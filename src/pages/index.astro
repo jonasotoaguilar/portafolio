@@ -2,13 +2,12 @@
 import BaseLayout from "@layouts/BaseLayout.astro";
 import Hero from "@components/Hero.astro";
 import ProjectCard from "@components/ProjectCard.astro";
-import Timeline from "@components/Timeline.astro";
+import ProfileSections from "@components/ProfileSections.astro";
 import Skills from "@components/Skills.astro";
 import ContactCTA from "@components/ContactCTA.astro";
 import { getCollection } from "astro:content";
 
 const projects = await getCollection("projects");
-const experiences = await getCollection("experience");
 ---
 
 <BaseLayout>
@@ -18,11 +17,15 @@ const experiences = await getCollection("experience");
     id="projects"
     class="py-24 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto"
   >
+    <span class="inline-flex items-center gap-2 text-xs font-mono text-accent-400 tracking-widest uppercase mb-3">
+      <span class="block w-4 h-px bg-accent-400/60" aria-hidden="true"></span>
+      Work
+    </span>
     <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-text-primary mb-2">
       Projects
     </h2>
     <p class="text-text-secondary mb-12 max-w-xl">
-      Selected work — built with intention, shipped to production.
+      Selected work — built with intention.
     </p>
     {
       projects.length > 0 ? (
@@ -33,29 +36,22 @@ const experiences = await getCollection("experience");
         </div>
       ) : (
         <p class="text-text-muted italic">
-          Projects coming soon. Building in public starts here.
+          No projects found.
         </p>
       )
     }
   </section>
 
-  <section
-    id="experience"
-    class="py-24 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto border-t border-dark-800"
-  >
-    <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-text-primary mb-2">
-      Experience
-    </h2>
-    <p class="text-text-secondary mb-12 max-w-xl">
-      The path that shaped how I think about software.
-    </p>
-    <Timeline experiences={experiences} />
-  </section>
+  <ProfileSections />
 
   <section
     id="skills"
     class="py-24 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto border-t border-dark-800"
   >
+    <span class="inline-flex items-center gap-2 text-xs font-mono text-accent-400 tracking-widest uppercase mb-3">
+      <span class="block w-4 h-px bg-accent-400/60" aria-hidden="true"></span>
+      Toolbox
+    </span>
     <Skills />
   </section>
 
