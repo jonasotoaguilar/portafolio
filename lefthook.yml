@@ -1,0 +1,16 @@
+# https://lefthook.dev/configuration/
+
+pre-commit:
+  parallel: false
+  jobs:
+    - name: format
+      glob: "*.{js,ts,tsx,jsx,json,astro,css,md,mjs,cjs,mdx}"
+      run: pnpm exec biome format --write --files-ignore-unknown=true {staged_files}
+      stage_fixed: true
+
+    - name: lint
+      glob: "*.{js,ts,tsx,jsx,json,astro,css,md,mjs,cjs,mdx}"
+      run: pnpm exec biome lint --files-ignore-unknown=true {staged_files}
+
+    - name: type-check
+      run: pnpm check
