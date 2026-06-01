@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Astro
+.astro/
+
+# Testing
+test-results/
+playwright-report/
+coverage/
+
+# Engram memory
+.engram/
+
+# Misc
+*.log

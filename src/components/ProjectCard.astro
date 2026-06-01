@@ -1,0 +1,61 @@
+---
+import type { CollectionEntry } from "astro:content";
+
+interface Props {
+  project: CollectionEntry<"projects">;
+}
+
+const { project } = Astro.props;
+const { data } = project;
+---
+
+<article
+  class="group relative rounded-2xl border border-dark-800 bg-dark-900 p-6
+         hover:border-dark-600 transition-colors animate-slide-up"
+>
+  <div class="flex items-start justify-between mb-4">
+    <h3 class="text-lg font-semibold text-text-primary group-hover:text-accent-400 transition-colors">
+      {data.title}
+    </h3>
+    {data.url && (
+      <a
+        href={data.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="shrink-0 ml-4 text-text-muted hover:text-accent-400 transition-colors"
+        aria-label={`Visit ${data.title}`}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M7 7h10v10" />
+          <path d="M7 17 17 7" />
+        </svg>
+      </a>
+    )}
+  </div>
+
+  <p class="text-text-secondary text-sm leading-relaxed mb-4">
+    {data.description}
+  </p>
+
+  {data.tags && data.tags.length > 0 && (
+    <div class="flex flex-wrap gap-2">
+      {data.tags.map((tag: string) => (
+        <span
+          class="inline-flex text-xs font-mono px-2 py-1 rounded-md bg-dark-800 text-text-muted"
+        >
+          {tag}
+        </span>
+      ))}
+    </div>
+  )}
+</article>

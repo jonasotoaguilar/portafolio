@@ -1,0 +1,26 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Page not found">
+  <main class="min-h-[80vh] flex items-center justify-center px-4">
+    <div class="text-center animate-fade-in">
+      <span class="text-8xl font-bold text-accent-500/20 select-none"
+        >404</span
+      >
+      <h1 class="text-2xl font-semibold text-text-primary mt-4">
+        Page not found
+      </h1>
+      <p class="text-text-secondary mt-2 mb-8">
+        The page you're looking for doesn't exist or moved.
+      </p>
+      <a
+        href="/"
+        class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-accent-500 text-white font-medium
+               hover:bg-accent-600 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500"
+      >
+        Back home
+      </a>
+    </div>
+  </main>
+</BaseLayout>

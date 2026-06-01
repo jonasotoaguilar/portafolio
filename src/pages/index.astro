@@ -1,0 +1,63 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Hero from "@components/Hero.astro";
+import ProjectCard from "@components/ProjectCard.astro";
+import Timeline from "@components/Timeline.astro";
+import Skills from "@components/Skills.astro";
+import ContactCTA from "@components/ContactCTA.astro";
+import { getCollection } from "astro:content";
+
+const projects = await getCollection("projects");
+const experiences = await getCollection("experience");
+---
+
+<BaseLayout>
+  <Hero />
+
+  <section
+    id="projects"
+    class="py-24 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto"
+  >
+    <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-text-primary mb-2">
+      Projects
+    </h2>
+    <p class="text-text-secondary mb-12 max-w-xl">
+      Selected work — built with intention, shipped to production.
+    </p>
+    {
+      projects.length > 0 ? (
+        <div class="grid gap-8 sm:grid-cols-2">
+          {projects.map((project) => (
+            <ProjectCard project={project} />
+          ))}
+        </div>
+      ) : (
+        <p class="text-text-muted italic">
+          Projects coming soon. Building in public starts here.
+        </p>
+      )
+    }
+  </section>
+
+  <section
+    id="experience"
+    class="py-24 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto border-t border-dark-800"
+  >
+    <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-text-primary mb-2">
+      Experience
+    </h2>
+    <p class="text-text-secondary mb-12 max-w-xl">
+      The path that shaped how I think about software.
+    </p>
+    <Timeline experiences={experiences} />
+  </section>
+
+  <section
+    id="skills"
+    class="py-24 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto border-t border-dark-800"
+  >
+    <Skills />
+  </section>
+
+  <ContactCTA />
+</BaseLayout>

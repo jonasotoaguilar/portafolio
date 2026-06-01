@@ -1,0 +1,50 @@
+---
+const categories = [
+  {
+    name: "Languages",
+    items: ["TypeScript", "Go", "Python", "SQL"],
+  },
+  {
+    name: "Frontend",
+    items: ["React", "Next.js", "Astro", "Tailwind CSS", "Playwright"],
+  },
+  {
+    name: "Backend",
+    items: ["Node.js", "PostgreSQL", "Redis", "REST / GraphQL", "gRPC"],
+  },
+  {
+    name: "Practices",
+    items: [
+      "Clean Architecture",
+      "TDD",
+      "CI/CD",
+      "Observability",
+      "Code Review",
+    ],
+  },
+];
+---
+
+<section>
+  <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-text-primary mb-2">
+    Skills
+  </h2>
+  <p class="text-text-secondary mb-12 max-w-xl">
+    Tools and practices I reach for daily.
+  </p>
+
+  <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+    {categories.map((cat) => (
+      <div class="animate-fade-in">
+        <h3 class="text-sm font-mono text-accent-400 tracking-wider mb-4 uppercase">
+          {cat.name}
+        </h3>
+        <ul class="space-y-2">
+          {cat.items.map((item) => (
+            <li class="text-text-secondary text-sm">{item}</li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+</section>

@@ -1,0 +1,59 @@
+---
+export interface Props {
+  title: string | undefined;
+  description: string | undefined;
+  image: string | undefined;
+}
+
+const {
+  title = "Jonathan Soto | Developer Portfolio",
+  description = "Jonathan Soto — software engineer building thoughtful, performant web experiences. Specializing in full-stack TypeScript, Go, and architecture.",
+  image = "/social-preview.png",
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+---
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<title>{title}</title>
+<meta name="description" content={description} />
+
+<link rel="canonical" href={canonical} />
+<link rel="sitemap" href="/sitemap-index.xml" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:url" content={canonical} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:site_name" content="Jonathan Soto" />
+<meta property="og:locale" content="en_US" />
+{image && <meta property="og:image" content={new URL(image, Astro.site).href} />}
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+{image && <meta name="twitter:image" content={new URL(image, Astro.site).href} />}
+
+<!-- JSON-LD -->
+<script type="application/ld+json" is:inline set:html={JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "Jonathan Soto",
+  "url": Astro.site?.href ?? "",
+  "sameAs": [],
+  "jobTitle": "Software Engineer",
+  "description": description,
+})}>
+</script>
+
+<!-- Fonts: Inter + JetBrains Mono via Google Fonts CDN -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400..600&display=swap"
+  rel="stylesheet"
+/>
