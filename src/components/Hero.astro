@@ -1,20 +1,50 @@
 ---
+import { Image } from "astro:assets";
+import profileImage from "../assets/perfil.jpg";
 ---
 
 <section
   class="pt-24 pb-16 sm:pt-32 sm:pb-24 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto"
 >
   <div class="max-w-3xl animate-fade-in">
-    <p class="text-accent-400 font-mono text-sm mb-4 tracking-wider">
-      Hello, I'm
+    <div class="flex items-center gap-3 mb-4" aria-hidden="true">
+      <span class="block w-6 h-6 rounded-full bg-accent-500/20 border border-accent-500/40 animate-glow-pulse"></span>
+      <span class="block w-12 h-px bg-accent-500/40"></span>
+    </div>
+
+    <p class="text-accent-400 font-mono text-sm mb-2 tracking-wider">
+      Hello, I&rsquo;m
     </p>
-    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-text-primary mb-6">
-      Jonathan Soto
-    </h1>
-    <p class="text-lg sm:text-xl text-text-secondary leading-relaxed mb-8">
-      Software engineer building thoughtful, performant digital experiences.
-      I work across the stack — from architecture decisions to pixel-perfect
-      UI — with a bias toward clean abstractions and shipping fast.
+
+    <div class="flex flex-col sm:flex-row sm:items-center gap-6 mb-4">
+      <div class="shrink-0">
+        <Image
+          src={profileImage}
+          alt="Jonathan Soto portrait"
+          width={112}
+          height={112}
+          class="rounded-full border-2 border-accent-500/40 object-cover"
+          loading="eager"
+          decoding="async"
+        />
+      </div>
+      <div>
+        <div class="flex items-center gap-3">
+          <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
+            <span class="text-text-primary">Jonathan</span>{" "}
+            <span class="text-accent-400">Soto</span>
+          </h1>
+        </div>
+        <p class="text-xl sm:text-2xl text-text-secondary font-medium mt-1">
+          Backend &amp; Full-Stack Engineer
+        </p>
+      </div>
+    </div>
+
+    <p class="text-base sm:text-lg text-text-secondary leading-relaxed mb-8 max-w-xl">
+      Building APIs, business systems, automation tools and AI-assisted
+      developer workflows. Focused on maintainable systems, clear API design,
+      and practical tools with Python, Java, and JavaScript/TypeScript.
     </p>
     <div class="flex flex-wrap gap-4">
       <a
@@ -23,6 +53,21 @@
                hover:bg-accent-600 transition-colors"
       >
         See my work
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="ml-2"
+          aria-hidden="true"
+        >
+          <path d="m9 18 6-6-6-6" />
+        </svg>
       </a>
       <a
         href="/#contact"

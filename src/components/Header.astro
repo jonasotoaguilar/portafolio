@@ -10,9 +10,30 @@
   >
     <a
       href="/"
-      class="font-bold text-lg tracking-tight text-text-primary hover:text-accent-400 transition-colors"
+      class="group flex items-center font-bold text-lg tracking-tight text-text-primary hover:text-accent-400 transition-colors"
+      aria-label="Jonathan Soto &mdash; Home"
     >
-      JS
+      <!-- Animated brand: same IDE-like box types from JS to Jonathan Soto -->
+      <span
+        class="relative inline-flex h-10 w-10 items-center rounded-lg border border-accent-500/30 bg-accent-500/10 px-3 font-mono font-bold text-text-primary transition-all duration-500 ease-out
+               group-hover:w-[8.75rem] group-hover:border-accent-500/50 group-hover:bg-accent-500/20 group-hover:text-accent-400 group-hover:shadow-[0_0_16px_var(--color-glow-400)]
+               group-focus-visible:w-[8.75rem] group-focus-visible:border-accent-500/50 group-focus-visible:bg-accent-500/20 group-focus-visible:text-accent-400"
+        aria-hidden="true"
+      >
+        <span
+          class="absolute inset-0 inline-flex items-center justify-center transition-opacity duration-150 delay-300 group-hover:opacity-0 group-hover:delay-0 group-focus-visible:opacity-0 group-focus-visible:delay-0"
+        >
+          JS
+          <span class="ml-0.5 h-5 w-0.5 rounded-sm bg-accent-400 animate-caret-blink"></span>
+        </span>
+        <span
+          class="inline-flex max-w-0 items-center overflow-hidden whitespace-nowrap text-sm opacity-0 transition-[max-width,opacity] duration-700 ease-out
+                 group-hover:max-w-[7.25rem] group-hover:opacity-100 group-focus-visible:max-w-[7.25rem] group-focus-visible:opacity-100"
+        >
+          Jonathan Soto
+          <span class="ml-0.5 h-5 w-0.5 rounded-sm bg-accent-400 animate-caret-blink"></span>
+        </span>
+      </span>
     </a>
     <ul class="flex items-center gap-6 text-sm font-medium">
       <li>
@@ -25,10 +46,10 @@
       </li>
       <li>
         <a
-          href="/#experience"
+          href="/#about"
           class="text-text-secondary hover:text-text-primary transition-colors"
         >
-          Experience
+          About
         </a>
       </li>
       <li>
