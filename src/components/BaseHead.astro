@@ -6,8 +6,8 @@ export interface Props {
 }
 
 const {
-  title = "Jonathan Soto | Developer Portfolio",
-  description = "Jonathan Soto — software engineer building thoughtful, performant web experiences. Specializing in full-stack TypeScript, Go, and architecture.",
+  title = "Jonathan Soto · Backend & Full-Stack Engineer",
+  description = "Jonathan Soto — Backend & Full-Stack Engineer based in Santiago, Chile. Building APIs, business systems, and AI-assisted developer workflows with Python, Java, and JavaScript/TypeScript.",
   image = "/social-preview.png",
 } = Astro.props;
 
@@ -44,8 +44,11 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
   "@type": "Person",
   "name": "Jonathan Soto",
   "url": Astro.site?.href ?? "",
-  "sameAs": [],
-  "jobTitle": "Software Engineer",
+  "sameAs": [
+    "https://github.com/jonasotoaguilar",
+    "https://www.linkedin.com/in/jonathan-soto-7304823b8/",
+  ],
+  "jobTitle": "Backend & Full-Stack Engineer",
   "description": description,
 })}>
 </script>

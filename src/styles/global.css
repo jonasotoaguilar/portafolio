@@ -24,6 +24,10 @@
   --animate-fade-in: fade-in 0.6s ease-out both;
   --animate-slide-up: slide-up 0.6s ease-out both;
   --animate-glow-pulse: glow-pulse 3s ease-in-out infinite;
+  --animate-float: float 8s ease-in-out infinite;
+  --animate-orbit: orbit 20s linear infinite;
+  --animate-caret-blink: caret-blink 1.2s step-end infinite;
+  --animate-aurora-drift: aurora-drift 12s ease-in-out infinite;
 }
 
 @keyframes fade-in {
@@ -56,6 +60,55 @@
   }
 }
 
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes orbit {
+  from {
+    transform: rotate(0deg) translateX(80px) rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg) translateX(80px) rotate(-360deg);
+  }
+}
+
+@keyframes caret-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes aurora-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1, 1.1);
+    opacity: 0.45;
+  }
+  25% {
+    transform: translate(3%, -2%) scale(1.1, 1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translate(-2%, 3%) scale(0.95, 1.05);
+    opacity: 0.4;
+  }
+  75% {
+    transform: translate(-1%, -1%) scale(1.05, 0.95);
+    opacity: 0.5;
+  }
+}
+
 /* Respect reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -85,5 +138,97 @@
 
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-accent-500;
+  }
+}
+
+/* === Enhanced Scroll-Reactive Background === */
+@layer base {
+  /* Layer 0: base gradient — subtle hue shift with scroll */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -3;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      var(--color-dark-950) 0%,
+      color-mix(in srgb, var(--color-dark-950) 97%, var(--color-accent-400))
+        calc(50% + var(--scroll-progress, 0) * 30%),
+      color-mix(in srgb, var(--color-dark-950) 95%, var(--color-accent-400)) 100%
+    );
+  }
+
+  /* Layer 1: dot grid — opacity intensifies with scroll */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background-image: radial-gradient(var(--color-dark-700) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: calc(0.12 + var(--scroll-progress, 0) * 0.28);
+  }
+}
+
+/* === Aurora orbs === */
+@layer components {
+  /* Aurora orbs: placed via fixed-positioned divs in BaseLayout */
+  .aurora-orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(100px);
+    pointer-events: none;
+    z-index: -3;
+    opacity: 0;
+  }
+
+  /* Orb 1: top-right, violet/magenta */
+  .aurora-orb--1 {
+    width: min(60vw, 500px);
+    height: min(60vw, 500px);
+    top: calc(-10% - var(--scroll-progress, 0) * 15%);
+    right: calc(-15% + var(--scroll-progress, 0) * 10%);
+    background: radial-gradient(
+      circle,
+      rgba(124, 92, 252, 0.25) 0%,
+      rgba(124, 92, 252, 0.06) 40%,
+      transparent 70%
+    );
+    opacity: calc(0.45 + var(--scroll-progress, 0) * 0.2);
+    animation: aurora-drift 12s ease-in-out infinite;
+  }
+
+  /* Orb 2: bottom-left, blue/cyan */
+  .aurora-orb--2 {
+    width: min(50vw, 400px);
+    height: min(50vw, 400px);
+    bottom: calc(-20% - var(--scroll-progress, 0) * 20%);
+    left: calc(-10% + var(--scroll-progress, 0) * 15%);
+    background: radial-gradient(
+      circle,
+      rgba(67, 97, 238, 0.22) 0%,
+      rgba(67, 97, 238, 0.05) 40%,
+      transparent 70%
+    );
+    opacity: calc(0.35 - var(--scroll-progress, 0) * 0.1);
+    animation: aurora-drift 16s ease-in-out infinite reverse;
+  }
+
+  /* Orb 3: center-right, accent/purple (scroll-reactive size) */
+  .aurora-orb--3 {
+    width: min(40vw, 350px);
+    height: min(40vw, 350px);
+    top: calc(50% - var(--scroll-progress, 0) * 30%);
+    right: calc(5% - var(--scroll-progress, 0) * 15%);
+    background: radial-gradient(
+      circle,
+      rgba(105, 51, 255, 0.18) 0%,
+      rgba(105, 51, 255, 0.04) 40%,
+      transparent 70%
+    );
+    opacity: calc(0.3 + var(--scroll-progress, 0) * 0.35);
+    animation: aurora-drift 14s ease-in-out infinite alternate;
   }
 }
