@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+[[ -f dist/index.html ]] || {
+  echo "::error::dist/index.html missing — release artifact incomplete."
+  exit 1
+}
+
+[[ -f dist/sitemap-index.xml ]] || {
+  echo "::error::dist/sitemap-index.xml missing — sitemap not built."
+  exit 1
+}
+
+grep -Eq '<title>[^<]*Jonathan Soto[^<]*</title>' dist/index.html || {
+  echo "::error::dist/index.html <title> does not contain 'Jonathan Soto'."
+  exit 1
+}
+
+echo "::notice::Release verified: dist/index.html and dist/sitemap-index.xml present; <title> check passed."

@@ -1,0 +1,49 @@
+---
+import type { SiteConfig } from "../../lib/content/schemas";
+import KeyHints from "./KeyHints.astro";
+
+interface Props {
+	site: SiteConfig;
+}
+
+const { site } = Astro.props;
+
+const MENU_ITEMS = [
+	{ label: "About", href: "/about" },
+	{ label: "Resume", href: "/resume" },
+	{ label: "Projects", href: "/projects" },
+	{ label: "Skills", href: "/skills" },
+	{ label: "Contact", href: "/contact" },
+] as const;
+---
+
+<main class="game-shell flex min-h-svh flex-col justify-center px-6 py-8">
+	<h1 class="sr-only">{site.name}</h1>
+	<nav
+		aria-label="Game menu"
+		data-menu
+		class="flex flex-col gap-2"
+	>
+		<ol class="flex flex-col gap-2">
+			{
+				MENU_ITEMS.map((item) => (
+					<li>
+						<a
+							href={item.href}
+							data-menu-item
+							data-entrance
+							class="group inline-flex min-h-11 items-center font-display text-[clamp(2.75rem,9vw,8.125rem)] uppercase leading-[0.95] text-text-primary transition-colors duration-150 ease-out -skew-x-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400 hover:text-accent-400"
+						>
+							{item.label}
+						</a>
+					</li>
+				))
+			}
+		</ol>
+	</nav>
+	<KeyHints />
+</main>
+
+<script>
+	import "../../scripts/shell";
+</script>

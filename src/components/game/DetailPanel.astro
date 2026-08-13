@@ -1,0 +1,40 @@
+---
+import { isExternalLink } from "../../lib/content/projects";
+import type { Project } from "../../lib/content/schemas";
+
+interface Props {
+	project: Project;
+	active?: boolean;
+}
+
+const { project, active = false } = Astro.props;
+const external = isExternalLink(project.link, Astro.site?.origin);
+---
+
+<aside
+	data-detail-panel
+	data-active={active ? "true" : undefined}
+	tabindex="-1"
+	aria-label={`${project.title} project`}
+	class="max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 rounded-[2px] bg-glow-end p-6"
+>
+	<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-primary">
+		{project.title}
+	</h2>
+	<p class="mt-4 text-text-secondary">{project.description}</p>
+	<ul class="mt-4 flex flex-wrap gap-2">
+		{project.stack.map((tech) => (
+			<li class="rounded-[2px] bg-bg-base px-3 py-1 text-text-primary">
+				{tech}
+			</li>
+		))}
+	</ul>
+	<a
+		href={project.link}
+		target={external ? "_blank" : undefined}
+		rel={external ? "noopener noreferrer" : undefined}
+		class="mt-6 inline-flex min-h-11 items-center font-label text-xl uppercase tracking-[0.08em] text-accent-300 transition-colors duration-150 ease-out hover:text-accent-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400"
+	>
+		{project.title}
+	</a>
+</aside>

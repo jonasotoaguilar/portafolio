@@ -1,0 +1,38 @@
+---
+import { getCollection } from "astro:content";
+
+import GameViewShell from "../components/game/GameViewShell.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { VIEW_TITLES } from "../lib/seo/titles";
+
+const [siteEntry] = await getCollection("siteConfig");
+if (!siteEntry) {
+	throw new Error("Expected exactly one siteConfig entry");
+}
+const site = siteEntry.data;
+---
+
+<BaseLayout title={VIEW_TITLES.about} site={site}>
+	<GameViewShell title="About">
+		<section class="flex flex-col items-start gap-8">
+			<h2 class="sr-only">Role</h2>
+			<p class="font-display text-[clamp(1.75rem,4.5vw,3.5rem)] uppercase leading-[1.05] text-text-primary">
+				{site.role}
+			</p>
+			<div class="flex flex-col gap-3">
+				<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-300">
+					Focus areas
+				</h3>
+				<ul class="flex flex-wrap gap-2">
+					{
+						site.focusAreas.map((area) => (
+							<li class="rounded-[2px] bg-glow-end px-4 py-2 text-text-primary">
+								{area}
+							</li>
+						))
+					}
+				</ul>
+			</div>
+		</section>
+	</GameViewShell>
+</BaseLayout>

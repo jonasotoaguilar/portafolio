@@ -1,0 +1,38 @@
+# Resume content typed from the verified CV facts (August 2026 CV).
+# No ranks, metrics, levels, or contact numbers; skills are plain names.
+resume:
+  education:
+    - institution: USACH
+      title: Ingeniería de Ejecución en Computación e Informática
+      period: Mar 2020–Apr 2025
+    - institution: Technical education
+      title: Telecommunications
+      period: Mar 2017–Nov 2019
+  experience:
+    - company: Productos Barber Chile
+      role: Sales and customer service
+      period: 2020–2026
+      details:
+        - Sales and customer service.
+    - company: Policomp
+      role: IT Support Intern
+      period: Jan–Mar 2020
+      details:
+        - IT support internship.
+  projects:
+    - name: ServiceFlow
+      description: Service order and ticket management.
+    - name: WealthQuest
+      published: May 2025
+      description: Thesis game built with Unity.
+  skills:
+    - Python
+    - Java
+    - Spring Boot
+    - TypeScript/JavaScript
+    - SQL and related tooling
+  languages:
+    - name: Spanish
+      proficiency: native
+    - name: English
+      proficiency: basic technical reading

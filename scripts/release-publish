@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Re-run the preflight gate: a release only proceeds from a fully green tree.
+./scripts/release-preflight
+
+if [[ ! -d dist ]]; then
+  echo "::error::dist/ not found — preflight must produce a build before publication."
+  exit 1
+fi
+
+ARTIFACT_DIR="${RUNNER_TEMP:-/tmp}/release-material"
+mkdir -p "$ARTIFACT_DIR"
+ARTIFACT="$ARTIFACT_DIR/dist-portafolio-${GITHUB_REF_NAME:-local}.tar.gz"
+tar -czf "$ARTIFACT" -C dist .
+
+if [[ -n "${GITHUB_REF_NAME:-}" ]]; then
+  REPO_ARGS=()
+  if [[ -n "${RELEASE_REPOSITORY:-${GITHUB_REPOSITORY:-}}" ]]; then
+    REPO_ARGS=(--repo "${RELEASE_REPOSITORY:-${GITHUB_REPOSITORY:-}}")
+  fi
+  gh release create "$GITHUB_REF_NAME" "$ARTIFACT" \
+    --title "Release $GITHUB_REF_NAME" \
+    --notes "Static portfolio build (dist/) for $GITHUB_REF_NAME." \
+    "${REPO_ARGS[@]}"
+  echo "::notice::Published GitHub release $GITHUB_REF_NAME with $ARTIFACT"
+else
+  # Local/dev run: never touch GitHub outside CI. Build the artifact and stop.
+  echo "Local run (GITHUB_REF_NAME unset): artifact built at $ARTIFACT"
+  echo "gh release create skipped — run this script inside CI to publish."
+fi

@@ -1,0 +1,11 @@
+---
+interface Props {
+	label: string;
+}
+
+const { label } = Astro.props;
+---
+
+<ol class="flex flex-col gap-2 md:min-w-64" data-list aria-label={label}>
+	<slot />
+</ol>

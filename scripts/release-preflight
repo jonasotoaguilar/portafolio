@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+pnpm install --frozen-lockfile
+pnpm exec astro check
+pnpm exec biome check .
+pnpm run test:unit
+pnpm run build

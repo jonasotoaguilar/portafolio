@@ -1,0 +1,49 @@
+---
+import { ClientRouter } from "astro:transitions";
+
+import "../styles/global.css";
+import Background from "../components/Background.astro";
+import JsonLd from "../components/JsonLd.astro";
+import type { SiteConfig } from "../lib/content/schemas";
+import { canonicalUrl, SHELL_TITLE, SITE_URL } from "../lib/seo/titles";
+
+interface Props {
+	title?: string;
+	/** Present on the shell and views; omitted on the 404 (SEO exception). */
+	site?: SiteConfig;
+}
+
+const { title, site } = Astro.props;
+
+// Route key for `html[data-route]` view-transition overlays (design D4):
+// the shell maps "/" and every view maps to its path segment (404 included).
+const pathname =
+	Astro.url.pathname.replace(/\.html$/, "").replace(/\/+$/, "") || "/";
+const route = pathname === "/" ? "shell" : pathname.slice(1);
+const is404 = route === "404";
+const canonical = is404
+	? null
+	: canonicalUrl(pathname, Astro.site?.href ?? SITE_URL);
+---
+
+<!doctype html>
+<html lang="en" data-route={route}>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" href="/favicon.ico" />
+		<meta name="generator" content={Astro.generator} />
+		{canonical && <link rel="canonical" href={canonical} />}
+		<ClientRouter fallback="none" />
+		<title>{title ?? SHELL_TITLE}</title>
+		{site && <JsonLd site={site} />}
+		<slot name="head" />
+	</head>
+	<body>
+		<div class="glow-layer" aria-hidden="true"></div>
+		<div class="scanlines-layer" aria-hidden="true"></div>
+		<Background />
+		<slot />
+	</body>
+</html>

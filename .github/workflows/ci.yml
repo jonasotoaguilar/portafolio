@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    # E2E (Playwright dev server + browser) gets headroom inside this budget.
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm exec astro check
+
+      - name: Lint
+        run: pnpm exec biome check .
+
+      - name: Privacy heuristic (L1, no exact value)
+        # Pattern-only scan of the HTML-producing surface ("no ... in HTML"),
+        # so ordinary CI never depends on the CV_PHONE env value. The exact
+        # value check is the L2 gate:privacy step (author/verifier only).
+        run: |
+          if grep -RInE '\b(phone|telephone|mobile|cell)\b|tel:|[0-9]{9,}' \
+            src/pages src/components src/layouts src/content; then
+            echo "L1 privacy heuristic: possible contact-number content found"
+            exit 1
+          fi
+
+      - name: Unit tests
+        run: pnpm run test:unit
+
+      - name: Coverage
+        run: pnpm run coverage
+
+      - name: Upload coverage artifact
+        if: always() && hashFiles('coverage/**') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage/
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install chromium
+
+      - name: E2E tests
+        run: pnpm run test:e2e
+
+      - name: Build
+        run: pnpm run build

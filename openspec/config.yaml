@@ -1,0 +1,33 @@
+# openspec/config.yaml
+schema: spec-driven
+
+context: |
+  Project: portafolio — personal portfolio for Jonathan Soto (jonasotoaguilar.dev), Persona-3-inspired design
+  Stack: Astro 7.2.0 (SSG static, View Transitions), TypeScript 6.0.3 (strict; TS 7.x breaks astro check), Tailwind CSS 4.3.3 (@tailwindcss/vite), motion 13.0.0
+  Content: Astro Content Collections (Markdown planned), @astrojs/sitemap
+  Testing: Vitest 4.1.10 (unit, coverage 80/70/80/80), Playwright 1.62.1 (e2e, chromium), Stryker 9.6.1 (no TS targets yet)
+  Tooling: Biome 2.5.7, Lefthook 2.1.10 (pre-commit), pnpm 11.1.1, Node >=24
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    guidelines:
+      - Follow existing code patterns
+    tdd: true
+    test_command: "pnpm run test:unit"
+  verify:
+    test_command: "pnpm run test:unit && pnpm run test:e2e"
+    build_command: "pnpm build"
+    coverage_threshold: 80
+  archive:
+    - Warn before merging destructive deltas

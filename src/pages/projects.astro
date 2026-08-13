@@ -1,0 +1,43 @@
+---
+import { getCollection } from "astro:content";
+
+import DetailPanel from "../components/game/DetailPanel.astro";
+import GameList from "../components/game/GameList.astro";
+import GameListItem from "../components/game/GameListItem.astro";
+import GameViewShell from "../components/game/GameViewShell.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { assertExactlyFour, sortByOrder } from "../lib/content/projects";
+import { VIEW_TITLES } from "../lib/seo/titles";
+
+const [siteEntry] = await getCollection("siteConfig");
+if (!siteEntry) {
+	throw new Error("Expected exactly one siteConfig entry");
+}
+const site = siteEntry.data;
+const projects = sortByOrder(
+	assertExactlyFour(await getCollection("projects")).map((entry) => ({
+		id: entry.id,
+		data: entry.data,
+		order: entry.data.order,
+	})),
+);
+---
+
+<BaseLayout title={VIEW_TITLES.projects} site={site}>
+	<GameViewShell title="Projects">
+		<section class="flex flex-col gap-6 md:flex-row md:items-start md:gap-10">
+			<GameList label="Projects">
+				{projects.map((entry, index) => (
+					<GameListItem
+						id={entry.id}
+						title={entry.data.title}
+						active={index === 0}
+					/>
+				))}
+			</GameList>
+			{projects.map((entry, index) => (
+				<DetailPanel project={entry.data} active={index === 0} />
+			))}
+		</section>
+	</GameViewShell>
+</BaseLayout>

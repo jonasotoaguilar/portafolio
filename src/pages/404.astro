@@ -1,0 +1,36 @@
+---
+import { getCollection } from "astro:content";
+
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const [siteEntry] = await getCollection("siteConfig");
+if (!siteEntry) {
+	throw new Error("Expected exactly one siteConfig entry");
+}
+const site = siteEntry.data;
+---
+
+<BaseLayout>
+	<main>
+		<section class="px-6 py-24 md:py-32">
+			<div class="mx-auto flex max-w-5xl flex-col items-start gap-6">
+				<h1 class="font-display text-[clamp(2.25rem,8vw,3.5rem)] uppercase leading-[1.05] text-text-primary">
+					404
+				</h1>
+				<p class="font-display text-[clamp(1.5rem,3.5vw,2rem)] uppercase leading-[1.05] text-text-primary">
+					{site.name}
+				</p>
+				<p class="font-label text-xl uppercase tracking-[0.08em] text-accent-300">
+					{site.role}
+				</p>
+				<p class="text-text-secondary">The page you are looking for does not exist.</p>
+				<a
+					href="/"
+					class="inline-flex min-h-11 items-center rounded-[2px] bg-accent-500 px-4 font-label text-xl uppercase tracking-[0.08em] text-text-primary transition-[background-color,transform] duration-150 ease-out hover:bg-accent-400 focus-visible:outline-2 focus-visible:outline-accent-400 active:scale-[0.97] active:bg-accent-600"
+				>
+					Back to home
+				</a>
+			</div>
+		</section>
+	</main>
+</BaseLayout>

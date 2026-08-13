@@ -1,0 +1,16 @@
+---
+import { getCollection } from "astro:content";
+
+import GameMenu from "../components/game/GameMenu.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const [siteEntry] = await getCollection("siteConfig");
+if (!siteEntry) {
+	throw new Error("Expected exactly one siteConfig entry");
+}
+const site = siteEntry.data;
+---
+
+<BaseLayout title={site.pageTitle} site={site}>
+	<GameMenu site={site} />
+</BaseLayout>

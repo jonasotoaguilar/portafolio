@@ -1,0 +1,7 @@
+pre-commit:
+  parallel: true
+  commands:
+    biome:
+      run: pnpm exec biome check --staged
+    unit:
+      run: pnpm exec vitest run --changed --passWithNoTests

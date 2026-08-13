@@ -1,0 +1,52 @@
+{
+	"name": "portafolio",
+	"type": "module",
+	"version": "0.0.1",
+	"engines": {
+		"node": ">=24"
+	},
+	"packageManager": "pnpm@11.1.1",
+	"scripts": {
+		"dev": "astro dev",
+		"build": "astro build",
+		"preview": "astro preview",
+		"astro": "astro",
+		"test": "vitest run",
+		"test:unit": "vitest run tests/unit",
+		"test:e2e": "playwright test",
+		"coverage": "vitest run --coverage",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"check": "astro check",
+		"stryker": "stryker run",
+		"test:build-failures": "node scripts/verify-build-failures.mjs",
+		"gate:privacy": "node scripts/verify-no-phone.mjs"
+	},
+	"dependencies": {
+		"@astrojs/sitemap": "3.7.3",
+		"@fontsource/anton": "5.3.0",
+		"@fontsource/bebas-neue": "5.3.0",
+		"@tailwindcss/vite": "4.3.3",
+		"astro": "7.2.0",
+		"cookie": "2.0.1",
+		"motion": "13.0.0",
+		"tailwindcss": "4.3.3"
+	},
+	"devDependencies": {
+		"@astrojs/check": "^0.9.10",
+		"@biomejs/biome": "2.5.7",
+		"@playwright/test": "1.62.1",
+		"@stryker-mutator/core": "9.6.1",
+		"@stryker-mutator/vitest-runner": "9.6.1",
+		"@types/node": "^26.1.2",
+		"@vitest/coverage-v8": "4.1.10",
+		"lefthook": "2.1.10",
+		"typescript": "^6.0.3",
+		"vitest": "4.1.10"
+	},
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"lefthook"
+		]
+	}
+}

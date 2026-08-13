@@ -1,0 +1,181 @@
+@import "@fontsource/anton";
+@import "@fontsource/bebas-neue";
+@import "tailwindcss";
+
+@theme {
+	--color-bg-base: #04060f;
+	--color-glow-start: #0d2560;
+	--color-glow-end: #060d2a;
+	--color-accent-300: #7c92ff;
+	--color-accent-400: #5d75ff;
+	--color-accent-500: #4666ff;
+	--color-accent-600: #2f46b8;
+	--color-text-primary: #ffffff;
+	--color-text-secondary: #a7a7ab;
+	--color-scanline: #000000;
+
+	--font-display: "Anton", "Arial Narrow", sans-serif;
+	--font-label: "Bebas Neue", sans-serif;
+}
+
+@layer base {
+	html {
+		color-scheme: dark;
+		background-color: var(--color-bg-base);
+	}
+
+	body {
+		background-color: transparent;
+		color: var(--color-text-primary);
+		font-family: system-ui, sans-serif;
+		line-height: 1.6;
+	}
+}
+
+/* No-scroll game screen (design D5): the gate attribute is set by the
+   enhancement layer only (shell.ts / view.ts), so without JS content stays in
+   flow. */
+html[data-game-ready] {
+	overflow: hidden;
+}
+
+/* Views (portfolio-page): with JS only the selected detail panel is shown;
+   without JS every panel stays in normal document flow. */
+html[data-game-ready] [data-view] [data-detail-panel]:not([data-active]) {
+	display: none;
+}
+
+/* Mobile views stay reachable under the gate: the view itself scrolls. */
+@media (max-width: 767px) {
+	html[data-game-ready] [data-view] {
+		height: 100dvh;
+		overflow-y: auto;
+	}
+}
+
+/* Background layer 1: breathing radial glow (CSS-only, zero JS). */
+.glow-layer {
+	position: fixed;
+	inset: 0;
+	z-index: -3;
+	pointer-events: none;
+	background: radial-gradient(
+		ellipse 80% 60% at 50% 30%,
+		var(--color-glow-start) 0%,
+		var(--color-glow-end) 55%,
+		var(--color-bg-base) 100%
+	);
+	animation: glow-breathe 8s cubic-bezier(0.77, 0, 0.175, 1) infinite alternate;
+	will-change: opacity, transform;
+}
+
+@keyframes glow-breathe {
+	from {
+		opacity: 0.75;
+		transform: scale(1);
+	}
+
+	to {
+		opacity: 1;
+		transform: scale(1.02);
+	}
+}
+
+/* Background layer 2: CRT scanlines at ~15% black. */
+.scanlines-layer {
+	position: fixed;
+	inset: 0;
+	z-index: -2;
+	pointer-events: none;
+	background: repeating-linear-gradient(
+		to bottom,
+		transparent 0,
+		transparent 2px,
+		rgb(0 0 0 / 0.15) 2px,
+		rgb(0 0 0 / 0.15) 4px
+	);
+}
+
+/* Reduced motion: the glow holds; no breathing animation. */
+@media (prefers-reduced-motion: reduce) {
+	.glow-layer {
+		animation: none;
+		opacity: 1;
+	}
+}
+
+/* View-transition overlays (site-transitions D3/D4): the shell, every view,
+   and the 404 route all carry html[data-route], so one rule set covers every
+   swap. The outgoing screen leaves over 300ms; the incoming screen enters on
+   a 25ms x4 stagger delay (300 + 4x25 = 400ms envelope, mirroring
+   menuOverlayOptions in keys.ts). Only transform and opacity animate; the
+   UA's default group animation (which animates backdropFilter and layout
+   size) is disabled so the overlay is fully owned by these rules. */
+html[data-route]::view-transition-group(root) {
+	animation: none;
+}
+
+html[data-route]::view-transition-old(root) {
+	animation: p3-overlay-out 300ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+html[data-route]::view-transition-new(root) {
+	animation: p3-overlay-in 300ms cubic-bezier(0.23, 1, 0.32, 1) both;
+	animation-delay: calc(25ms * 4);
+}
+
+@keyframes p3-overlay-out {
+	from {
+		opacity: 1;
+		transform: translateY(0);
+	}
+
+	to {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+}
+
+@keyframes p3-overlay-in {
+	from {
+		opacity: 0;
+		transform: translateY(-8px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* Reduced motion: opacity-only fades at most 200ms with no sweeps and no
+   stagger, so nothing about the transition exceeds 200ms. */
+@media (prefers-reduced-motion: reduce) {
+	html[data-route]::view-transition-old(root) {
+		animation: p3-overlay-fade-out 200ms ease-out both;
+	}
+
+	html[data-route]::view-transition-new(root) {
+		animation: p3-overlay-fade-in 200ms ease-out both;
+	}
+}
+
+@keyframes p3-overlay-fade-out {
+	from {
+		opacity: 1;
+	}
+
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes p3-overlay-fade-in {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+}

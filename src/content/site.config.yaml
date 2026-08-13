@@ -1,0 +1,15 @@
+site:
+  name: Jonathan Soto
+  role: Backend & Full-Stack Engineer
+  tagline: Engineer with a Persona-3 soul.
+  focusAreas:
+    - Go
+    - TypeScript
+    - Python
+    - clean architecture
+    - API design
+  email: jonathansoto.dev@gmail.com
+  socials:
+    github: https://github.com/jonasotoaguilar
+    wealthquest: https://jonasotoaguilar.itch.io/wealthquest
+  pageTitle: Jonathan Soto · Backend & Full-Stack Engineer

@@ -1,0 +1,26 @@
+skills:
+  backend:
+    - Go
+    - Python
+    - TypeScript
+    - Node.js
+    - FastAPI
+    - SQLAlchemy 2
+    - Alembic
+    - Appwrite
+    - AMQP
+  frontend:
+    - Astro
+    - React 19
+    - Next.js 16
+    - Tailwind CSS 4
+    - JavaScript
+  tooling:
+    - Docker
+    - Docker Compose
+    - Git
+    - GitHub Actions
+    - pnpm
+    - Biome
+    - Playwright
+    - Vitest

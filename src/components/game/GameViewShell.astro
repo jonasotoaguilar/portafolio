@@ -1,0 +1,18 @@
+---
+import ViewHeader from "./ViewHeader.astro";
+
+interface Props {
+	title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<main class="game-view flex min-h-svh flex-col gap-6 px-6 py-8" data-view>
+	<ViewHeader title={title} />
+	<slot />
+</main>
+
+<script>
+	import "../../scripts/view";
+</script>

@@ -1,0 +1,146 @@
+---
+import { getCollection } from "astro:content";
+
+import GameList from "../components/game/GameList.astro";
+import GameListItem from "../components/game/GameListItem.astro";
+import GameViewShell from "../components/game/GameViewShell.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { VIEW_TITLES } from "../lib/seo/titles";
+
+const [siteEntry] = await getCollection("siteConfig");
+const [resumeEntry] = await getCollection("resume");
+if (!siteEntry || !resumeEntry) {
+	throw new Error("Expected siteConfig and resume content");
+}
+const site = siteEntry.data;
+const resume = resumeEntry.data;
+const sections = [
+	["education", "Education"],
+	["experience", "Experience"],
+	["projects", "Projects"],
+	["skills", "Skills"],
+	["languages", "Languages"],
+] as const;
+---
+
+<BaseLayout title={VIEW_TITLES.resume} site={site}>
+	<GameViewShell title="Resume">
+		<section class="flex flex-col gap-6 md:flex-row md:items-start md:gap-10">
+			<GameList label="Resume sections">
+				{sections.map(([id, label], index) => (
+					<GameListItem id={id} title={label} active={index === 0} />
+				))}
+			</GameList>
+			<aside
+				data-detail-panel
+				data-active="true"
+				tabindex="-1"
+				aria-label="Education"
+				class="max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 rounded-[2px] bg-glow-end p-6"
+			>
+				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-primary">
+					Education
+				</h2>
+				<ul class="mt-4 flex flex-col gap-4">
+					{resume.education.map((entry) => (
+						<li>
+							<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-300">
+								{entry.institution}
+							</h3>
+							<p class="mt-1 text-text-secondary">{entry.title}</p>
+							<p class="text-text-secondary">{entry.period}</p>
+						</li>
+					))}
+				</ul>
+			</aside>
+			<aside
+				data-detail-panel
+				tabindex="-1"
+				aria-label="Experience"
+				class="max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 rounded-[2px] bg-glow-end p-6"
+			>
+				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-primary">
+					Experience
+				</h2>
+				<ul class="mt-4 flex flex-col gap-4">
+					{resume.experience.map((entry) => (
+						<li>
+							<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-300">
+								{entry.company}
+							</h3>
+							<p class="mt-1 text-text-secondary">{entry.role}</p>
+							<p class="text-text-secondary">{entry.period}</p>
+							{entry.details.length > 0 && (
+								<ul class="mt-2 list-disc pl-5 text-text-secondary">
+									{entry.details.map((detail) => (
+										<li>{detail}</li>
+									))}
+								</ul>
+							)}
+						</li>
+					))}
+				</ul>
+			</aside>
+			<aside
+				data-detail-panel
+				tabindex="-1"
+				aria-label="Projects"
+				class="max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 rounded-[2px] bg-glow-end p-6"
+			>
+				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-primary">
+					Projects
+				</h2>
+				<ul class="mt-4 flex flex-col gap-4">
+					{resume.projects.map((entry) => (
+						<li>
+							<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-300">
+								{entry.name}
+							</h3>
+							{entry.published && (
+								<p class="mt-1 text-accent-400">Academic publication · {entry.published}</p>
+							)}
+							<p class="mt-1 text-text-secondary">{entry.description}</p>
+						</li>
+					))}
+				</ul>
+			</aside>
+			<aside
+				data-detail-panel
+				tabindex="-1"
+				aria-label="Skills"
+				class="max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 rounded-[2px] bg-glow-end p-6"
+			>
+				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-primary">
+					Skills
+				</h2>
+				<ul class="mt-4 flex flex-wrap gap-2">
+					{resume.skills.map((name) => (
+						<li class="rounded-[2px] bg-bg-base px-3 py-1 text-text-primary">
+							{name}
+						</li>
+					))}
+				</ul>
+			</aside>
+			<aside
+				data-detail-panel
+				tabindex="-1"
+				aria-label="Languages"
+				class="max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 rounded-[2px] bg-glow-end p-6"
+			>
+				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-primary">
+					Languages
+				</h2>
+				<ul class="mt-4 flex flex-col gap-4">
+					{resume.languages.map((entry) => (
+						<li>
+							<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-300">
+								{entry.name}
+							</h3>
+							<p class="mt-1 text-text-secondary">{entry.proficiency}</p>
+						</li>
+					))}
+				</ul>
+			</aside>
+		</section>
+	</GameViewShell>
+</BaseLayout>

@@ -1,0 +1,121 @@
+import { describe, expect, it } from "vitest";
+import {
+	cappedDpr,
+	createParticleField,
+	PARTICLE_CAP,
+	renderParticles,
+	seededRng,
+	stepParticles,
+} from "../../src/lib/canvas/particles";
+
+describe("PARTICLE_CAP", () => {
+	it("caps the particle field at 120", () => {
+		expect(PARTICLE_CAP).toBe(120);
+	});
+});
+describe("cappedDpr", () => {
+	it("never exceeds 2 and keeps lower values", () => {
+		expect(cappedDpr(3)).toBe(2);
+		expect(cappedDpr(2.5)).toBe(2);
+		expect(cappedDpr(2)).toBe(2);
+		expect(cappedDpr(1)).toBe(1);
+		expect(cappedDpr(0.5)).toBe(0.5);
+	});
+});
+describe("seededRng", () => {
+	it("is deterministic per seed and differs across seeds", () => {
+		const a = seededRng(42);
+		const b = seededRng(42);
+		const c = seededRng(7);
+		expect(a()).toBe(b());
+		expect(a()).toBe(b());
+		expect(a()).not.toBe(c());
+	});
+});
+describe("createParticleField", () => {
+	const rng = seededRng(42);
+
+	it("keeps particles inside the canvas bounds with radius and drift speed", () => {
+		const field = createParticleField(10, 800, 600, rng);
+
+		expect(field.particles).toHaveLength(10);
+		for (const particle of field.particles) {
+			expect(particle.x).toBeGreaterThanOrEqual(0);
+			expect(particle.x).toBeLessThanOrEqual(800);
+			expect(particle.y).toBeGreaterThanOrEqual(0);
+			expect(particle.y).toBeLessThanOrEqual(600);
+			expect(particle.radius).toBeGreaterThan(0);
+			expect(particle.opacity).toBeGreaterThan(0);
+			expect(particle.opacity).toBeLessThanOrEqual(1);
+			const speed = Math.hypot(particle.vx, particle.vy);
+			expect(speed).toBeGreaterThanOrEqual(0.2);
+			expect(speed).toBeLessThanOrEqual(0.5);
+		}
+	});
+
+	it("clamps the count to PARTICLE_CAP and accepts zero", () => {
+		expect(createParticleField(1000, 800, 600, rng).particles).toHaveLength(
+			PARTICLE_CAP,
+		);
+		expect(createParticleField(0, 800, 600, rng).particles).toHaveLength(0);
+	});
+
+	it("is deterministic for the same seeded rng", () => {
+		const a = createParticleField(10, 800, 600, seededRng(42));
+		const b = createParticleField(10, 800, 600, seededRng(42));
+
+		expect(a).toEqual(b);
+	});
+});
+describe("stepParticles", () => {
+	it("moves every particle by its velocity without mutating the input", () => {
+		const field = createParticleField(5, 800, 600, seededRng(42));
+		const before = structuredClone(field);
+		const stepped = stepParticles(field);
+		expect(stepped).not.toBe(field);
+		expect(field).toEqual(before);
+		for (let i = 0; i < field.particles.length; i++) {
+			expect(stepped.particles[i].x).toBeCloseTo(
+				field.particles[i].x + field.particles[i].vx,
+				10,
+			);
+			expect(stepped.particles[i].y).toBeCloseTo(
+				field.particles[i].y + field.particles[i].vy,
+				10,
+			);
+		}
+	});
+
+	it("wraps particles that drift past the right edge", () => {
+		const field = createParticleField(1, 100, 100, () => 0.5);
+		field.particles[0].x = 99.9;
+		field.particles[0].vx = 0.5;
+		field.particles[0].y = 50;
+		field.particles[0].vy = 0;
+		const stepped = stepParticles(field);
+
+		expect(stepped.particles[0].x).not.toBe(100.4);
+		expect(stepped.particles[0].x).toBeGreaterThanOrEqual(0);
+		expect(stepped.particles[0].x).toBeLessThanOrEqual(100);
+	});
+});
+describe("renderParticles", () => {
+	it("draws one arc per particle and does not mutate the field", () => {
+		let arcCalls = 0;
+		const ctx = {
+			globalAlpha: 1,
+			fillStyle: "",
+			beginPath: () => {},
+			arc: () => {
+				arcCalls++;
+			},
+			fill: () => {},
+		};
+		const field = createParticleField(4, 800, 600, seededRng(42));
+		const before = structuredClone(field);
+
+		renderParticles(field, ctx as unknown as CanvasRenderingContext2D);
+		expect(arcCalls).toBe(4);
+		expect(field).toEqual(before);
+	});
+});

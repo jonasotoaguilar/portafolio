@@ -1,0 +1,52 @@
+---
+import { getCollection } from "astro:content";
+
+import GameViewShell from "../components/game/GameViewShell.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { VIEW_TITLES } from "../lib/seo/titles";
+
+const [siteEntry] = await getCollection("siteConfig");
+if (!siteEntry) {
+	throw new Error("Expected exactly one siteConfig entry");
+}
+const site = siteEntry.data;
+
+const EXTERNAL_LINK_CLASS =
+	"inline-flex min-h-11 items-center rounded-[2px] bg-glow-end px-4 font-label text-xl uppercase tracking-[0.08em] text-text-primary transition-colors duration-150 ease-out hover:bg-glow-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400";
+---
+
+<BaseLayout title={VIEW_TITLES.contact} site={site}>
+	<GameViewShell title="Contact">
+		<section class="flex flex-col items-start gap-8">
+			<h2 class="sr-only">Contact channels</h2>
+			<a
+				href={`mailto:${site.email}`}
+				class="inline-flex min-h-11 items-center rounded-[2px] bg-accent-500 px-4 font-label text-xl uppercase tracking-[0.08em] text-text-primary transition-[background-color,transform] duration-150 ease-out hover:bg-accent-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400 active:scale-[0.97] active:bg-accent-600"
+			>
+				{site.email}
+			</a>
+			<ul class="flex flex-col gap-2">
+				<li>
+					<a
+						href={site.socials.github}
+						target="_blank"
+						rel="noopener noreferrer"
+						class={EXTERNAL_LINK_CLASS}
+					>
+						GitHub
+					</a>
+				</li>
+				<li>
+					<a
+						href={site.socials.wealthquest}
+						target="_blank"
+						rel="noopener noreferrer"
+						class={EXTERNAL_LINK_CLASS}
+					>
+						WealthQuest
+					</a>
+				</li>
+			</ul>
+		</section>
+	</GameViewShell>
+</BaseLayout>
