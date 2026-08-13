@@ -64,9 +64,9 @@ Commits map 1:1 to units, conventional commits, tests/docs with their unit.
 
 ## Phase 5: Ambient Audio
 
-- [ ] 5.1 RED — create `tests/unit/audio-state.test.ts`: `no-track→ready⇄playing⇄muted`, `audio-error`→no-track terminal, restore
-- [ ] 5.2 GREEN — `src/lib/audio/state.ts` pure reducer
-- [ ] 5.3 GREEN — create `src/components/game/AudioControl.astro`: `<audio loop preload="none">`, `aria-pressed` button, disabled no-track state
+- [x] 5.1 RED — create `tests/unit/audio-state.test.ts`: `no-track→ready⇄playing⇄muted`, `audio-error`→no-track terminal, restore
+- [x] 5.2 GREEN — `src/lib/audio/state.ts` pure reducer
+- [x] 5.3 GREEN — create `src/components/game/AudioControl.astro`: `<audio loop preload="none">`, `aria-pressed` button, disabled no-track state
 - [ ] 5.4 RED — create `tests/e2e/ambient-audio.spec.ts`: no-track, gesture gate, toggle, persistence, nav survival, no re-probe
 - [ ] 5.5 GREEN — `src/scripts/ambient-audio.ts`: HEAD probe once (in-flight guard, stash on persisted cluster, abort on `astro:before-swap`), one-time gesture unlock, 400/200ms fades, try/catch storage
 - [ ] 5.6 GREEN — `public/audio/README.txt`: BYO licensed-track contract

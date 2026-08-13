@@ -1,15 +1,25 @@
 ---
-// Unit 5/6 boundary: ambient-audio behavior (state reducer, HEAD probe,
-// gesture unlock, fades, localStorage persistence) is implemented in later
-// units. This is inert accessible markup only — the disabled no-track button
-// shape matches design AD5's no-track state, so nothing claims sound exists.
-// No <audio> element yet; it arrives with the wiring in Unit 5/6.
+// Unit 5/6 boundary: probe, gesture unlock, fades and localStorage wiring
+// land in later units. This slice ships the markup + data hooks only:
+//   - <audio loop preload="none"> — lazy BYO track, zero bytes until play()
+//   - disabled no-track button — design AD5's safe initial state
+//   - data hooks consumed by the Unit 5/6 wiring and e2e
+// Preload="none" means a missing /audio/background.mp3 never 404s, so the
+// site stays silent and graceful with no track present (BYO contract).
 ---
+<audio
+	data-audio-element
+	src="/audio/background.mp3"
+	loop
+	preload="none"
+></audio>
 <button
 	type="button"
 	class="mute-control min-h-11 min-w-11 rounded-[2px] border border-accent-600 px-4 font-label text-xl uppercase tracking-[0.08em] text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
 	disabled
 	aria-pressed="false"
+	data-mute-control
+	data-audio-state="no-track"
 >
 	Sound: Off
 </button>

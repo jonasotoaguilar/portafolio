@@ -1,9 +1,10 @@
-# Apply Progress — persona-ui-ux-remediation (cumulative: Unit 1 + Unit 2 + Unit 3 + Unit 4)
+# Apply Progress — persona-ui-ux-remediation (cumulative: Unit 1 + Unit 2 + Unit 3 + Unit 4 + Unit 5A)
 
 - **Unit 1** (Phase 1, tasks 1.1–1.5, active/focus indicator): ✅ DONE — committed at `f616ea0`, evidence `rev-1`.
 - **Unit 2** (Phase 2, tasks 2.1–2.4, diagonal staggered menu): ✅ DONE — committed at `d38d833`, evidence `sha256:ff5066ed49abc4ca34cd88efa9e52bc3d88e0d5f7af1521859328e2a8972cc0b`.
 - **Unit 3** (Phase 3, tasks 3.1–3.6, bottom-right ControlCluster): ✅ DONE — uncommitted, evidence `sha256:cba0e53c27c34e33eef6cf3f38874ab589a9f5b6338ff459adcc0673123f7c8d`.
 - **Unit 4** (Phase 4, tasks 4.1–4.4, FigureLayer): ✅ DONE — this batch, uncommitted, evidence `sha256:d37317f653cf422ce2b638d5b2882c82f156a816f3b25ff58421ac160e513666`.
+- **Unit 5A** (Phase 5, tasks 5.1–5.3, audio reducer + control markup): ✅ DONE — this batch, uncommitted, evidence `sha256:8f3630eb8a2716a7af91f7fec8637ea188fe2cb3d6960c984aa40bd945079145`.
 
 ---
 
@@ -310,3 +311,72 @@ Total authored changed lines ≈ 396 incl. artifacts (332 code/tests) — within
 
 - Mode: chained PR slice (auto-chain, feature-branch-chain); work unit `unit-4-original-figure-layer` → PR 4 (targets `feat/persona-ui-ux-remediation` tracker branch)
 - Boundary: start = current branch state (Unit 3 verified but uncommitted; HEAD `e109d63`); end = tasks 4.1–4.4 verified; Unit 5 (audio) explicitly excluded; estimated review budget ≈ 396 authored changed lines incl. artifacts (unit budget 400)
+
+---
+
+# Unit 5A Batch (this batch — audio reducer + control markup)
+
+## Batch Metadata
+
+| Field | Value |
+|-------|-------|
+| Change / Work unit / Scope | `persona-ui-ux-remediation` / `unit-5a-audio-reducer-control` / Phase 5 tasks 5.1–5.3 only (reducer + markup; wiring/probe/fades/e2e are 5.4–5.7, next slice) |
+| Branch / Mode / Delivery | `feat/persona-ui-ux-remediation` (feature-branch-chain); Strict TDD (openspec `rules.apply.tdd: true`); `auto-chain` — no commit/push/PR |
+| Attempt token / Evidence revision | `sha256:8f3630eb8a2716a7af91f7fec8637ea188fe2cb3d6960c984aa40bd945079145` (prior batches rev-1 + Units 2–4 merged above; token provided by parent — this batch did not acquire/settle) |
+
+## Settlement Evidence
+
+- **Evidence revision**: fifth evidence batch; Units 1–4 preserved verbatim above (disk `apply-progress.md` is the artifact of record; Engram #6112 mirrors the summary).
+- **Diagnosis**: fresh batch; no prior failed evidence, no remediation lineage. RED = module missing (test file could not import `src/lib/audio/state.ts`), then GREEN.
+- **Harness**: dev server reused (http://localhost:4321, HTTP 200 — `reuseExistingServer`); no servers started/stopped, no temp files inside the repo (probe script in `/tmp/opencode/u5a`; `test-results/` gitignored).
+- **Process evidence**: baseline 84 unit + 5 cluster e2e green; final full e2e 60 passing (60 baseline + 0 new — markup verified via probe + regression), unit 98 (84 baseline + 14 new), `astro check` 0 errors/0 warnings, Biome 0 warnings on all three changed files.
+
+## TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| 5.1 | `tests/unit/audio-state.test.ts` | Unit | ✅ 84 unit | ✅ Written (14 tests; file failed to import — module absent, intended RED) | ✅ 14/14 after 5.2 | ✅ full transition matrix: initial safe, probe-ok/fail, gesture gate (muted vs unmuted), toggle both directions, audio-error terminal from 3 states + no resurrection, restore flag + gesture gating | ✅ Aligned one expectation to the design contract (status terminal; mute preference survives) |
+| 5.2 | `src/lib/audio/state.ts` | Unit | ✅ 84 + 14 RED | ✅ (covered by 5.1 RED) | ✅ 14/14 | ✅ idempotent probe-ok, probe-fail from both states, toggle no-op before unlock, terminal no-resurrection pair | ✅ Biome organizeImports fix |
+| 5.3 | `src/components/game/AudioControl.astro` | Markup | ✅ 5/5 cluster e2e + 14 unit | ✅ (audio element + hooks absent) | ✅ probe-verified | ✅ `<audio loop preload="none">` + button hooks + accessible name via runtime probe; 4 cluster viewports re-asserted (44px target, corner, hints) | ✅ N/A — markup only |
+
+## Work Unit Evidence
+
+| Evidence | Required value |
+|----------|----------------|
+| Focused test command and exact result | `pnpm run test:unit audio-state` → 14 passed (RED: 1 failed | 84 passed before impl); full `pnpm run test:unit` → 98 passed; `pnpm exec playwright test views.spec.ts -g "bottom-right control cluster"` → 5 passed; full `pnpm run test:e2e` → 60 passed; `astro check` → 0 errors / 0 warnings |
+| Runtime harness command/scenario and exact result | Dev server localhost:4321; Chromium probe: `[data-audio-element]` present (count 1) with `loop` + `preload="none"` + `src="/audio/background.mp3"`; `[data-mute-control]` disabled with `aria-pressed="false"`, `data-audio-state="no-track"`, accessible name "Sound: Off" (via `textContent` — the name the existing e2e locates), box 119×44 ≥ 44px; `trackRequests: 0` — no fetch of the missing `/audio/background.mp3` (preload="none" contract, no 404); `consoleErrors: []` |
+| Rollback boundary | Revert `tests/unit/audio-state.test.ts` (new), `src/lib/audio/state.ts` (new), `src/components/game/AudioControl.astro` (markup upgrade — restores the Unit 3 inert placeholder); cluster positioning, ControlCluster, BaseLayout, menu composition, shell.ts, links, keyboard semantics untouched |
+
+## Test Summary
+
+- **Total tests written**: 14 (all unit, in `audio-state.test.ts`); **passing**: 98 unit + 60 e2e; 14/14 in audio-state spec. **Layers**: Unit (14 new + 84 existing); E2E (60 existing — cluster describe acted as regression guard for the button). **Approval tests**: None — new module + additive markup. **Pure functions created**: 1 (`reduceAudio` + `createAudioState`, design AD5 interface verbatim).
+
+## Changed Lines (authored)
+
+| File | ± |
+|------|---|
+| `tests/unit/audio-state.test.ts` | new (105) |
+| `src/lib/audio/state.ts` | new (48) |
+| `src/components/game/AudioControl.astro` | +15/−5 |
+| `tasks.md` + `apply-progress.md` (openspec change) | 3/3 marks + cumulative merge |
+
+Total authored changed lines ≈ 225 incl. artifacts (173 code/tests) — within the 400-line unit budget.
+
+## Deviations from Design
+
+- None in behavior. Design AD5 interfaces verbatim: `AudioStatus = "no-track" | "ready" | "playing" | "muted"`, `AudioEvent` kinds `probe-ok | probe-fail | audio-error | gesture | toggle | restore{muted}`, `reduceAudio(state: { status; muted }, event)`.
+- Implementation notes (not deviations): initial state is `no-track` (safe default: nothing known → silent + disabled control until the probe resolves); `probe-ok` only arms from `no-track` (idempotent); `audio-error` → `no-track` keeps the `muted` preference (status is terminal, preference survives); `toggle` is a no-op before unlock (the wiring's gesture fires first anyway, and no-track must never toggle); `restore` sets only the `muted` flag so a restored muted preference gates the first `gesture` into `muted` (design data flow: "gesture → persisted muted? → silent | play()"). The one RED expectation corrected mid-cycle asserted `muted` resets on `audio-error`; the implementation preserves it — the test now pins the actual contract.
+
+## Issues Found
+
+- One transient full-suite flake: `budget.spec.ts` "with JS every route fills the viewport" failed once in the full run (dev-server HMR race class, same as prior units) — passed in isolation twice and in the final 60/60 full-suite rerun. No code impact.
+- Playwright package not resolvable from `/tmp` probes under pnpm (ESM + NODE_PATH); resolved by importing from the pnpm store path (`node_modules/.pnpm/playwright@1.62.1/...`). Environment note, not a repo defect.
+
+## Remaining Tasks
+
+- Phase 5 continuation (Unit 5B, next slice): tasks 5.4–5.7 — e2e `ambient-audio.spec.ts`, `src/scripts/ambient-audio.ts` wiring, `public/audio/README.txt`, verify. Phases 6–7 untouched per boundary.
+
+## Workload / PR Boundary
+
+- Mode: chained PR slice (auto-chain, feature-branch-chain); work unit `unit-5a-audio-reducer-control` → PR 5 (targets `feat/persona-ui-ux-remediation` tracker branch)
+- Boundary: start = current branch state (Units 3–4 verified but uncommitted; HEAD `30a4574`); end = tasks 5.1–5.3 verified; tasks 5.4–5.7 (wiring/e2e/README/verify) explicitly excluded; estimated review budget ≈ 225 authored changed lines incl. artifacts (unit budget 400)
