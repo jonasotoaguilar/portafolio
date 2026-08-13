@@ -144,6 +144,46 @@ html[data-game-ready] [data-view] [data-detail-panel]:not([data-active]) {
 	pointer-events: none;
 }
 
+/* Menu composition (design AD1): a 55vw column, horizontally centered, with
+   per-item diagonal offsets/skews/sizes. Each row carries inline vars
+   (--item-x / --item-skew / --item-size) set by GameMenu.astro; ONE rule
+   consumes them so items never overlap. The transform lives on the row (the
+   <li>), not the anchor, so the JS entrance animation on the anchors never
+   overrides the stagger. */
+[data-menu] {
+	width: 55vw;
+}
+
+[data-menu] .menu-item {
+	--item-x: 0rem;
+	--item-skew: 0deg;
+	--item-size: clamp(2.75rem, 9vw, 8.125rem);
+	line-height: 0.95;
+	transform: translateX(var(--item-x)) skewX(var(--item-skew));
+	font-size: var(--item-size);
+}
+
+/* Tablet 768–1023px: half offsets at −4° (design AD1). */
+@media (min-width: 768px) and (max-width: 1023px) {
+	[data-menu] .menu-item {
+		transform: translateX(calc(var(--item-x) / 2)) skewX(-4deg);
+	}
+}
+
+/* <768px or coarse pointer: the stagger collapses to uniform-size
+   non-colliding ≥44px targets with a 12px gap (design AD1, spec scenario
+   "Coarse pointer collapses stagger"). */
+@media (max-width: 767px), (pointer: coarse) {
+	[data-menu] .menu-item {
+		transform: none;
+		font-size: clamp(2.75rem, 9vw, 8.125rem);
+	}
+
+	[data-menu] .menu-list {
+		gap: 12px;
+	}
+}
+
 /* View-transition overlays (site-transitions D3/D4): the shell, every view,
    and the 404 route all carry html[data-route], so one rule set covers every
    swap. The outgoing screen leaves over 300ms; the incoming screen enters on

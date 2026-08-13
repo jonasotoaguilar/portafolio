@@ -8,31 +8,68 @@ interface Props {
 
 const { site } = Astro.props;
 
+// Design AD1 per-item diagonal config: inline CSS vars consumed by the single
+// .menu-item rule in global.css. Offsets/skews are the exact AD1 desktop
+// values; PROJECTS is the largest item. Tablet halves the offsets at −4° and
+// coarse/<768px collapse everything via CSS — no JS involved.
 const MENU_ITEMS = [
-	{ label: "About", href: "/about" },
-	{ label: "Resume", href: "/resume" },
-	{ label: "Projects", href: "/projects" },
-	{ label: "Skills", href: "/skills" },
-	{ label: "Contact", href: "/contact" },
+	{
+		label: "About",
+		href: "/about",
+		offset: "-2.25rem",
+		skew: "-6deg",
+		size: "clamp(2.75rem, 9vw, 8.125rem)",
+	},
+	{
+		label: "Resume",
+		href: "/resume",
+		offset: "1.5rem",
+		skew: "-6deg",
+		size: "clamp(2.75rem, 9vw, 8.125rem)",
+	},
+	{
+		label: "Projects",
+		href: "/projects",
+		offset: "-3rem",
+		skew: "-8deg",
+		size: "clamp(3.25rem, 10.5vw, 9.5rem)",
+	},
+	{
+		label: "Skills",
+		href: "/skills",
+		offset: "2.25rem",
+		skew: "-6deg",
+		size: "clamp(2.75rem, 9vw, 8.125rem)",
+	},
+	{
+		label: "Contact",
+		href: "/contact",
+		offset: "-1rem",
+		skew: "-8deg",
+		size: "clamp(2.75rem, 9vw, 8.125rem)",
+	},
 ] as const;
 ---
 
-<main class="game-shell flex min-h-svh flex-col justify-center px-6 py-8">
+<main class="game-shell flex min-h-svh flex-col items-center justify-center px-6 py-8">
 	<h1 class="sr-only">{site.name}</h1>
 	<nav
 		aria-label="Game menu"
 		data-menu
-		class="flex flex-col gap-2"
+		class="flex flex-col"
 	>
-		<ol class="flex flex-col gap-2">
+		<ol class="menu-list flex flex-col gap-2">
 			{
 				MENU_ITEMS.map((item) => (
-					<li>
+					<li
+						class="menu-item"
+						style={`--item-x: ${item.offset}; --item-skew: ${item.skew}; --item-size: ${item.size}`}
+					>
 						<a
 							href={item.href}
 							data-menu-item
 							data-entrance
-							class="group inline-flex min-h-11 items-center font-display text-[clamp(2.75rem,9vw,8.125rem)] uppercase leading-[0.95] text-text-primary transition-colors duration-150 ease-out -skew-x-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400"
+							class="group inline-flex min-h-11 items-center font-display uppercase leading-[0.95] text-text-primary transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400"
 						>
 							{item.label}
 						</a>

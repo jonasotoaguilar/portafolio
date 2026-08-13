@@ -41,10 +41,10 @@ Commits map 1:1 to units, conventional commits, tests/docs with their unit.
 
 ## Phase 2: Diagonal Staggered Menu
 
-- [ ] 2.1 RED — `keyboard.spec.ts`: centered/center-right stagger, non-overlap ≥1024px; coarse collapse, ≥44px targets
-- [ ] 2.2 GREEN — `GameMenu.astro`: per-item `--item-x`/`--item-skew`/`--item-size` (design AD1 offsets)
-- [ ] 2.3 GREEN — `global.css`: `.menu-item` var rule; 768–1023px half offsets −4°; <768px/coarse collapse
-- [ ] 2.4 Verify — e2e pass
+- [x] 2.1 RED — `keyboard.spec.ts`: centered/center-right stagger, non-overlap ≥1024px; coarse collapse, ≥44px targets
+- [x] 2.2 GREEN — `GameMenu.astro`: per-item `--item-x`/`--item-skew`/`--item-size` (design AD1 offsets)
+- [x] 2.3 GREEN — `global.css`: `.menu-item` var rule; 768–1023px half offsets −4°; <768px/coarse collapse
+- [x] 2.4 Verify — e2e pass
 
 ## Phase 3: Control Cluster
 
