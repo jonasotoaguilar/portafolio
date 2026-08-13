@@ -1,7 +1,8 @@
-# Apply Progress — persona-ui-ux-remediation (cumulative: Unit 1 + Unit 2)
+# Apply Progress — persona-ui-ux-remediation (cumulative: Unit 1 + Unit 2 + Unit 3)
 
 - **Unit 1** (Phase 1, tasks 1.1–1.5, active/focus indicator): ✅ DONE — committed at `f616ea0`, evidence `rev-1`.
-- **Unit 2** (Phase 2, tasks 2.1–2.4, diagonal staggered menu): ✅ DONE — this batch, uncommitted, evidence `sha256:ff5066ed49abc4ca34cd88efa9e52bc3d88e0d5f7af1521859328e2a8972cc0b`.
+- **Unit 2** (Phase 2, tasks 2.1–2.4, diagonal staggered menu): ✅ DONE — committed at `d38d833`, evidence `sha256:ff5066ed49abc4ca34cd88efa9e52bc3d88e0d5f7af1521859328e2a8972cc0b`.
+- **Unit 3** (Phase 3, tasks 3.1–3.6, bottom-right ControlCluster): ✅ DONE — this batch, uncommitted, evidence `sha256:cba0e53c27c34e33eef6cf3f38874ab589a9f5b6338ff459adcc0673123f7c8d`.
 
 ---
 
@@ -157,3 +158,82 @@ Total authored changed lines = 399 incl. artifacts (316 code/tests) — within t
 
 - Mode: chained PR slice (auto-chain, feature-branch-chain); work unit `unit-2-diagonal-staggered-menu` → PR 2 (targets `feat/persona-ui-ux-remediation` tracker branch)
 - Boundary: start = f616ea0 (Unit 1 committed); end = tasks 2.1–2.4 verified; Unit 3 (ControlCluster) explicitly excluded; estimated review budget = 399 authored changed lines incl. artifacts (unit budget 400)
+
+---
+
+# Unit 3 Batch (this batch — bottom-right ControlCluster)
+
+## Batch Metadata
+
+| Field | Value |
+|-------|-------|
+| Change / Work unit / Scope | `persona-ui-ux-remediation` / `unit-3-bottom-right-control-cluster` / Phase 3 tasks 3.1–3.6 only |
+| Branch / Mode / Delivery | `feat/persona-ui-ux-remediation` (feature-branch-chain); Strict TDD (openspec `rules.apply.tdd: true`); `auto-chain` — no commit/push/PR |
+| Attempt token / Evidence revision | `sha256:cba0e53c27c34e33eef6cf3f38874ab589a9f5b6338ff459adcc0673123f7c8d` (prior batches `rev-1` + Unit 2 merged above) |
+
+## Settlement Evidence
+
+- **Evidence revision**: third evidence batch; Units 1–2 preserved verbatim above (merged in Engram #6112 — updated, not duplicated).
+- **Diagnosis**: fresh batch; no prior failed evidence, no remediation lineage. All RED failures intended (no `[data-control-cluster]`, no "Sound: Off" button, hints visible), then GREEN.
+- **Harness**: dev server was restarted mid-batch (old pid 280526 stopped, new pid 465289 started via `astro dev --background`) to reset a dev-toolbar exposure change (see Issues). `reuseExistingServer` reused it; no temp files inside the repo (`test-results/` gitignored; biome-HEAD comparison ran from `/tmp/opencode/biome-head`).
+- **Process evidence**: baseline 84 unit + 21 views e2e green; final full e2e 57 passing (52 baseline + 5 new), unit 84, `astro check` 0 errors/0 warnings, `pnpm build` 7 pages clean, budget spec 4/4 vs rebuilt `dist/`, Biome 13 warnings on changed files vs 12 at HEAD — delta exactly the new ControlCluster import false positives (−1 KeyHints import removed, +2 ControlCluster imports, +1 BaseLayout ControlCluster import); no new warning class.
+
+## TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| 3.1 | `tests/e2e/views.spec.ts` (cluster describe) | E2E | ✅ 21 views + 84 unit | ✅ Written (2 tests; failed: no cluster locator) | ✅ 2/2 after 3.3–3.5 | ✅ 2 cases: shell anchors (5 items) + all 5 views (h1 + back link) | ✅ Nested describes per context (test.use scope fix) |
+| 3.2 | `tests/e2e/views.spec.ts` (cluster describe) | E2E | ✅ 21 views + 84 unit | ✅ Written (3 tests; failed: hints visible, no mute button) | ✅ 3/3 | ✅ 3 cases: coarse mobile 390×844, coarse desktop-width 1024×768, short 1280×500 (max-height path distinct from coarse) | ➖ None needed |
+| 3.3 | `src/components/game/ControlCluster.astro` + `AudioControl.astro` (via views.spec.ts) | E2E | ✅ 26/26 | ✅ (cluster/mute assertions) | ✅ 26/26 | ✅ corner offsets + mute ≥44px across 4 contexts | ✅ One nested describe per `test.use` context |
+| 3.4 | `KeyHints.astro`/`ViewHeader.astro`/`GameMenu.astro` (via views.spec.ts) | E2E | ✅ 26/26 | ✅ (trim is behavioral: hints only in cluster) | ✅ 26/26 | ✅ desktop (hints visible in cluster) vs coarse/short (hidden) | ➖ None needed |
+| 3.5 | `BaseLayout.astro` + `src/styles/global.css` (via views.spec.ts) | E2E | ✅ 26/26 | ✅ (position/hide rules missing → corner + visibility fail) | ✅ 26/26 | ✅ `position: fixed` probe + exact right/bottom offsets + hints `display` per media branch | ✅ Combined `(max-height: 560px), (pointer: coarse)` into one rule |
+| 3.6 | — (verification) | E2E | — | — | ✅ `pnpm run test:e2e` 57/57; unit 84/84; `astro check` 0/0; build clean; budget 4/4 | — | — |
+
+## Work Unit Evidence
+
+| Evidence | Required value |
+|----------|----------------|
+| Focused test command and exact result | `pnpm run test:e2e views.spec.ts -g "bottom-right control cluster"` → 5 passed, 0 failed; full `pnpm run test:e2e` → 57 passed (52 baseline + 5 new); `pnpm run test:unit` → 84 passed; `pnpm build` clean (7 pages) |
+| Runtime harness command/scenario and exact result | Dev server localhost:4321 (restarted, pid 465289); Chromium probes: desktop 1280×720 shell + /about — cluster `position: fixed`, box 861..1252 × 616..696 (right edge 1252 = vw−28, bottom 696 = vh−24, exact AD4), hints `display: flex`, mute 44×119 at corner, `data-astro-transition-persist` present, zero console/page errors; coarse 390×844 — hints `none`, mute 44px box 243..362 × 776..820 (right 362 = 390−28, bottom 820 = 844−24); short 1280×500 — hints `none` (max-height path), mute 44px at 1133..1252 × 432..476 (bottom 476 = 500−24). No overlap: menu anchors end ≤648px right (zone starts 861) at 1280×720; view headers end ≤149px top (zone starts 616) |
+| Rollback boundary | Revert `src/components/game/ControlCluster.astro`, `AudioControl.astro`, `BaseLayout.astro` wiring, `global.css` cluster block, KeyHints/ViewHeader/GameMenu trims, `tests/e2e/views.spec.ts` cluster describe + the two `main`-scoped button-count edits; menu composition, shell.ts, links, keyboard semantics untouched |
+
+## Test Summary
+
+- **Total tests written**: 5 (all e2e, in `views.spec.ts`); **passing**: 57 e2e + 84 unit; 26/26 in views spec. **Layers**: E2E (5 new + 21 existing in spec); Unit (84 existing, untouched). **Approval tests**: None — additive markup/CSS. **Pure functions**: 0 (CSS media-query geometry + inert markup).
+
+## Changed Lines (authored)
+
+| File | ± |
+|------|---|
+| `tests/e2e/views.spec.ts` | +147 (5 cluster tests + helpers + 2 main-scope edits) |
+| `src/styles/global.css` | +21 |
+| `src/components/game/ControlCluster.astro` | new (~17) |
+| `src/components/game/AudioControl.astro` | new (~16) |
+| `src/components/game/KeyHints.astro` | 5 ± (class hook, drop Tailwind coarse variant) |
+| `src/components/game/ViewHeader.astro` | −3 (drop KeyHints) |
+| `src/components/game/GameMenu.astro` | −2 (drop KeyHints) |
+| `src/layouts/BaseLayout.astro` | +2 (import + render) |
+| `tasks.md` + `apply-progress.md` (openspec change) | 6/6 marks + cumulative merge |
+
+Total authored changed lines ≈ 310 incl. artifacts (213 code/tests) — within the 400-line unit budget.
+
+## Deviations from Design
+
+- None in behavior. Design AD4 verbatim: fixed bottom-right (bottom 1.5rem / right 1.75rem), column, `transition:persist` in BaseLayout, hints hidden on `(max-height: 560px)` and `(pointer: coarse)`, mute ≥44px (Tailwind `min-h-11 min-w-11`, matching repo convention; the e2e asserts the computed ≥44px box).
+- Boundary respected: `AudioControl.astro` is an inert accessible placeholder only — a disabled `aria-pressed="false"` "Sound: Off" button matching design AD5's no-track state, with a comment documenting the Unit 5/6 boundary (state reducer, HEAD probe, gesture unlock, fades, persistence, `<audio>` element all deferred). No audio logic, no FigureLayer, no docs changes.
+- Implementation notes (not deviations): hide rule combined into one `@media (max-height: 560px), (pointer: coarse)`; `key-hints` class added to the KeyHints footer as the hide-rule hook (Tailwind `pointer-coarse:hidden` variant removed — hide is single-sourced in global.css per task 3.5); cluster is a page-level `<footer>` rendered after `<slot />` in BaseLayout (covers shell, all views, and 404 consistently).
+
+## Issues Found
+
+1. **Playwright `test.use()` scope trap (fixed in-test)**: `test.use()` calls inside one `test.describe` merge across the whole block (later calls override per-property) — the desktop tests silently ran at the LAST test.use's viewport (1280×500) plus coarse options from earlier calls, failing corner assertions by 220px. Fixed by nesting one `test.use` + its tests in a dedicated nested `describe` per context (desktop 1280×720 / coarse mobile 390×844 / coarse desktop 1024×768 / short 1280×500). NOTE: Unit 2's keyboard.spec uses the same pattern — it passes only because both contexts there are coarse (same collapse behavior); worth reviewing in a later unit.
+2. **Astro Dev Toolbar button exposure (environmental, fixed in-test)**: mid-session the dev toolbar began exposing its 4 shadow-DOM buttons (Menu/Inspect/Audit/Settings) to `getByRole("button")` on every page (stable across a dev-server restart; absent from production builds). Two pre-existing count-all-buttons tests (SKILLS =3, RESUME =5) then failed with 8/10 — the failure is toolbar-induced, not caused by this unit (without the cluster they would still fail with 7/9). Fixed minimally: scoped those two assertions to `page.locator("main").getByRole("button")` (content region — the toolbar lives outside `<main>`), preserving intent exactly. My new tests use named locators only, so they are toolbar-proof by construction.
+3. Dev server restarted mid-batch (old pid 280526 → new pid 465289) — the harness continued on the new server; full suite re-run green on it.
+
+## Remaining Tasks
+
+- Phase 4 (Unit 4): FigureLayer — tasks 4.1–4.4 (NOT in this batch). Phases 5–7 untouched per boundary.
+
+## Workload / PR Boundary
+
+- Mode: chained PR slice (auto-chain, feature-branch-chain); work unit `unit-3-bottom-right-control-cluster` → PR 3 (targets `feat/persona-ui-ux-remediation` tracker branch)
+- Boundary: start = d38d833 (Unit 2 committed); end = tasks 3.1–3.6 verified; Unit 4 (FigureLayer) explicitly excluded; estimated review budget ≈ 310 authored changed lines incl. artifacts (unit budget 400)

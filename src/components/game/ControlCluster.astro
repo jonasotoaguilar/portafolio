@@ -1,0 +1,13 @@
+---
+import AudioControl from "./AudioControl.astro";
+import KeyHints from "./KeyHints.astro";
+---
+
+<!-- Design AD4: fixed bottom-right control cluster rendered once in
+     BaseLayout. Position and hide rules live in global.css
+     (.control-cluster); transition:persist keeps the cluster — and from
+     Unit 5/6 its audio state — across view-transition swaps. -->
+<footer class="control-cluster" data-control-cluster transition:persist>
+	<KeyHints />
+	<AudioControl />
+</footer>

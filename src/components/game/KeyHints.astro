@@ -1,9 +1,10 @@
 ---
 // Decorative key hints: styled keys only, no Gamepad API (spec: hints are
 // decoration; keyboard reality is Arrow/Enter/Escape). Hidden from assistive
-// tech (real link text carries the meaning) and on touch-only devices.
+// tech (real link text carries the meaning) and by the cluster hide rules in
+// global.css on short (<560px) or coarse-pointer viewports (design AD4).
 ---
-<footer class="pointer-coarse:hidden flex items-center gap-4 font-label text-xl uppercase tracking-[0.08em] text-text-secondary" aria-hidden="true">
+<footer class="key-hints flex items-center gap-4 font-label text-xl uppercase tracking-[0.08em] text-text-secondary" aria-hidden="true">
 	<span class="rounded-[2px] border border-accent-600 px-2 py-1 text-sm leading-none text-accent-300">
 		GAMEPAD
 	</span>

@@ -48,12 +48,12 @@ Commits map 1:1 to units, conventional commits, tests/docs with their unit.
 
 ## Phase 3: Control Cluster
 
-- [ ] 3.1 RED — `tests/e2e/views.spec.ts`: fixed bottom-right cluster, no desktop overlap
-- [ ] 3.2 RED — coarse pointer: hints hidden, mute reachable ≥44px
-- [ ] 3.3 GREEN — create `src/components/game/ControlCluster.astro` (KeyHints + AudioControl slot, `transition:persist`)
-- [ ] 3.4 GREEN — `KeyHints.astro`/`ViewHeader.astro`: content-only trim
-- [ ] 3.5 GREEN — `BaseLayout.astro`: render cluster; `global.css`: position + hide rules (max-height 560px, pointer-coarse)
-- [ ] 3.6 Verify — e2e pass
+- [x] 3.1 RED — `tests/e2e/views.spec.ts`: fixed bottom-right cluster, no desktop overlap
+- [x] 3.2 RED — coarse pointer: hints hidden, mute reachable ≥44px
+- [x] 3.3 GREEN — create `src/components/game/ControlCluster.astro` (KeyHints + AudioControl slot, `transition:persist`)
+- [x] 3.4 GREEN — `KeyHints.astro`/`ViewHeader.astro`: content-only trim
+- [x] 3.5 GREEN — `BaseLayout.astro`: render cluster; `global.css`: position + hide rules (max-height 560px, pointer-coarse)
+- [x] 3.6 Verify — e2e pass
 
 ## Phase 4: Figure Layer
 

@@ -1,0 +1,15 @@
+---
+// Unit 5/6 boundary: ambient-audio behavior (state reducer, HEAD probe,
+// gesture unlock, fades, localStorage persistence) is implemented in later
+// units. This is inert accessible markup only — the disabled no-track button
+// shape matches design AD5's no-track state, so nothing claims sound exists.
+// No <audio> element yet; it arrives with the wiring in Unit 5/6.
+---
+<button
+	type="button"
+	class="mute-control min-h-11 min-w-11 rounded-[2px] border border-accent-600 px-4 font-label text-xl uppercase tracking-[0.08em] text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
+	disabled
+	aria-pressed="false"
+>
+	Sound: Off
+</button>

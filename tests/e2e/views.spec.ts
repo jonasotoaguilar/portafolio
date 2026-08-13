@@ -204,7 +204,10 @@ test.describe("game shell and view routes", () => {
 		page,
 	}) => {
 		await page.goto("/skills");
-		await expect(page.getByRole("button")).toHaveCount(3);
+		// Content-region scope: the dev-only Astro toolbar injects its own
+		// buttons outside <main>, so page-wide button counts are unstable in
+		// dev (the toolbar is absent from production builds).
+		await expect(page.locator("main").getByRole("button")).toHaveCount(3);
 		await expect(page.getByRole("button", { name: "backend" })).toBeVisible();
 		const panel = page.locator("[data-detail-panel][data-active]");
 		await expect(panel.getByText("FastAPI")).toBeVisible();
@@ -314,7 +317,9 @@ test.describe("RESUME view", () => {
 		page,
 	}) => {
 		await page.goto("/resume");
-		await expect(page.getByRole("button")).toHaveCount(5);
+		// Content-region scope: dev-only Astro toolbar buttons live outside
+		// <main> and would otherwise inflate the page-wide button count.
+		await expect(page.locator("main").getByRole("button")).toHaveCount(5);
 		const panel = page.locator("[data-detail-panel][data-active]");
 
 		await expect(panel).toContainText("USACH");
@@ -615,5 +620,143 @@ test.describe("view-transition overlays", () => {
 			docAfter,
 			"full-page fallback must create a new document (startViewTransition masked)",
 		).not.toBe(docBefore);
+	});
+});
+
+// Bottom-right control cluster (persona-navigation spec scenarios "Hints
+// cluster bottom-right without overlap" and "Coarse pointer hides hints";
+// design AD4): the cluster is fixed at bottom 1.5rem / right 1.75rem, the
+// decorative key hints hide on short (<560px) or coarse-pointer viewports,
+// and the mute control keeps a ≥44px target. Anchor boxes (the visible
+// menu items) are the non-overlap measure on the shell; the heading and the
+// back link stand for view content, which never reaches the corner region.
+test.describe("bottom-right control cluster", () => {
+	const cluster = (page: Page) => page.locator("[data-control-cluster]");
+
+	const clusterBox = async (page: Page) => {
+		const box = await cluster(page).boundingBox();
+		if (!box) throw new Error("expected a visible control cluster box");
+		return box;
+	};
+
+	const assertCorner = (
+		box: { x: number; y: number; width: number; height: number },
+		viewportWidth: number,
+		viewportHeight: number,
+	) => {
+		expect(
+			Math.abs(viewportWidth - 28 - (box.x + box.width)),
+		).toBeLessThanOrEqual(2);
+		expect(
+			Math.abs(viewportHeight - 24 - (box.y + box.height)),
+		).toBeLessThanOrEqual(2);
+	};
+
+	const assertNoOverlap = (
+		a: { x: number; y: number; width: number; height: number },
+		b: { x: number; y: number; width: number; height: number },
+	) => {
+		const overlapX =
+			Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
+		const overlapY =
+			Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+		expect(Math.min(overlapX, overlapY)).toBeLessThanOrEqual(0.5);
+	};
+
+	const assertMuteTarget = async (page: Page) => {
+		const mute = page.getByRole("button", { name: "Sound: Off" });
+		await expect(mute).toBeVisible();
+		const box = await mute.boundingBox();
+		if (!box) throw new Error("expected a visible mute button box");
+		expect(box.height).toBeGreaterThanOrEqual(44);
+		expect(box.width).toBeGreaterThanOrEqual(44);
+	};
+
+	test.use({ viewport: { width: 1280, height: 720 } });
+
+	test.describe("desktop 1280x720", () => {
+		test("shell: cluster is fixed bottom-right and never overlaps menu items", async ({
+			page,
+		}) => {
+			await page.goto("/");
+			await expect(cluster(page)).toBeVisible();
+			expect(
+				await cluster(page).evaluate((el) => getComputedStyle(el).position),
+			).toBe("fixed");
+			const box = await clusterBox(page);
+			assertCorner(box, 1280, 720);
+			const items = await page.locator("[data-menu-item]").evaluateAll((els) =>
+				els.map((el) => {
+					const rect = el.getBoundingClientRect();
+					return {
+						x: rect.x,
+						y: rect.y,
+						width: rect.width,
+						height: rect.height,
+					};
+				}),
+			);
+			expect(items).toHaveLength(5);
+			for (const item of items) assertNoOverlap(item, box);
+			await assertMuteTarget(page);
+		});
+
+		test("every view: cluster stays fixed bottom-right without overlapping the header", async ({
+			page,
+		}) => {
+			for (const [path] of VIEWS) {
+				await page.goto(path);
+				await expect(cluster(page)).toBeVisible();
+				assertCorner(await clusterBox(page), 1280, 720);
+				for (const target of [
+					page.getByRole("heading", { level: 1 }),
+					page.getByRole("link", { name: "Back to menu" }),
+				]) {
+					const box = await target.boundingBox();
+					if (!box) {
+						throw new Error(`expected a visible header box on ${path}`);
+					}
+					assertNoOverlap(box, await clusterBox(page));
+				}
+			}
+		});
+	});
+
+	test.describe("coarse mobile 390x844", () => {
+		test.use({
+			hasTouch: true,
+			isMobile: true,
+			viewport: { width: 390, height: 844 },
+		});
+
+		test("hints hidden, mute control stays a ≥44px target", async ({
+			page,
+		}) => {
+			await page.goto("/");
+			await expect(page.getByText("GAMEPAD")).toBeHidden();
+			await assertMuteTarget(page);
+		});
+	});
+
+	test.describe("coarse desktop-width 1024x768", () => {
+		test.use({ hasTouch: true, viewport: { width: 1024, height: 768 } });
+
+		test("hints hidden, mute stays reachable", async ({ page }) => {
+			await page.goto("/");
+			await expect(page.getByText("GAMEPAD")).toBeHidden();
+			await assertMuteTarget(page);
+		});
+	});
+
+	test.describe("short viewport 1280x500", () => {
+		test.use({ viewport: { width: 1280, height: 500 } });
+
+		test("hints hidden below 560px, mute control stays a ≥44px target", async ({
+			page,
+		}) => {
+			await page.goto("/");
+			await expect(page.getByText("GAMEPAD")).toBeHidden();
+			await assertMuteTarget(page);
+		});
 	});
 });

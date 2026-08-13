@@ -184,6 +184,27 @@ html[data-game-ready] [data-view] [data-detail-panel]:not([data-active]) {
 	}
 }
 
+/* Control cluster (design AD4): fixed bottom-right at 1.5rem/1.75rem,
+   column layout, persisted across view transitions (transition:persist on
+   the element in BaseLayout). Decorative hints hide on short (<560px) or
+   coarse-pointer viewports; the mute control keeps its ≥44px target. */
+.control-cluster {
+	position: fixed;
+	right: 1.75rem;
+	bottom: 1.5rem;
+	z-index: 50;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 0.5rem;
+}
+
+@media (max-height: 560px), (pointer: coarse) {
+	.control-cluster .key-hints {
+		display: none;
+	}
+}
+
 /* View-transition overlays (site-transitions D3/D4): the shell, every view,
    and the 404 route all carry html[data-route], so one rule set covers every
    swap. The outgoing screen leaves over 300ms; the incoming screen enters on

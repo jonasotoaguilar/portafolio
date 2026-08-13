@@ -3,6 +3,7 @@ import { ClientRouter } from "astro:transitions";
 
 import "../styles/global.css";
 import Background from "../components/Background.astro";
+import ControlCluster from "../components/game/ControlCluster.astro";
 import JsonLd from "../components/JsonLd.astro";
 import type { SiteConfig } from "../lib/content/schemas";
 import { canonicalUrl, SHELL_TITLE, SITE_URL } from "../lib/seo/titles";
@@ -45,5 +46,6 @@ const canonical = is404
 		<div class="scanlines-layer" aria-hidden="true"></div>
 		<Background />
 		<slot />
+		<ControlCluster />
 	</body>
 </html>
