@@ -33,11 +33,11 @@ Commits map 1:1 to units, conventional commits, tests/docs with their unit.
 
 ## Phase 1: Active/Focus Indicator (defect first)
 
-- [ ] 1.1 RED — `tests/e2e/keyboard.spec.ts`: ArrowDown moves `data-active`+`aria-current`; `:focus-visible` outline stays visible
-- [ ] 1.2 GREEN — `src/scripts/shell.ts`: set `data-active`+`aria-current` on init/move; clear on teardown
-- [ ] 1.3 GREEN — `src/components/game/GameMenu.astro`: `data-menu-item` markup + hover hooks
-- [ ] 1.4 GREEN — `src/styles/global.css`: accent-400 text, clip-path accent layer, 2px cyan bar, hover mirror, 150ms; never suppress `:focus-visible`
-- [ ] 1.5 Verify — `pnpm test:e2e keyboard.spec.ts`
+- [x] 1.1 RED — `tests/e2e/keyboard.spec.ts`: ArrowDown moves `data-active`+`aria-current`; `:focus-visible` outline stays visible
+- [x] 1.2 GREEN — `src/scripts/shell.ts`: set `data-active`+`aria-current` on init/move; clear on teardown
+- [x] 1.3 GREEN — `src/components/game/GameMenu.astro`: `data-menu-item` markup + hover hooks
+- [x] 1.4 GREEN — `src/styles/global.css`: accent-400 text, clip-path accent layer, 2px cyan bar, hover mirror, 150ms; never suppress `:focus-visible`
+- [x] 1.5 Verify — `pnpm test:e2e keyboard.spec.ts`
 
 ## Phase 2: Diagonal Staggered Menu
 

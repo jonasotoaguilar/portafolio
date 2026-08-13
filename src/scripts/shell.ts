@@ -24,6 +24,20 @@ function trapTab(event: KeyboardEvent): void {
 	}
 }
 
+// Persistent keyboard-active indicator (design AD2): exactly one item carries
+// data-active + aria-current="page" at a time; index -1 clears every item.
+function syncActive(index: number): void {
+	items.forEach((item, i) => {
+		if (i === index) {
+			item.setAttribute("data-active", "");
+			item.setAttribute("aria-current", "page");
+		} else {
+			item.removeAttribute("data-active");
+			item.removeAttribute("aria-current");
+		}
+	});
+}
+
 function onKeydown(event: KeyboardEvent): void {
 	if (event.key === "Tab") {
 		trapTab(event);
@@ -33,6 +47,7 @@ function onKeydown(event: KeyboardEvent): void {
 	if (result.kind === "move") {
 		event.preventDefault();
 		state.activeIndex = result.activeIndex;
+		syncActive(result.activeIndex);
 		items[result.activeIndex]?.focus();
 	} else if (result.kind === "activate") {
 		const active = items[state.activeIndex];
@@ -73,6 +88,7 @@ function setupShell(): void {
 	nav = root;
 	items = found;
 	state = { open: true, activeIndex: 0 };
+	syncActive(0);
 	// No-scroll gate (design D5): set only with JS, so zero-JS content flows.
 	document.documentElement.dataset.gameReady = "";
 	playEntrance(window.matchMedia(REDUCED_MOTION_QUERY).matches);
@@ -83,6 +99,7 @@ function setupShell(): void {
 function teardownShell(): void {
 	for (const animation of animations) animation.stop();
 	animations.length = 0;
+	syncActive(-1);
 	nav?.removeEventListener("keydown", onKeydown);
 	nav = null;
 	items = [];

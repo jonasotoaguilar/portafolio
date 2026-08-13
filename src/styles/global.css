@@ -10,6 +10,7 @@
 	--color-accent-400: #5d75ff;
 	--color-accent-500: #4666ff;
 	--color-accent-600: #2f46b8;
+	--color-accent-cyan: #38e1ff;
 	--color-text-primary: #ffffff;
 	--color-text-secondary: #a7a7ab;
 	--color-scanline: #000000;
@@ -102,6 +103,45 @@ html[data-game-ready] [data-view] [data-detail-panel]:not([data-active]) {
 		animation: none;
 		opacity: 1;
 	}
+}
+
+/* Menu active indicator (design AD2): the keyboard-active item and :hover
+   share one persistent colorful treatment — accent-400 text, a diagonal
+   clip-path accent layer behind the label, and a 2px cyan highlight bar.
+   Color-only 150ms transition (Tailwind transition-colors on the item); the
+   layer and bar toggle with state, no entrance motion. The :focus-visible
+   outline is never touched here, so it stays visible alongside the
+   treatment. */
+[data-menu-item] {
+	position: relative;
+}
+
+[data-menu-item][data-active],
+[data-menu-item]:hover {
+	color: var(--color-accent-400);
+}
+
+[data-menu-item][data-active]::before,
+[data-menu-item]:hover::before {
+	content: "";
+	position: absolute;
+	inset: 0.05em 0;
+	z-index: -1;
+	background: color-mix(in srgb, var(--color-accent-400) 22%, transparent);
+	clip-path: polygon(0.35em 0, 100% 0, calc(100% - 0.35em) 100%, 0 100%);
+	pointer-events: none;
+}
+
+[data-menu-item][data-active]::after,
+[data-menu-item]:hover::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0.04em;
+	height: 2px;
+	background: var(--color-accent-cyan);
+	pointer-events: none;
 }
 
 /* View-transition overlays (site-transitions D3/D4): the shell, every view,
