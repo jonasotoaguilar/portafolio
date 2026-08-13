@@ -14,7 +14,7 @@ Every link below points to a file that exists in this repository.
 
 ## Mental Model
 
-portafolio is a fully static Persona-3 game-menu portfolio for Jonathan Soto (jonasotoaguilar): Astro 7.2.0 generates plain HTML at build time from Content Collections, with a root game-menu shell at `/` and five view routes (`/about`, `/resume`, `/projects`, `/skills`, `/contact`), while a fixed three-layer background (CSS radial glow, CSS CRT scanlines, Canvas 2D particles) and native View Transitions provide the Persona-3 feel in the browser. There is no backend, database, or runtime state; the output is served by any static host.
+portafolio is a fully static Persona-3 game-menu portfolio for Jonathan Soto (jonasotoaguilar): Astro 7.2.0 generates plain HTML at build time from Content Collections, with a root game-menu shell at `/` and five view routes (`/about`, `/resume`, `/projects`, `/skills`, `/contact`), while a fixed four-layer background (CSS radial glow, CSS CRT scanlines, Canvas 2D particles, and an original decorative figure/artifact layer) plus a bottom-right control cluster and native View Transitions provide the Persona-3 feel in the browser. There is no backend, database, or runtime state; the output is served by any static host.
 
 - `docs/codebase/mental-model.md` — the foundational detail page: how the site fits together, data flow, the canvas game-loop pattern, and the reduced-motion contract.
 
@@ -26,7 +26,7 @@ Static-first and content-driven: everything a visitor sees is generated at build
 
 | Page | What it covers | Key files |
 |------|---------------|-----------|
-| `docs/codebase/mental-model.md` | Mental model of the site: shell + views, content collections, three-layer background, view transitions | `src/pages/index.astro`, `src/styles/global.css`, `astro.config.mjs` |
+| `docs/codebase/mental-model.md` | Mental model of the site: shell + views, content collections, layered background, view transitions | `src/pages/index.astro`, `src/styles/global.css`, `astro.config.mjs` |
 
 ## Stack
 
@@ -53,20 +53,20 @@ Static-first and content-driven: everything a visitor sees is generated at build
 │   └── tailwind-4-docs/     #   Tailwind 4 docs, engineering playbook, sync script
 ├── .github/workflows/       # ci.yml, pr-check.yml, release.yml
 ├── docs/
-│   ├── adr/                 # ADR-0001 (static over SPA), ADR-0002 (canvas background), ADR-0003 (static view routes)
+│   ├── adr/                 # ADR-0001 (static over SPA), ADR-0002 (canvas background), ADR-0003 (static view routes), ADR-0004 (BYO ambient audio)
 │   ├── CODEBASE-GUIDE.md    # this guide
 │   └── codebase/            # detail pages (mental-model.md)
-├── public/                  # static assets: favicon.ico, favicon.svg
+├── public/                  # static assets: favicon.ico, favicon.svg, audio/README.txt (BYO track contract)
 ├── scripts/                 # release hooks: release-preflight, release-publish, release-verify
 ├── src/
-│   ├── components/          # game/ shell+view components; preserved: Background, JsonLd, Watermark
+│   ├── components/          # game/ shell+view components; preserved: Background, JsonLd, Watermark; FigureLayer (per-route SVG)
 │   ├── content/             # content collections: projects/*.md, skills.yaml, site.config.yaml, resume.yaml (+ content.config.ts)
-│   ├── layouts/             # BaseLayout.astro (head, transitions)
-│   ├── lib/                 # canvas/particles.ts, content/schemas.ts + projects.ts, menu/keys.ts, motion/, seo/
+│   ├── layouts/             # BaseLayout.astro (head, transitions, FigureLayer + ControlCluster)
+│   ├── lib/                 # audio/state.ts (reducer), canvas/particles.ts, content/schemas.ts + projects.ts, menu/keys.ts, motion/, seo/
 │   ├── pages/               # index.astro (game shell), 404.astro, and the five view routes
-│   ├── scripts/             # shell.ts, view.ts, entrances.ts, living-background.ts
+│   ├── scripts/             # shell.ts, view.ts, entrances.ts, living-background.ts, ambient-audio.ts
 │   └── styles/              # global.css (Tailwind entry point)
-├── tests/                   # unit/ (Vitest: content, canvas, seo, pages, menu-keys, layout, entrances, resume, privacy-gate), e2e/ (Playwright: views, links, budget, reduced-motion)
+├── tests/                   # unit/ (Vitest: content, canvas, seo, pages, menu-keys, layout, entrances, resume, privacy-gate, audio-state), e2e/ (Playwright: views, links, budget, reduced-motion, ambient-audio, keyboard, contact-resolution, transitions-evidence)
 ├── astro.config.mjs         # site URL, sitemap, Tailwind v4 plugin
 ├── biome.json               # lint/format configuration
 ├── lefthook.yml             # pre-commit: biome + vitest --changed
@@ -100,6 +100,8 @@ CI (`ci.yml`) runs on every PR and push to `main`: type check, lint, unit tests,
 - `[DESIGN.md](../DESIGN.md)` — visual design system: Persona-3 aesthetic, tokens, layout, motion, accessibility contract.
 - `[docs/adr/0001-astro-static-over-react-spa.md](adr/0001-astro-static-over-react-spa.md)` — why Astro static over a React SPA.
 - `[docs/adr/0002-canvas-2d-background-over-video-assets.md](adr/0002-canvas-2d-background-over-video-assets.md)` — why a Canvas 2D game loop over video assets.
+- `[docs/adr/0003-static-view-routes-over-client-view-state.md](adr/0003-static-view-routes-over-client-view-state.md)` — why real static routes over client-only view state.
+- `[docs/adr/0004-byo-licensed-ambient-audio.md](adr/0004-byo-licensed-ambient-audio.md)` — why BYO licensed ambient audio over a bundled soundtrack.
 - `[docs/codebase/mental-model.md](codebase/mental-model.md)` — foundational mental-model detail page (start here after this guide).
 - `[AGENTS.md](../AGENTS.md)` — agent operating rules for this repository.
 - `.github/` — community docs (CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md, CODEOWNERS, issue/PR templates).
@@ -109,7 +111,7 @@ CI (`ci.yml`) runs on every PR and push to `main`: type check, lint, unit tests,
 1. `README.md` — what the project is and how to run it.
 2. `docs/codebase/mental-model.md` — how the site fits together and what is implemented vs. planned.
 3. `PRD.md` and `DESIGN.md` — product intent and the Persona-3 visual system.
-4. `ARCHITECTURE.md` and `docs/adr/` — technical architecture and the three key decisions.
+4. `ARCHITECTURE.md` and `docs/adr/` — technical architecture and the key decisions.
 
 ## Next Step
 

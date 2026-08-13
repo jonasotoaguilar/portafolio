@@ -16,6 +16,13 @@ const ROUTES = [
 
 // Exact per-route document titles (seo-metadata): asserted from the rendered
 // route, not just from built HTML.
+// Inline module scripts (Astro inlines small scripts — the ambient-audio
+// wiring is one of them), which the external-script regex must not miss.
+const INLINE_MODULES = (html: string): string[] =>
+	[...html.matchAll(/<script type="module">([\s\S]*?)<\/script>/g)].map(
+		(match) => match[1] ?? "",
+	);
+
 const TITLES: [string, string][] = [
 	["/", "Jonathan Soto · Backend & Full-Stack Engineer"],
 	["/about", "About · Jonathan Soto"],
@@ -26,6 +33,32 @@ const TITLES: [string, string][] = [
 ];
 
 test.describe("first-load budget", () => {
+	test("every route ships the audio wiring inside the measured script set and the figure layer", () => {
+		// Portfolio-page spec "Budget holds with new assets": the production
+		// build with the audio and figure layers is what the budget measures.
+		// The ambient-audio wiring (design AD5) is inlined per route by Astro
+		// and the figure layer is zero-JS static markup (design AD3) — both
+		// must be present in the built document, wherever the bundler puts
+		// the audio module.
+		for (const [route, file] of ROUTES) {
+			const html = readFileSync(`dist/${file}`, "utf8");
+			const external = [...html.matchAll(/src="(\/_astro\/[^"]+\.js)"/g)].map(
+				(match) => match[1] ?? "",
+			);
+			const measured = [
+				...external.map((src) => readFileSync(`dist${src}`, "utf8")),
+				...INLINE_MODULES(html),
+			].join("\n");
+			expect(
+				measured.includes("no-track") && measured.includes("muted"),
+				`${route} audio wiring must be inside the measured script set`,
+			).toBe(true);
+			expect(html, `${route} must ship the figure layer markup`).toContain(
+				"figure-layer",
+			);
+		}
+	});
+
 	test("every route stays under 100KB of gzipped JavaScript", () => {
 		for (const [route, file] of ROUTES) {
 			const html = readFileSync(`dist/${file}`, "utf8");
@@ -36,11 +69,18 @@ test.describe("first-load budget", () => {
 				scripts.length,
 				`${route} must reference client scripts`,
 			).toBeGreaterThan(0);
-			const total = scripts.reduce((sum, src) => {
+			const external = scripts.reduce((sum, src) => {
 				const bytes = Buffer.from(readFileSync(`dist${src}`, "utf8"));
 				return sum + gzipSync(bytes).length;
 			}, 0);
-			console.log(`${route} gzipped JS: ${total} bytes`);
+			const inline = INLINE_MODULES(html).reduce(
+				(sum, source) => sum + gzipSync(Buffer.from(source, "utf8")).length,
+				0,
+			);
+			const total = external + inline;
+			console.log(
+				`${route} gzipped JS: ${total} bytes (external ${external} + inline ${inline})`,
+			);
 			expect(total, `${route} under 100KB gzipped`).toBeLessThan(100 * 1024);
 		}
 	});

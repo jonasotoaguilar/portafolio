@@ -90,7 +90,7 @@ A visitor lands on `/` and sees a full-screen game menu: five diagonally stagger
 
 ### Architecture Overview
 
-Static site generation: Markdown Content Collections feed Astro pages at build time; the output is plain HTML/CSS/JS. The root page is a full-screen game menu; each of the five views is its own static route. A fixed three-layer background (CSS radial glow, CSS scanlines, Canvas 2D particles) sits behind every view. Native View Transitions handle page changes; the canvas persists across them via `transition:persist`. Full detail lives in ARCHITECTURE.md.
+Static site generation: Markdown Content Collections feed Astro pages at build time; the output is plain HTML/CSS/JS. The root page is a full-screen game menu; each of the five views is its own static route. A fixed four-layer background (CSS radial glow, CSS scanlines, Canvas 2D particles, and an original decorative figure/artifact layer) sits behind every view. Native View Transitions handle page changes; the canvas and the control cluster persist across them via `transition:persist`. Full detail lives in ARCHITECTURE.md.
 
 ### Integration Points
 

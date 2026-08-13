@@ -10,6 +10,7 @@
 | Suggested split | PR 1 → PR 2 → … → PR 8 |
 | Delivery strategy | auto-chain |
 | Chain strategy | feature-branch-chain |
+| Unit 5B size exception | **Accepted by maintainer (Jona, 2026-08-13)**: tasks 5.4–5.7 = 546 code/test lines (631 incl. OpenSpec artifacts) exceed the 400-line review budget, but no clean sub-400 autonomous split keeps the runtime behavior together with its verifying E2E tests (wiring `src/scripts/ambient-audio.ts` + `tests/e2e/ambient-audio.spec.ts` are mutually verifying and cohesive). Recorded in apply-progress Unit 5B Batch Metadata / Issues #4 / Workload-PR Boundary. |
 
 Decision needed before apply: No
 Chained PRs recommended: Yes
@@ -67,20 +68,22 @@ Commits map 1:1 to units, conventional commits, tests/docs with their unit.
 - [x] 5.1 RED — create `tests/unit/audio-state.test.ts`: `no-track→ready⇄playing⇄muted`, `audio-error`→no-track terminal, restore
 - [x] 5.2 GREEN — `src/lib/audio/state.ts` pure reducer
 - [x] 5.3 GREEN — create `src/components/game/AudioControl.astro`: `<audio loop preload="none">`, `aria-pressed` button, disabled no-track state
-- [ ] 5.4 RED — create `tests/e2e/ambient-audio.spec.ts`: no-track, gesture gate, toggle, persistence, nav survival, no re-probe
-- [ ] 5.5 GREEN — `src/scripts/ambient-audio.ts`: HEAD probe once (in-flight guard, stash on persisted cluster, abort on `astro:before-swap`), one-time gesture unlock, 400/200ms fades, try/catch storage
-- [ ] 5.6 GREEN — `public/audio/README.txt`: BYO licensed-track contract
-- [ ] 5.7 Verify — `pnpm test:unit && pnpm test:e2e ambient-audio.spec.ts`
+- [x] 5.4 RED — create `tests/e2e/ambient-audio.spec.ts`: no-track, gesture gate, toggle, persistence, nav survival, no re-probe
+- [x] 5.5 GREEN — `src/scripts/ambient-audio.ts`: HEAD probe once (in-flight guard, stash on persisted cluster, abort on `astro:before-swap`), one-time gesture unlock, 400/200ms fades, try/catch storage
+- [x] 5.6 GREEN — `public/audio/README.txt`: BYO licensed-track contract
+- [x] 5.7 Verify — `pnpm test:unit && pnpm test:e2e ambient-audio.spec.ts`
+
+> **Unit 5B (tasks 5.4–5.7): maintainer-accepted `size:exception`** — 546 code/test lines (631 incl. artifacts) exceed the 400-line budget; no clean sub-400 autonomous split keeps the runtime behavior with its verifying E2E tests. See Review Workload Forecast above and apply-progress Unit 5B (Batch Metadata, Issues #4, Workload/PR Boundary). Correction Batch 1 (2026-08-13): storage-failure e2e coverage added (spec 6 → 8 tests) and `assertFade` upper band tightened 600 → 450ms per the ambient-audio spec; runtime `src/scripts/ambient-audio.ts` unchanged.
 
 ## Phase 6: Regression Verification
 
-- [ ] 6.1 RED — `budget.spec.ts`: <100KB gz/route including audio + figure scripts
-- [ ] 6.2 RED — `views.spec.ts`: `aria-current`/`data-active`, figure `aria-hidden`, keyboard mute
-- [ ] 6.3 Verify — `pnpm test:unit && pnpm test:e2e && pnpm build`
+- [x] 6.1 RED — `budget.spec.ts`: <100KB gz/route including audio + figure scripts
+- [x] 6.2 RED — `views.spec.ts`: `aria-current`/`data-active`, figure `aria-hidden`, keyboard mute
+- [x] 6.3 Verify — `pnpm test:unit && pnpm test:e2e && pnpm build`
 
 ## Phase 7: Documentation
 
-- [ ] 7.1 `PRD.md` — remediated system acceptance criteria/UX
-- [ ] 7.2 `DESIGN.md` — menu, indicator, figure, cluster, audio (run `scripts/validate-design-md.sh`)
-- [ ] 7.3 `ARCHITECTURE.md` — component details, failure modes, migration notes
-- [ ] 7.4 `README.md` refresh (stale landing), `docs/CODEBASE-GUIDE.md` + `docs/codebase/mental-model.md`, setup/audio docs
+- [x] 7.1 `PRD.md` — remediated system acceptance criteria/UX
+- [x] 7.2 `DESIGN.md` — menu, indicator, figure, cluster, audio (run `scripts/validate-design-md.sh`)
+- [x] 7.3 `ARCHITECTURE.md` — component details, failure modes, migration notes
+- [x] 7.4 `README.md` refresh (stale landing), `docs/CODEBASE-GUIDE.md` + `docs/codebase/mental-model.md`, setup/audio docs

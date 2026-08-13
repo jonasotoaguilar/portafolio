@@ -1,10 +1,10 @@
 # ARCHITECTURE.md
 
-> **Status**: Approved | **Last updated**: 2026-08-11 | **Author**: Jonathan Soto (jonasotoaguilar)
+> **Status**: Approved | **Last updated**: 2026-08-13 | **Author**: Jonathan Soto (jonasotoaguilar)
 
 ## System Overview **[ALWAYS]**
 
-A fully static personal portfolio for Jonathan Soto, Backend & Full-Stack Engineer, built as a Persona-3 game-menu shell. The root route `/` is a full-screen menu of five items (ABOUT, RESUME, PROJECTS, SKILLS, CONTACT) — centered/center-right, diagonally staggered, with a persistent colorful keyboard-active indicator — and selecting one changes the complete view to its own static route (`/about`, `/resume`, `/projects`, `/skills`, `/contact`), with the 404 page preserved for unknown paths. Astro 7.2.0 generates plain HTML at build time from Markdown Content Collections; a fixed layered background (CSS radial glow, CSS CRT scanlines, Canvas 2D particles, and an original decorative figure/artifact SVG layer) plus native View Transitions provide the Persona-3 feel. A fixed bottom-right control cluster holds keyboard hints and the ambient-audio mute toggle; optional audio plays only a user-provided licensed track (`/audio/background.mp3`) after the first gesture. There is no backend, database, or cache: the product has zero server-side state (audio preference persists client-side in `localStorage`) and no build-time network dependency. This document describes the approved target; the landing implementation currently in `src/` (single scrolling page, `CompactNav`, `MenuOverlay`, `sections/*`) is the model being replaced — see [Migration Notes](#migration-notes).
+A fully static personal portfolio for Jonathan Soto, Backend & Full-Stack Engineer, built as a Persona-3 game-menu shell. The root route `/` is a full-screen menu of five items (ABOUT, RESUME, PROJECTS, SKILLS, CONTACT) — centered/center-right, diagonally staggered, with a persistent colorful keyboard-active indicator — and selecting one changes the complete view to its own static route (`/about`, `/resume`, `/projects`, `/skills`, `/contact`), with the 404 page preserved for unknown paths. Astro 7.2.0 generates plain HTML at build time from Markdown Content Collections; a fixed layered background (CSS radial glow, CSS CRT scanlines, Canvas 2D particles, and an original decorative figure/artifact SVG layer) plus native View Transitions provide the Persona-3 feel. A fixed bottom-right control cluster holds keyboard hints and the ambient-audio mute toggle; optional audio plays only a user-provided licensed track (`/audio/background.mp3`) after the first gesture. There is no backend, database, or cache: the product has zero server-side state (audio preference persists client-side in `localStorage`) and no build-time network dependency. The landing model is fully replaced: `src/` implements the shell, views, figure layer, control cluster, and ambient-audio wiring described below (see [Migration Notes](#migration-notes)).
 
 ---
 
@@ -148,7 +148,7 @@ sequenceDiagram
 
 - **Technology**: Astro Content Collections: `projects` (glob of 4 `.md`), `skills` and `siteConfig` (`file()` loaders over YAML), schema-validated at build time.
 - **Responsibility**: Single source of truth for the four projects, grouped skills, and site config (name, role, tagline, focus areas, email, socials). The PROJECTS view renders exactly the four verified entries (`assertExactlyFour`, `sortByOrder`); SKILLS renders plain names only — the schema rejects non-string levels. Bounded, file-based content; no runtime dependencies; missing or mistyped front matter fails the build with a schema error.
-- **Resume content source**: the RESUME view renders only verified CV data (August 2026 CV): USACH Ingeniería de Ejecución en Computación e Informática (Mar 2020–Apr 2025) and technical telecommunications education (Mar 2017–Nov 2019); experience at Productos Barber Chile (2020–2026) and the Policomp IT support internship (Jan–Mar 2020); the ServiceFlow and WealthQuest projects; the WealthQuest academic publication (May 2025); languages Spanish (native) and English (basic technical reading). No ranks, metrics, or phone number are published. A typed resume content model/file will be added during apply so this data is schema-validated like the other collections.
+- **Resume content source**: the RESUME view renders only verified CV data (August 2026 CV): USACH Ingeniería de Ejecución en Computación e Informática (Mar 2020–Apr 2025) and technical telecommunications education (Mar 2017–Nov 2019); experience at Productos Barber Chile (2020–2026) and the Policomp IT support internship (Jan–Mar 2020); the ServiceFlow and WealthQuest projects; the WealthQuest academic publication (May 2025); languages Spanish (native) and English (basic technical reading). No ranks, metrics, or phone number are published. The typed `resume` collection (`resume.yaml` in `src/content/`) schema-validates this data like the other collections, with a no-phone privacy gate enforced by `scripts/verify-no-phone.mjs`.
 
 ### Game-menu shell (root `/`)
 
@@ -208,7 +208,7 @@ sequenceDiagram
 ### Performance
 
 - LCP: < 2.5s on a mid-range device over 4G; INP: < 200ms; CLS: < 0.1.
-- JavaScript budget: < 100KB gzipped on first load (canvas layer and motion scripts included; no framework runtime by default).
+- JavaScript budget: < 100KB gzipped on first load (canvas layer, motion scripts, and the inlined ambient-audio wiring included; no framework runtime by default).
 - Per-view transition overlays: <= 400ms total (300ms default; 400ms documented exception); opacity-only <= 200ms under reduced motion.
 - Fonts: self-hosted via `@fontsource` (Anton, Bebas Neue); no external font CDN.
 - Build time: full static build completes in < 3 minutes on CI.
@@ -257,7 +257,7 @@ sequenceDiagram
 | Astro 7.2.0 SSG over React SPA | Static output, best first paint and crawlability, zero runtime infrastructure for a brochure site | React SPA (reference repo), SSR Node server — see ADR-0001 |
 | Real static view routes + in-view detail over client-only state | Each view keeps its own URL, title, h1, JSON-LD, and sitemap entry; native Back; zero-JS reachability | Client-only view state (single `/` + JS switch) — see ADR-0003 |
 | In-view LIST/detail panels with `#slug` deep links over detail sub-routes | Matches the game-panel interaction; per-project pages stay a v2.0 option | `/projects/:slug` and `/resume/:section` sub-routes — see ADR-0003 |
-| Game-menu shell at `/` with five real route links | The approved product model: selecting an item changes the complete view, never a scroll | Scrolling single-page landing (current `src/` model, being replaced) |
+| Game-menu shell at `/` with five real route links | The approved product model: selecting an item changes the complete view, never a scroll | Scrolling single-page landing (previous model — replaced by the shell) |
 | No backend, database, or cache | No server-side state exists; static files are the simplest correct architecture | Supabase/other BaaS — rejected, adds cost and surface for no feature |
 | Markdown Content Collections | Schema-validated, versioned, editor-friendly content pipeline | JSON data files, headless CMS — rejected |
 | Astro native View Transitions (`<ClientRouter/>`, `fallback="none"`) | Browser-driven cross-page motion with a full-page fallback and per-view overlays <= 400ms; no SPA router | react-router + AnimatePresence (reference repo) — removed |
@@ -282,13 +282,13 @@ sequenceDiagram
 | Active indicator missing after keyboard move | Keyboard-active item indistinguishable (documented-but-missing contract) | `shell.ts` sets `data-active` + `aria-current` on every move; E2E asserts both follow ArrowUp/Down |
 | Menu items overlap after stagger | Unreadable/clickable-collision menu | Stacked column + fixed gap; per-item offsets alternate sign with >= 1rem separation; coarse-pointer viewports collapse offsets/skew (E2E bounding-box assertions) |
 | Cluster overlaps content on small screens | Hints/controls cover menu or view content | Hints hide on coarse-pointer and short (<560px height) viewports; mute stays reachable >= 44px; E2E asserts non-overlap at desktop |
-| Copyrighted audio/art ships | Infringement risk | No bundled media; original inline-SVG figures; BYO licensed track contract in `public/audio/README.txt` (ADR-0004); E2E asserts no audio file in `dist` |
+| Copyrighted audio/art ships | Infringement risk | No bundled media; original inline-SVG figures; BYO licensed track contract in `public/audio/README.txt` (ADR-0004); E2E covers the no-track state. Future gap: no automated check yet asserts that no audio file ships in `dist` |
 | Autoplay policy blocks audio | Track never audible | Silent default; one-time `pointerdown`/`keydown` unlock; play() only after gesture; E2E asserts silence before first gesture |
 | Missing track file | Dead control or console errors | HEAD probe (no body bytes) → disabled no-track state; `<audio>` error event resolves optimistic cases; site stays silent |
 | localStorage unavailable or throwing | Audio preference lost or script crash | try/catch reads/writes; in-memory fallback; E2E asserts toggle still works |
 | No-scroll viewport applied without JS | Content hidden from no-JS visitors and crawlers | `overflow: hidden` applied by the enhancement layer only; static HTML stays in normal document flow (E2E-verified) |
 | View transition overlays exceed 400ms | Motion contract violation | Durations capped (300ms default, 400ms exception); reduced motion becomes opacity-only <= 200ms; E2E timing assertions |
-| View Transitions unsupported (older browser) | No cross-page motion | `<ClientRouter/>` falls back to full-page navigation; E2E matrix covers Firefox and Safari |
+| View Transitions unsupported (older browser) | No cross-page motion | `<ClientRouter/>` falls back to full-page navigation; the full-page fallback is E2E-verified in Chromium. Future gap: Playwright currently runs no Firefox/Safari project matrix, so cross-browser coverage is not yet automated |
 | Mobile detail panel overflow | Detail unreachable on small screens (reference bug) | Panel stacks below the list and scrolls internally on < 768px |
 | Reduced-motion user | Motion sickness / distraction | Canvas paints one static frame; entrances and overlays opacity-only; enforced by E2E with emulated `prefers-reduced-motion` |
 | External link rot (itch.io, GitHub) | Dead project links | Link-check assertions in the E2E suite fail CI when a link stops resolving |
@@ -300,12 +300,12 @@ sequenceDiagram
 
 ## Migration Notes
 
-The `src/` tree still implements the single-page landing (index with Hero/Featured Work/Projects/Skills/Contact sections, `CompactNav`, `MenuOverlay`, anchor navigation, duplicated project grids). Until apply lands, this document describes the approved target, not the current code.
+The landing model is fully replaced and this document describes the current code.
 
-- **Replace**: `index.astro` landing composition -> game-menu shell; `CompactNav` + `MenuOverlay` + `menu.ts` -> shell menu + scoped view keyboard model (reusing `reduceMenuKey`); `sections/*` -> view pages with LIST/detail panels; anchor navigation -> real routes.
-- **Delete**: the Featured Work grid (duplicated project rendering — one PROJECTS view only), the dialog overlay, and the `#featured-work`/`#projects`/`#skills`/`#contact` anchor contract.
-- **Preserve**: content collections and schemas, fontsource fonts, DESIGN.md tokens and `global.css` layers (glow/scanlines, reduced motion), `Background.astro` + `particles.ts` + `transition:persist`, `JsonLd.astro` + `person.ts` + sitemap filtering, the 404 page, reduced-motion and link-check E2E patterns, the JS budget spec, and the toolchain/CI.
-- **Post-apply follow-ups**: `README.md`, `docs/CODEBASE-GUIDE.md`, and `docs/codebase/mental-model.md` still describe the landing model and are deliberately not updated here; they must be refreshed after implementation reflects the shell + views.
+- **Landed**: the single-page landing (Hero/Featured Work/Projects/Skills/Contact sections, `CompactNav` + `MenuOverlay`, anchor navigation, duplicated project grids) was replaced by the game-menu shell + five static view routes (delivered in the archived change `openspec/changes/archive/2026-08-11-persona-game-menu-navigation/`); the Featured Work grid, the dialog overlay, and the `#featured-work`/`#projects`/`#skills`/`#contact` anchor contract are deleted.
+- **Remediation landed**: the Persona UI/UX remediation (`openspec/changes/persona-ui-ux-remediation/`) then added the diagonal staggered menu composition (AD1), the persistent keyboard-active indicator (AD2), the original per-route figure layer (AD3), the fixed bottom-right control cluster (AD4), and the BYO ambient-audio island (AD5) — all described in Component Details above.
+- **Preserved through both changes**: content collections and schemas (including the typed `resume` collection), fontsource fonts, DESIGN.md tokens and `global.css` layers (glow/scanlines, reduced motion), `Background.astro` + `particles.ts` + `transition:persist`, `JsonLd.astro` + `person.ts` + sitemap filtering, the 404 page, reduced-motion and link-check E2E patterns, the JS budget spec, and the toolchain/CI.
+- **Docs synchronized**: `README.md`, `docs/CODEBASE-GUIDE.md`, and `docs/codebase/mental-model.md` were refreshed with the shell + views + remediation product, the BYO audio setup, and the current file map.
 
 ---
 

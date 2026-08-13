@@ -760,3 +760,84 @@ test.describe("bottom-right control cluster", () => {
 		});
 	});
 });
+
+// Regression boundaries for the remediated system (portfolio-page spec
+// "Remediation regression boundaries"): the shell active indicator is
+// re-established when returning from a view, and the mute control stays
+// keyboard-operable on view routes. (Figure aria-hidden is asserted for all
+// seven routes in reduced-motion.spec.ts; shell indicator movement in
+// keyboard.spec.ts; shell keyboard toggle in ambient-audio.spec.ts — the
+// cases below cover the view-boundary angles those specs do not.)
+test.describe("remediation regression boundaries", () => {
+	// A zero-filled MPEG-1 Layer III frame decodes as silence in Chromium;
+	// serves as the "licensed track present" setup for view-route playback.
+	function silentMp3(): Buffer {
+		const frame = Buffer.alloc(417);
+		frame[0] = 0xff;
+		frame[1] = 0xfb;
+		frame[2] = 0x90;
+		frame[3] = 0x00;
+		return Buffer.concat(Array.from({ length: 24 }, () => Buffer.from(frame)));
+	}
+
+	test("returning to the shell restores the active indicator on the first item", async ({
+		page,
+	}) => {
+		// shell.ts re-inits on astro:page-load after the swap: exactly one
+		// item carries data-active + aria-current again (design AD2).
+		await page.goto("/about");
+		await page.keyboard.press("Escape");
+		await expect(page).toHaveURL(/\/$/);
+		const about = page.getByRole("link", { name: "About" });
+		await expect(about).toHaveAttribute("data-active", /.*/);
+		await expect(about).toHaveAttribute("aria-current", "page");
+		await expect(page.locator("[data-menu-item][data-active]")).toHaveCount(1);
+		await expect(page.locator("[data-menu-item][aria-current]")).toHaveCount(1);
+	});
+
+	test("keyboard mute stays operable on a view route", async ({ page }) => {
+		// The cluster renders on every route; the mute control must be
+		// keyboard-reachable there too (persona-navigation cluster contract,
+		// ambient-audio spec "Keyboard toggles mute" on a direct view load).
+		const track = { heads: 0, gets: 0 };
+		const body = silentMp3();
+		await page.route("**/audio/background.mp3", (route) => {
+			if (route.request().method() === "HEAD") {
+				track.heads += 1;
+				return route.fulfill({ status: 200 });
+			}
+			track.gets += 1;
+			return route.fulfill({ status: 200, contentType: "audio/mpeg", body });
+		});
+		await page.goto("/about");
+		await expect(
+			page.getByRole("heading", { level: 1, name: "About" }),
+		).toBeVisible();
+		// Attribute locator: the accessible name flips with the state, so a
+		// name-scoped locator would go stale mid-test.
+		const mute = page.locator("[data-mute-control]");
+		await expect(mute).toHaveAttribute("data-audio-state", "ready");
+		await expect(page.getByRole("button", { name: "Sound: On" })).toBeVisible();
+		await page.keyboard.press("Shift"); // first gesture unlocks playback
+		await expect.poll(() => track.gets).toBe(1);
+		await expect
+			.poll(() =>
+				page
+					.locator("[data-audio-element]")
+					.evaluate((el) => (el as HTMLAudioElement).paused),
+			)
+			.toBe(false);
+		await expect.poll(() => track.heads).toBe(1);
+		await mute.focus();
+		await page.keyboard.press("Enter");
+		await expect(mute).toHaveAttribute("aria-pressed", "true");
+		await expect(mute).toHaveText("Sound: Off");
+		await expect
+			.poll(() =>
+				page
+					.locator("[data-audio-element]")
+					.evaluate((el) => (el as HTMLAudioElement).paused),
+			)
+			.toBe(true);
+	});
+});

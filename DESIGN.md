@@ -171,10 +171,10 @@ Sharp and geometric, matching the Persona-3 angular identity. The base radius is
 
 ## Components
 
-- **Game menu (root shell)**: full-screen route list of five giant skewed `menu-label` links (ABOUT, RESUME, PROJECTS, SKILLS, CONTACT), centered/center-right with per-item diagonal offsets, skews, and sizes (PROJECTS largest). Each item carries inline CSS vars (`--item-x`, `--item-skew`, `--item-size`); the stagger collapses on coarse-pointer viewports. The keyboard-active item (`data-active` + `aria-current="page"`) renders `accent-400` text over a diagonal clip-path accent layer with a 2px cyan highlight bar; `:hover` mirrors the same treatment; `:focus-visible` keeps its accent outline alongside the indicator. Navigation is keyboard-first (ArrowUp/ArrowDown wraps, Enter activates — existing `reduceMenuKey` logic); items enter with a 30-50ms stagger. Key hints live in the bottom-right cluster, not in the menu column.
+- **Game menu (root shell)**: full-screen route list of five giant skewed `menu-label` links (ABOUT, RESUME, PROJECTS, SKILLS, CONTACT), centered/center-right with per-item diagonal offsets, skews, and sizes (PROJECTS largest). Each item carries inline CSS vars (`--item-x`, `--item-skew`, `--item-size`); the stagger collapses on coarse-pointer viewports. The keyboard-active item (`data-active` + `aria-current="page"`) renders `accent-400` text over a diagonal clip-path accent layer with a 2px cyan highlight bar; `:hover` mirrors the same treatment; `:focus-visible` keeps its accent outline alongside the indicator. Navigation is keyboard-first (ArrowUp/ArrowDown wraps, Enter activates — existing `reduceMenuKey` logic); items enter with a 25ms stagger. Key hints live in the bottom-right cluster, not in the menu column.
 - **Decorative figure layer**: one original inline-SVG composition per route (`FigureLayer`), fixed between canvas and content, `aria-hidden` and `pointer-events-none`, zero JavaScript. `html[data-route]` CSS places each variant: shell → oversized figure on the right half; projects → cyan top band; skills → right figure framing the center; about → bottom-left figure; contact → bottom blue wash + left figure; resume → left-mid figure; 404 → shell variant. Renders static at final state (entrance fade only, gated); fully static under reduced motion.
 - **Control cluster**: fixed bottom-right column (key hints + ambient-audio mute toggle), shared on every route and persisted across View Transitions. Hints hide on coarse-pointer viewports and on short viewports (< 560px height); the mute toggle always stays reachable (≥44px).
-- **Ambient audio control**: a real button with `aria-pressed` and a visible label (Mute/Unmute ambient audio). Enabled state plays the user-provided `/audio/background.mp3` (never bundled) after the first pointer/key gesture; the no-track state renders disabled with a "No ambient track" label; muted state persists to `localStorage` and survives navigation.
+- **Ambient audio control**: a real button with `aria-pressed` and a visible label (Mute/Unmute ambient audio). Enabled state plays the user-provided `/audio/background.mp3` (never bundled) after the first pointer/key gesture; the no-track state renders the control disabled with the label staying "Sound: Off"; muted state persists to `localStorage` and survives navigation.
 - **View header**: per-view composition header with the view's `display-lg` heading, a back-to-menu control (Esc returns to `/`), and key hints; ArrowLeft is offered on detail views.
 - **LIST/detail**: a LIST column of `list-item` surfaces; the selected item (`list-item-active`) opens a `detail-panel` on the right with badges, description, stack, and external link. Selection state is per-view client-side; PROJECTS deep links (`#slug`) preselect an item. Focus moves into the panel on open and back to the list on close.
 - **Primary button**: `accent-500` fill, `label` typography, 2px radius, 16px padding. Hover brightens to `accent-400`; press deepens to `accent-600` and scales to 0.97 (100-160ms). Used for the Contact CTA and external project links.
@@ -227,7 +227,7 @@ Sharp and geometric, matching the Persona-3 angular identity. The base radius is
 ## Performance
 
 - LCP < 2.5s, CLS < 0.1, INP < 200ms; Lighthouse performance >= 90, accessibility >= 95.
-- JavaScript budget < 100KB gzipped on first load (canvas layer and motion scripts included; no framework runtime by default).
+- JavaScript budget < 100KB gzipped on first load (canvas layer, motion scripts, and the inlined ambient-audio wiring included; no framework runtime by default).
 - No above-the-fold images; the background is pure CSS plus canvas.
 - Self-hosted fonts via fontsource with swap-friendly loading; no external font CDN.
 - Canvas caps particle count and devicePixelRatio and pauses when the tab is hidden.
@@ -245,7 +245,7 @@ Sharp and geometric, matching the Persona-3 angular identity. The base radius is
 - Copy is English, first-person, professional; no emojis in UI strings.
 - RESUME content derives only from the verified CV: education (USACH 2020-2025, technical telecommunications 2017-2019), experience (Productos Barber Chile 2020-2026, Policomp internship Jan-Mar 2020), projects (ServiceFlow, WealthQuest), WealthQuest academic publication (May 2025), and languages (Spanish native; English basic technical reading). No ranks, metrics, or phone number.
 - LIST items have one static state plus a selected state (active item opens the detail panel); no loading or empty states exist (static content, built at compile time).
-- Ambient audio states: `no-track` (disabled button, "No ambient track" label — the default deployed state), `ready` (track present, awaiting first gesture), `playing`, and `muted` (persisted). State changes fade volume 400ms (200ms under reduced motion); storage failure keeps an in-memory state.
+- Ambient audio states: `no-track` (disabled button labeled "Sound: Off" — the default deployed state), `ready` (track present, awaiting first gesture), `playing`, and `muted` (persisted). State changes fade volume linearly over 400ms (200ms under reduced motion); storage failure keeps an in-memory state.
 - Error state: the 404 page reuses the visual identity with a single action (back to `/`).
 - External link behavior: open in a new tab with `rel="noopener noreferrer"`.
 
@@ -258,10 +258,10 @@ Motion is ambient and identity-driven, following the ui-motion contract (sub-300
 | Glow breathing (CSS, zero JS) | ~8s cycle, strong `ease-in-out` (cubic-bezier(0.77, 0, 0.175, 1)), opacity 0.75 -> 1, optional scale 1 -> 1.02 | Ambient constant motion; `transform`/`opacity` only; no layout paint |
 | Canvas particles/fog | rAF game loop, `linear` per-particle motion, drift 0.2-0.5 px/frame at 60fps, capped count and DPR | Constant motion is linear; the loop pauses on hidden tabs |
 | View transitions (menu <-> views) | Per-view overlay moments (blue panel, stripe, or clip-path sweep) at 300ms default, up to 400ms total as a documented exception, strong `ease-out` (cubic-bezier(0.23, 1, 0.32, 1)) | The reference's 450-600ms overlays violate the contract; capped at 400ms |
-| Menu item entrance | Stagger 30-50ms between items, `translateY(8px) -> 0` + opacity, 300ms `ease-out` | Group entrance stagger; no `scale(0)` entries |
+| Menu item entrance | Stagger 25ms between items, `translateY(8px) -> 0` + opacity, 300ms `ease-out` | Group entrance stagger; no `scale(0)` entries |
 | Active indicator state | 150ms color transition only; the accent layer and highlight bar toggle with state, no entrance motion | Persistent indicator follows keyboard; instant affordance, no distraction |
 | Figure layer entrance | One 400ms opacity fade on first paint (`ease-out`), then fully static | Ambient decoration; no loop, no drift |
-| Ambient audio fades | 400ms `ease-out` volume fade default; 200ms under reduced motion | Audible transitions inside the 200-450ms spec band |
+| Ambient audio fades | 400ms linear volume fade default; 200ms under reduced motion | Audible transitions inside the 200-450ms spec band |
 | Card / link hover | 150-200ms, `ease`, color shift to accent | Hover/color change uses `ease`; gated to fine pointers |
 | Button press | `scale(0.97)`, transition 160ms `ease-out` | Press feedback, 100-160ms band |
 | Reduced motion | Canvas paints one static frame and never starts the loop; glow holds; entrances and view transitions become opacity-only <= 200ms; figure layer static with no entrance; audio never starts automatically | Fewer and gentler, not zero |
