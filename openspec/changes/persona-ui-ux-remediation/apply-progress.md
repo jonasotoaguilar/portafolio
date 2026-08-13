@@ -1,8 +1,9 @@
-# Apply Progress — persona-ui-ux-remediation (cumulative: Unit 1 + Unit 2 + Unit 3)
+# Apply Progress — persona-ui-ux-remediation (cumulative: Unit 1 + Unit 2 + Unit 3 + Unit 4)
 
 - **Unit 1** (Phase 1, tasks 1.1–1.5, active/focus indicator): ✅ DONE — committed at `f616ea0`, evidence `rev-1`.
 - **Unit 2** (Phase 2, tasks 2.1–2.4, diagonal staggered menu): ✅ DONE — committed at `d38d833`, evidence `sha256:ff5066ed49abc4ca34cd88efa9e52bc3d88e0d5f7af1521859328e2a8972cc0b`.
-- **Unit 3** (Phase 3, tasks 3.1–3.6, bottom-right ControlCluster): ✅ DONE — this batch, uncommitted, evidence `sha256:cba0e53c27c34e33eef6cf3f38874ab589a9f5b6338ff459adcc0673123f7c8d`.
+- **Unit 3** (Phase 3, tasks 3.1–3.6, bottom-right ControlCluster): ✅ DONE — uncommitted, evidence `sha256:cba0e53c27c34e33eef6cf3f38874ab589a9f5b6338ff459adcc0673123f7c8d`.
+- **Unit 4** (Phase 4, tasks 4.1–4.4, FigureLayer): ✅ DONE — this batch, uncommitted, evidence `sha256:d37317f653cf422ce2b638d5b2882c82f156a816f3b25ff58421ac160e513666`.
 
 ---
 
@@ -237,3 +238,75 @@ Total authored changed lines ≈ 310 incl. artifacts (213 code/tests) — within
 
 - Mode: chained PR slice (auto-chain, feature-branch-chain); work unit `unit-3-bottom-right-control-cluster` → PR 3 (targets `feat/persona-ui-ux-remediation` tracker branch)
 - Boundary: start = d38d833 (Unit 2 committed); end = tasks 3.1–3.6 verified; Unit 4 (FigureLayer) explicitly excluded; estimated review budget ≈ 310 authored changed lines incl. artifacts (unit budget 400)
+
+---
+
+# Unit 4 Batch (this batch — original figure layer)
+
+## Batch Metadata
+
+| Field | Value |
+|-------|-------|
+| Change / Work unit / Scope | `persona-ui-ux-remediation` / `unit-4-original-figure-layer` / Phase 4 tasks 4.1–4.4 only |
+| Branch / Mode / Delivery | `feat/persona-ui-ux-remediation` (feature-branch-chain); Strict TDD (openspec `rules.apply.tdd: true`); `auto-chain` — no commit/push/PR |
+| Attempt token / Evidence revision | `sha256:d37317f653cf422ce2b638d5b2882c82f156a816f3b25ff58421ac160e513666` (prior batches rev-1 + Units 2–3 merged above; token acquired by parent — this batch did not acquire/settle) |
+
+## Settlement Evidence
+
+- **Evidence revision**: fourth evidence batch; Units 1–3 preserved verbatim above (disk `apply-progress.md` is the artifact of record; Engram #6112 mirrors the summary).
+- **Diagnosis**: fresh batch; no prior failed evidence, no remediation lineage. All RED failures intended (`.figure-layer` locator absent on every route), then GREEN.
+- **Harness**: dev server reused (http://localhost:4321, HTTP 200 — `reuseExistingServer`); no servers started/stopped, no temp files inside the repo (probe scripts + screenshots in `/tmp/opencode/u4`; `test-results/` gitignored; biome-HEAD compare reused `/tmp/opencode/biome-head` worktree).
+- **Process evidence**: baseline 84 unit + 4/4 reduced-motion e2e green; final full e2e 60 passing (57 baseline + 3 new), unit 84, `astro check` 0/0, `pnpm build` 7 pages clean, budget spec 4/4 vs rebuilt `dist/` (6.2KB gz/route), Biome 11 warnings on changed files vs 7 at HEAD — same two pre-existing `.astro` frontmatter false-positive classes (`noUnusedImports`/`noUnusedVariables`; delta = new FigureLayer constants used via `set:html`, invisible to static analysis); no new warning class.
+
+## TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| 4.1 | `tests/e2e/reduced-motion.spec.ts` (figure layer describe) | E2E | ✅ 84 unit + 4 reduced-motion | ✅ Written (3 tests; all failed: no `.figure-layer`) | ✅ 7/7 after 4.2–4.3 | ✅ 7 routes × 4 placement probes + static under reduce on shell AND /projects + DOM-order/z-index/pointer-events probe | ✅ Fixed inverted `compareDocumentPosition` bit in the RED test (PRECEDING, not FOLLOWING — test bug, implementation was correct) |
+| 4.2 | `src/components/FigureLayer.astro` (via reduced-motion.spec.ts) | E2E | ✅ 7/7 | ✅ (covered by 4.1 RED) | ✅ 7/7 | ✅ geometry audit: 6 variant compositions, bust present where designed, all shapes non-degenerate, fills/opacities in the 15–45% contract, zero console errors | ✅ Added missing `fill="#38e1ff"` on slashes/bars/chips (audit caught default-black fills) |
+| 4.3 | `BaseLayout.astro` + `global.css` (via reduced-motion.spec.ts) | E2E | ✅ 7/7 | ✅ (rules missing → placements fail) | ✅ 7/7 | ✅ exact per-route placement matrix (shell/404 right half 640×720, projects band 1280×288, skills 52%.. right, about 704×446 bottom-left, contact 1280×396 wash, resume 537×547 left-mid) + gated 400ms entrance verified static under reduce | ➖ None needed |
+| 4.4 | — (verification) | E2E | — | — | ✅ full e2e 60/60; unit 84/84; `astro check` 0/0; build clean; budget 4/4 | — | — |
+
+## Work Unit Evidence
+
+| Evidence | Required value |
+|----------|----------------|
+| Focused test command and exact result | `pnpm run test:e2e reduced-motion.spec.ts` → 7 passed (4 baseline + 3 new), 0 failed; `pnpm run test:unit` → 84 passed; full `pnpm run test:e2e` → 60 passed (57 baseline + 3 new) |
+| Runtime harness command/scenario and exact result | Dev server localhost:4321; geometry audit probe (Playwright): all 7 routes render their variant SVG with the designed groups (shell/404 bust+slashes+chevrons+bars+chips; projects band; skills bust+chevrons; about bust+slashes+chips; contact wash+bust+bars+chips; resume bust+chips+slashes+chevrons), 0 out-of-bounds / 0 zero-size shapes, bust present on all figure routes, artifact opacities within 15–45%, zero console/page errors on 6 routes (1 pre-existing 404 asset 404, reproduced with changes stashed); screenshots captured to /tmp/opencode/u4 (model cannot view images — geometry verified programmatically) |
+| Rollback boundary | Revert `src/components/FigureLayer.astro` (new), `BaseLayout.astro` (import + render), `global.css` figure-layer block (base + entrance + 7 route placements), `tests/e2e/reduced-motion.spec.ts` figure-layer describe; menu composition, control cluster, shell.ts, links, keyboard semantics untouched |
+
+## Test Summary
+
+- **Total tests written**: 3 (all e2e, in `reduced-motion.spec.ts`); **passing**: 60 e2e + 84 unit; 7/7 in reduced-motion spec. **Layers**: E2E (3 new + 4 existing in spec); Unit (84 existing, untouched). **Approval tests**: None — additive markup/CSS. **Pure functions**: 0 (static authored SVG geometry + CSS media-query placements).
+
+## Changed Lines (authored)
+
+| File | ± |
+|------|---|
+| `tests/e2e/reduced-motion.spec.ts` | +105 (3 figure-layer tests + helpers) |
+| `src/components/FigureLayer.astro` | new (155) |
+| `src/styles/global.css` | +70 |
+| `src/layouts/BaseLayout.astro` | +2 |
+| `tasks.md` + `apply-progress.md` (openspec change) | 4/4 marks + cumulative merge |
+
+Total authored changed lines ≈ 396 incl. artifacts (332 code/tests) — within the 400-line unit budget.
+
+## Deviations from Design
+
+- None in behavior. Design AD3 verbatim: one original inline-SVG composition per route, deep-blue faceted featureless bust with cyan rims, bars/chevrons/chips/slashes at 15–45% opacity, `aria-hidden`, `pointer-events-none`, z-index -1 (same layer as the canvas, painted after it in DOM order — between atmosphere and content), zero JS, gated 400ms entrance fade (no-preference + `html[data-game-ready]` only) and fully static under reduced motion. DESIGN.md route placements applied: shell/404 oversized right half, projects cyan top band, skills right figure framing the center, about bottom-left, contact bottom blue wash + left figure, resume left-mid.
+- Implementation notes (not deviations): route branches render server-side in one component (the design's "one SVG per route"); shared bust/artifact geometry authored once as frontmatter constants and injected with `set:html`; container insets (50%/52%/40vh/55vw/62vh/55vh/42vw/12%) are the authored values satisfying the qualitative DESIGN.md placements, asserted exactly by the route-variant e2e.
+
+## Issues Found
+
+1. **Playwright `emulateMedia` + dev-server HMR race (environmental, transient)**: two consecutive reduced-motion runs failed test 1 ("canvas paints one static frame") with `Execution context was destroyed, most likely because of a navigation` — the astro dev server was mid-rebuild from the just-saved SVG fill edit, so the page reloaded inside the test's 250ms evaluate window. After the server settled (6s), the same spec passed 7/7 and the full suite 60/60. Not a code defect (test passed twice before the edit with identical implementation).
+2. **Contact-resolution external-network flake (pre-existing, transient)**: `contact-resolution.spec.ts` itch.io probe failed once in the full suite; passes in isolation (both URLs 200). Unrelated to this unit (network-dependent test).
+3. **Model cannot view screenshots** (no image input support): visual verification was replaced by a programmatic geometry audit (bboxes, fills, opacities, group presence per route) — screenshots kept at `/tmp/opencode/u4` for human review.
+
+## Remaining Tasks
+
+- Phase 5 (Unit 5): Ambient audio — tasks 5.1–5.7 (NOT in this batch). Phases 6–7 untouched per boundary.
+
+## Workload / PR Boundary
+
+- Mode: chained PR slice (auto-chain, feature-branch-chain); work unit `unit-4-original-figure-layer` → PR 4 (targets `feat/persona-ui-ux-remediation` tracker branch)
+- Boundary: start = current branch state (Unit 3 verified but uncommitted; HEAD `e109d63`); end = tasks 4.1–4.4 verified; Unit 5 (audio) explicitly excluded; estimated review budget ≈ 396 authored changed lines incl. artifacts (unit budget 400)

@@ -98,3 +98,108 @@ test.describe("reduced motion", () => {
 			.not.toBe(initial);
 	});
 });
+
+test.describe("figure layer", () => {
+	// Decorative figure/artifact layer (living-background spec scenarios
+	// "Original abstract figures render over atmosphere" / "Figures are
+	// decoration only" / "Figures static under reduced motion"; design AD3):
+	// one original inline-SVG composition per route, fixed between the canvas
+	// and content, aria-hidden, pointer-events-none, zero JS, and fully static
+	// under prefers-reduced-motion. Placements below encode the design route
+	// variants (DESIGN.md figure placements): shell/404 oversized right half,
+	// projects cyan top band, skills right figure framing the center, about
+	// bottom-left, contact bottom blue wash + left figure, resume left-mid.
+	const figureLayer = (page: Page) => page.locator(".figure-layer");
+
+	const layerStyle = (page: Page) =>
+		figureLayer(page).evaluate((el) => {
+			const style = getComputedStyle(el);
+			return {
+				pointerEvents: style.pointerEvents,
+				zIndex: style.zIndex,
+				animation: style.animationName,
+				transition: style.transitionDuration,
+				opacity: style.opacity,
+				transform: style.transform,
+			};
+		});
+
+	const ROUTE_PLACEMENTS: [
+		string,
+		{ left: number; top: number; width: number; height: number },
+	][] = [
+		["/", { left: 640, top: 0, width: 640, height: 720 }],
+		["/projects", { left: 0, top: 0, width: 1280, height: 288 }],
+		["/skills", { left: 665.6, top: 0, width: 614.4, height: 720 }],
+		["/about", { left: 0, top: 273.6, width: 704, height: 446.4 }],
+		["/contact", { left: 0, top: 324, width: 1280, height: 396 }],
+		["/resume", { left: 0, top: 86.4, width: 537.6, height: 547.2 }],
+		["/404", { left: 640, top: 0, width: 640, height: 720 }],
+	];
+
+	test("decorative figure renders above the atmosphere and below content", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		const layer = figureLayer(page);
+		await expect(layer).toBeVisible();
+		await expect(layer).toHaveAttribute("aria-hidden", "true");
+		await expect(layer.locator("svg")).toHaveCount(1);
+		const style = await layerStyle(page);
+		expect(style.pointerEvents).toBe("none");
+		expect(style.zIndex).toBe("-1");
+		// Same negative z-index layer as the canvas, painted after it in DOM
+		// order, so the figure sits above the animated atmosphere and below
+		// content (stacking: glow -> scanlines -> canvas -> figure -> content).
+		// compareDocumentPosition returns PRECEDING when the canvas (other)
+		// precedes the figure (this node).
+		const paintsAboveCanvas = await page.evaluate(() => {
+			const canvas = document.getElementById("living-background");
+			const figure = document.querySelector(".figure-layer");
+			if (!canvas || !figure) return false;
+			return (
+				(figure.compareDocumentPosition(canvas) &
+					Node.DOCUMENT_POSITION_PRECEDING) !==
+				0
+			);
+		});
+		expect(paintsAboveCanvas).toBe(true);
+	});
+
+	test("figures render static under reduced motion", async ({ page }) => {
+		await page.emulateMedia({ reducedMotion: "reduce" });
+		for (const path of ["/", "/projects"]) {
+			await page.goto(path);
+			await expect(figureLayer(page)).toBeVisible();
+			const style = await layerStyle(page);
+			expect(style.animation, `${path} no animation`).toBe("none");
+			expect(style.transition, `${path} no transition`).toBe("0s");
+			expect(style.opacity, `${path} fully opaque`).toBe("1");
+			expect(style.transform, `${path} no transform`).toBe("none");
+		}
+	});
+
+	test("every route places its own figure variant", async ({ page }) => {
+		for (const [path, expected] of ROUTE_PLACEMENTS) {
+			await page.goto(path);
+			const layer = figureLayer(page);
+			await expect(layer, `${path} figure visible`).toBeVisible();
+			await expect(layer).toHaveAttribute("aria-hidden", "true");
+			const actual = await layer.evaluate((el) => {
+				const style = getComputedStyle(el);
+				return {
+					left: parseFloat(style.left),
+					top: parseFloat(style.top),
+					width: parseFloat(style.width),
+					height: parseFloat(style.height),
+				};
+			});
+			for (const key of ["left", "top", "width", "height"] as const) {
+				expect(
+					Math.abs(actual[key] - expected[key]),
+					`${path} ${key} placement (got ${actual[key]})`,
+				).toBeLessThanOrEqual(2);
+			}
+		}
+	});
+});

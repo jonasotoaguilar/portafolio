@@ -205,6 +205,76 @@ html[data-game-ready] [data-view] [data-detail-panel]:not([data-active]) {
 	}
 }
 
+/* Decorative figure/artifact layer (design AD3): one original inline-SVG
+   composition per route, fixed between the canvas (also z-index -1 but
+   painted earlier in DOM order) and content; aria-hidden and
+   pointer-events-none, zero JS. Route placements below position the
+   container per DESIGN.md figure placements; the SVG slices to fill it. */
+.figure-layer {
+	position: fixed;
+	z-index: -1;
+	pointer-events: none;
+}
+
+.figure-layer svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+/* Gated entrance (design AD3 motion): one 400ms opacity fade on first
+   paint, only with JS enhancement active (html[data-game-ready]) and no
+   reduced-motion preference; otherwise the layer is fully static. */
+@media (prefers-reduced-motion: no-preference) {
+	html[data-game-ready] .figure-layer {
+		animation: figure-layer-in 400ms ease-out both;
+	}
+}
+
+@keyframes figure-layer-in {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+}
+
+/* Route variant placements (DESIGN.md figure placements): shell/404
+   oversized figure on the right half; projects cyan top band; skills right
+   figure framing the center; about bottom-left figure; contact bottom blue
+   wash + left figure; resume left-mid figure. */
+html[data-route="shell"] .figure-layer,
+html[data-route="404"] .figure-layer {
+	inset: 0 0 0 50%;
+}
+
+html[data-route="projects"] .figure-layer {
+	inset: 0 0 auto 0;
+	height: 40vh;
+}
+
+html[data-route="skills"] .figure-layer {
+	inset: 0 0 0 52%;
+}
+
+html[data-route="about"] .figure-layer {
+	inset: auto auto 0 0;
+	width: 55vw;
+	height: 62vh;
+}
+
+html[data-route="contact"] .figure-layer {
+	inset: auto 0 0 0;
+	height: 55vh;
+}
+
+html[data-route="resume"] .figure-layer {
+	inset: 12% auto 12% 0;
+	width: 42vw;
+}
+
 /* View-transition overlays (site-transitions D3/D4): the shell, every view,
    and the 404 route all carry html[data-route], so one rule set covers every
    swap. The outgoing screen leaves over 300ms; the incoming screen enters on

@@ -57,10 +57,10 @@ Commits map 1:1 to units, conventional commits, tests/docs with their unit.
 
 ## Phase 4: Figure Layer
 
-- [ ] 4.1 RED — `reduced-motion.spec.ts`: figures `aria-hidden`/`pointer-events-none`, static under reduce
-- [ ] 4.2 GREEN — create `src/components/FigureLayer.astro`: original SVG polygons per route, no copied art
-- [ ] 4.3 GREEN — `BaseLayout.astro`: render; `global.css`: `html[data-route]` variant placements (shell/projects/skills/about/contact/resume/404)
-- [ ] 4.4 Verify — e2e pass
+- [x] 4.1 RED — `reduced-motion.spec.ts`: figures `aria-hidden`/`pointer-events-none`, static under reduce
+- [x] 4.2 GREEN — create `src/components/FigureLayer.astro`: original SVG polygons per route, no copied art
+- [x] 4.3 GREEN — `BaseLayout.astro`: render; `global.css`: `html[data-route]` variant placements (shell/projects/skills/about/contact/resume/404)
+- [x] 4.4 Verify — e2e pass
 
 ## Phase 5: Ambient Audio
 

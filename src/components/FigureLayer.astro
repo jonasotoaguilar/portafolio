@@ -1,0 +1,155 @@
+---
+// Design AD3: one original inline-SVG composition per route, rendered between
+// the canvas and content (z-index -1, painted after the canvas in DOM order),
+// aria-hidden and pointer-events-none, zero JS. Every polygon is authored
+// geometry: a faceted featureless bust (no face, hair, or uniform reads —
+// never a copied character silhouette) in deep-blue fills with cyan rims,
+// plus angular bars/chevrons/chips/slashes at 15-45% opacity. Placements live
+// in global.css under html[data-route]; the SVG slices to fill its container.
+const pathname =
+	Astro.url.pathname.replace(/\.html$/, "").replace(/\/+$/, "") || "/";
+const route = pathname === "/" ? "shell" : pathname.slice(1);
+// The 404 route reuses the shell composition (DESIGN.md figure placements).
+const variant = route === "404" ? "shell" : route;
+
+// Abstract faceted bust, unit space 0..100 (head top ~4, shoulders to 100).
+const BUST = `
+	<g class="fx-bust">
+		<polygon points="30,14 50,4 70,14 74,34 66,52 34,52 26,34" fill="#0d2560"/>
+		<polygon points="30,14 50,4 66,20 30,30" fill="#4666ff"/>
+		<polygon points="50,4 70,14 66,20" fill="#2f46b8"/>
+		<polygon points="30,30 66,20 70,44 34,48" fill="#2f46b8"/>
+		<polygon points="34,48 70,44 66,52 34,52" fill="#4666ff"/>
+		<polyline points="26,34 30,14 50,4 70,14 74,34 66,52 34,52 26,34" fill="none" stroke="#38e1ff" stroke-width="1.2"/>
+		<polygon points="42,52 58,52 56,64 44,64" fill="#4666ff"/>
+		<polygon points="16,100 34,64 58,64 44,100" fill="#0d2560"/>
+		<polygon points="44,100 58,64 84,64 96,100" fill="#2f46b8"/>
+		<polygon points="44,64 58,64 56,84 42,84" fill="#4666ff"/>
+		<polyline points="16,100 34,64 58,64 84,64 96,100" fill="none" stroke="#38e1ff" stroke-width="1.2"/>
+	</g>`;
+
+// Angular artifact groups at 15-45% opacity (design AD3).
+const SLASHES = `
+	<g class="fx-slashes" opacity="0.3">
+		<rect x="0" y="42" width="5" height="56" transform="rotate(26 2.5 70)" fill="#38e1ff"/>
+		<rect x="14" y="30" width="5" height="68" transform="rotate(-18 16.5 64)" fill="#38e1ff"/>
+		<rect x="28" y="48" width="4" height="50" transform="rotate(12 30 73)" fill="#38e1ff"/>
+	</g>`;
+
+const BARS = `
+	<g class="fx-bars" opacity="0.35">
+		<rect x="30" y="0" width="12" height="100" transform="rotate(-16 36 50)" fill="#38e1ff"/>
+		<rect x="58" y="6" width="9" height="92" transform="rotate(21 62.5 52)" fill="#38e1ff"/>
+	</g>`;
+
+const CHEVRONS = `
+	<g class="fx-chevrons" opacity="0.4">
+		<polyline points="0,62 34,44 68,62" fill="none" stroke="#38e1ff" stroke-width="6"/>
+		<polyline points="12,74 34,62 56,74" fill="none" stroke="#38e1ff" stroke-width="4"/>
+		<polygon points="20,30 44,18 68,30 44,42" fill="none" stroke="#38e1ff" stroke-width="4"/>
+	</g>`;
+
+const CHIPS = `
+	<g class="fx-chips" opacity="0.45">
+		<polygon points="0,84 26,58 34,74" fill="#38e1ff"/>
+		<polygon points="70,10 96,36 80,44" fill="#38e1ff"/>
+		<polygon points="52,90 78,64 86,80" fill="#38e1ff"/>
+	</g>`;
+
+// Projects variant: cyan top band (DESIGN.md figure placements).
+const BAND = `
+	<g class="fx-band">
+		<polygon points="0,0 1280,0 1280,96 1080,148 0,124" fill="#38e1ff" opacity="0.2"/>
+		<polygon points="0,122 1080,146 1280,94 1280,120 1080,170 0,146" fill="#38e1ff" opacity="0.45"/>
+	</g>`;
+
+// Contact variant: bottom blue wash + left figure.
+const WASH = `
+	<g class="fx-wash">
+		<polygon points="0,210 1280,150 1280,400 0,400" fill="#2f46b8" opacity="0.35"/>
+		<polygon points="0,240 1280,180 1280,196 0,256" fill="#38e1ff" opacity="0.3"/>
+	</g>`;
+
+// Per-route compositions: the bust is scaled/translated into its container
+// (shell/404 oversized right half; skills right; about bottom-left; contact
+// left; resume left-mid), artifacts frame the remaining space.
+const COMPOSITIONS = {
+	shell: `
+		<g transform="translate(120,120) scale(4.4)">${BUST}</g>
+		<g transform="translate(560,80) scale(1.4)">${SLASHES}</g>
+		<g transform="translate(40,60) scale(1.8)">${CHEVRONS}</g>
+		<g transform="translate(300,600) scale(1.5)">${BARS}</g>
+		<g transform="translate(20,420) scale(2)">${CHIPS}</g>`,
+	projects: `
+		${BAND}
+		<g transform="translate(1120,60) scale(1.4)">${SLASHES}</g>
+		<g transform="translate(60,120) scale(1.3)">${CHIPS}</g>
+		<g transform="translate(880,140) scale(1.3)">${CHEVRONS}</g>`,
+	skills: `
+		<g transform="translate(300,140) scale(3.3)">${BUST}</g>
+		<g transform="translate(20,60) scale(1.8)">${CHEVRONS}</g>
+		<g transform="translate(500,560) scale(1.3)">${SLASHES}</g>
+		<g transform="translate(40,560) scale(1.5)">${CHIPS}</g>`,
+	about: `
+		<g transform="translate(20,150) scale(2.8)">${BUST}</g>
+		<g transform="translate(600,40) scale(1.5)">${SLASHES}</g>
+		<g transform="translate(360,300) scale(1.5)">${CHIPS}</g>`,
+	contact: `
+		${WASH}
+		<g transform="translate(80,120) scale(2.6)">${BUST}</g>
+		<g transform="translate(1100,140) scale(1.5)">${BARS}</g>
+		<g transform="translate(760,300) scale(1.4)">${CHIPS}</g>`,
+	resume: `
+		<g transform="translate(10,80) scale(3.1)">${BUST}</g>
+		<g transform="translate(420,320) scale(1.5)">${CHIPS}</g>
+		<g transform="translate(400,50) scale(1.1)">${SLASHES}</g>
+		<g transform="translate(300,440) scale(1.4)">${CHEVRONS}</g>`,
+} as const;
+---
+
+<!-- The layer itself carries the ARIA/pointer contract; each route renders
+     exactly one SVG (tested per route in reduced-motion.spec.ts). -->
+<div class="figure-layer" aria-hidden="true" data-figure-layer>
+	{variant === "shell" && (
+		<svg
+			viewBox="0 0 640 720"
+			preserveAspectRatio="xMidYMid slice"
+			set:html={COMPOSITIONS.shell}
+		/>
+	)}
+	{variant === "projects" && (
+		<svg
+			viewBox="0 0 1280 400"
+			preserveAspectRatio="xMidYMid slice"
+			set:html={COMPOSITIONS.projects}
+		/>
+	)}
+	{variant === "skills" && (
+		<svg
+			viewBox="0 0 614 720"
+			preserveAspectRatio="xMidYMid slice"
+			set:html={COMPOSITIONS.skills}
+		/>
+	)}
+	{variant === "about" && (
+		<svg
+			viewBox="0 0 704 446"
+			preserveAspectRatio="xMidYMid slice"
+			set:html={COMPOSITIONS.about}
+		/>
+	)}
+	{variant === "contact" && (
+		<svg
+			viewBox="0 0 1280 396"
+			preserveAspectRatio="xMidYMid slice"
+			set:html={COMPOSITIONS.contact}
+		/>
+	)}
+	{variant === "resume" && (
+		<svg
+			viewBox="0 0 537 547"
+			preserveAspectRatio="xMidYMid slice"
+			set:html={COMPOSITIONS.resume}
+		/>
+	)}
+</div>
