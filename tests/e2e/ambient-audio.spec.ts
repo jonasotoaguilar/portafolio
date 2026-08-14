@@ -106,6 +106,11 @@ test.describe("ambient audio", () => {
 	test("no track present: probe 404 keeps the control disabled and silent, swaps never re-probe", async ({
 		page,
 	}) => {
+		// The site now ships the licensed derivative (public/audio/…), so the
+		// absent-derivative build is simulated with a deterministic 404 route.
+		await page.route("**/audio/background.mp3", (route) =>
+			route.fulfill({ status: 404 }),
+		);
 		const heads: string[] = [];
 		const gets: string[] = [];
 		page.on("request", (request) => {
@@ -176,7 +181,7 @@ test.describe("ambient audio", () => {
 		const fadeOut = watchVolume(page);
 		await page.keyboard.press("Enter");
 		await expect(mute).toHaveAttribute("aria-pressed", "true");
-		await expect(mute).toHaveText("Sound: Off");
+		await expect(mute).toHaveAttribute("aria-label", "Sound: Off");
 		assertFade(await fadeOut, 0);
 		await expect.poll(() => paused(page)).toBe(true);
 		expect(
@@ -186,7 +191,7 @@ test.describe("ambient audio", () => {
 		const fadeIn = watchVolume(page);
 		await page.keyboard.press("Enter");
 		await expect(mute).toHaveAttribute("aria-pressed", "false");
-		await expect(mute).toHaveText("Sound: On");
+		await expect(mute).toHaveAttribute("aria-label", "Sound: On");
 		assertFade(await fadeIn, 1);
 		await expect.poll(() => paused(page)).toBe(false);
 	});
@@ -365,12 +370,12 @@ test.describe("ambient audio", () => {
 		// Mute: the persist write throws; the toggle still flips in memory.
 		await mute.click();
 		await expect(mute).toHaveAttribute("aria-pressed", "true");
-		await expect(mute).toHaveText("Sound: Off");
+		await expect(mute).toHaveAttribute("aria-label", "Sound: Off");
 		await expect.poll(() => paused(page)).toBe(true);
 		// And back: the in-memory state keeps cycling without storage.
 		await mute.click();
 		await expect(mute).toHaveAttribute("aria-pressed", "false");
-		await expect(mute).toHaveText("Sound: On");
+		await expect(mute).toHaveAttribute("aria-label", "Sound: On");
 		await expect.poll(() => paused(page)).toBe(false);
 		expect(pageErrors).toEqual([]);
 	});

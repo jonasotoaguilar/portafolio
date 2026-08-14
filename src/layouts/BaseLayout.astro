@@ -46,7 +46,7 @@ const canonical = is404
 		<div class="glow-layer" aria-hidden="true"></div>
 		<div class="scanlines-layer" aria-hidden="true"></div>
 		<Background />
-		<FigureLayer />
+		{route !== "shell" && <FigureLayer />}
 		<slot />
 		<ControlCluster />
 	</body>

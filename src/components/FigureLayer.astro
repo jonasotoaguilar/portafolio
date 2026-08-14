@@ -63,16 +63,9 @@ const BAND = `
 		<polygon points="0,122 1080,146 1280,94 1280,120 1080,170 0,146" fill="#38e1ff" opacity="0.45"/>
 	</g>`;
 
-// Contact variant: bottom blue wash + left figure.
-const WASH = `
-	<g class="fx-wash">
-		<polygon points="0,210 1280,150 1280,400 0,400" fill="#2f46b8" opacity="0.35"/>
-		<polygon points="0,240 1280,180 1280,196 0,256" fill="#38e1ff" opacity="0.3"/>
-	</g>`;
-
 // Per-route compositions: the bust is scaled/translated into its container
-// (shell/404 oversized right half; skills right; about bottom-left; contact
-// left; resume left-mid), artifacts frame the remaining space.
+// (shell/404 oversized right half; skills right; about bottom-left; resume
+// left-mid), artifacts frame the remaining space.
 const COMPOSITIONS = {
 	shell: `
 		<g transform="translate(120,120) scale(4.4)">${BUST}</g>
@@ -94,11 +87,6 @@ const COMPOSITIONS = {
 		<g transform="translate(20,150) scale(2.8)">${BUST}</g>
 		<g transform="translate(600,40) scale(1.5)">${SLASHES}</g>
 		<g transform="translate(360,300) scale(1.5)">${CHIPS}</g>`,
-	contact: `
-		${WASH}
-		<g transform="translate(80,120) scale(2.6)">${BUST}</g>
-		<g transform="translate(1100,140) scale(1.5)">${BARS}</g>
-		<g transform="translate(760,300) scale(1.4)">${CHIPS}</g>`,
 	resume: `
 		<g transform="translate(10,80) scale(3.1)">${BUST}</g>
 		<g transform="translate(420,320) scale(1.5)">${CHIPS}</g>
@@ -136,13 +124,6 @@ const COMPOSITIONS = {
 			viewBox="0 0 704 446"
 			preserveAspectRatio="xMidYMid slice"
 			set:html={COMPOSITIONS.about}
-		/>
-	)}
-	{variant === "contact" && (
-		<svg
-			viewBox="0 0 1280 396"
-			preserveAspectRatio="xMidYMid slice"
-			set:html={COMPOSITIONS.contact}
 		/>
 	)}
 	{variant === "resume" && (

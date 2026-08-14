@@ -1,0 +1,59 @@
+# Asset provenance register — owner-created original artwork (schema v1).
+# One entry per production source under assets/persona and assets/sprites; every
+# entry records owner metadata (creator Jonathan Soto, commercial/modification
+# permitted) and role classification. selected: true entries carry the locked
+# source→derivative mapping: derivative widths (design.md "Route Asset Matrix");
+# formats are fixed by design — AVIF (primary) + WebP (fallback) per width.
+# Validation: pnpm run gate:provenance (scripts/verify-provenance.mjs).
+# Policy: docs/adr/0005-owner-created-assets-provenance.md; design.md "Asset Pipeline".
+#
+# Licensed ambient music (ADR-0006): a separate music section records the
+# external Pixabay track and its committed derivative. The gate allows only
+# this registered derivative as audio in dist and verifies its sha256 against
+# derivative-sha256 (regenerate with scripts/optimize-audio.mjs).
+schema-version: 1
+music:
+  - title: "Acid Jazz Groove"
+    creator: alex-morgan
+    source-url: "https://pixabay.com/music/cafe-acid-jazz-groove-517096/"
+    license: "Pixabay Content License"
+    license-url: "https://pixabay.com/service/license-summary/"
+    acquisition-date: "2026-08-13"
+    commercial-use: permitted
+    modification: permitted
+    attribution-requirement: optional
+    standalone-redistribution: false
+    content-id-registered: true
+    ai-modified-generated: true
+    identity-confirmation: manual
+    source-path: "assets/music/background.mp3"
+    derivative-path: "public/audio/background.mp3"
+    derivative-format: mp3
+    derivative-encode: "-c:a libmp3lame -b:a 128k -ar 48000 -joint_stereo 1"
+    derivative-sha256: "c986cac8f96fdbbac28c570ab26aed62f0a6506c19cc992a46768b5909b51144"
+register:
+  - {file: persona_1.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: principal-persona, selected: true, widths: "480,768,960"}
+  - {file: persona_2.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: principal-persona, selected: true, widths: "480,768,960"}
+  - {file: persona_3.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: support-avatar, selected: false}
+  - {file: persona_4.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: support-avatar, selected: false}
+  - {file: persona_5.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: support-avatar, selected: false}
+  - {file: persona_6.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: principal-persona, selected: true, widths: "480,768,1280"}
+  - {file: persona_7.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: principal-persona, selected: false}
+  - {file: persona_8.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: principal-persona, selected: true, widths: "480,768,1280"}
+  - {file: persona_9.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: principal-persona, selected: true, widths: "480,768,1280"}
+  - {file: persona_10.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: principal-persona, selected: false}
+  - {file: persona_11.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: principal-persona, selected: true, widths: "480,768,1280"}
+  - {file: asset_01_luna_fragmentada.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: sprite-accent, selected: false}
+  - {file: asset_02_ciudad_nocturna.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: sprite-accent, selected: false}
+  - {file: asset_03_estacion_metro.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: sprite-accent, selected: false}
+  - {file: asset_04_mariposa_neon.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: sprite-accent, selected: true, widths: "96,160"}
+  - {file: asset_05_card.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: sprite-accent, selected: true, widths: "96,160"}
+  - {file: asset_06_heard.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: sprite-accent, selected: false}
+  - {file: asset_07_ola_oceano.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: sprite-accent, selected: false}
+  - {file: asset_08_puente_nocturno.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: sprite-accent, selected: false}
+  - {file: asset_09_badge_dev.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: sprite-accent, selected: true, widths: "96,160"}
+  - {file: asset_10_computer.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: sprite-accent, selected: true, widths: "96,160"}
+  - {file: asset_11_metro.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: sprite-accent, selected: false}
+  - {file: asset_12_clock.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: sprite-accent, selected: true, widths: "96,160"}
+  - {file: asset_13_mask.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: sprite-accent, selected: false}
+  - {file: asset_14_fire.png, origin-class: owner-created, license: "owner-created (all rights reserved)", creator: "Jonathan Soto", commercial-use: permitted, modification: permitted, usage-role: sprite-accent, selected: true, widths: "96,160"}

@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 
 // Browser-level proof for persona-navigation: shell ArrowUp/Down wrapping and
 // Enter activation, plus focus restoration when returning to the shell.
@@ -19,13 +19,11 @@ test.describe("shell keyboard navigation and focus restoration", () => {
 		await expect(page.getByRole("link", { name: "Resume" })).toBeFocused();
 		await page.keyboard.press("ArrowDown");
 		await page.keyboard.press("ArrowDown");
-		await page.keyboard.press("ArrowDown");
-		await expect(page.getByRole("link", { name: "Contact" })).toBeFocused();
+		await expect(page.getByRole("link", { name: "Skills" })).toBeFocused();
 		await page.keyboard.press("ArrowDown");
 		await expect(page.getByRole("link", { name: "About" })).toBeFocused();
 		await page.keyboard.press("ArrowUp");
-		await expect(page.getByRole("link", { name: "Contact" })).toBeFocused();
-		await page.keyboard.press("ArrowUp");
+		await expect(page.getByRole("link", { name: "Skills" })).toBeFocused();
 		await page.keyboard.press("ArrowUp");
 		await page.keyboard.press("ArrowUp");
 		await page.keyboard.press("ArrowUp");
@@ -37,6 +35,33 @@ test.describe("shell keyboard navigation and focus restoration", () => {
 	}) => {
 		await enterMenu(page);
 		await page.keyboard.press("ArrowDown");
+		await page.keyboard.press("Enter");
+		await expect(page).toHaveURL(/\/resume$/);
+		await expect(
+			page.getByRole("heading", { level: 1, name: "Resume" }),
+		).toBeVisible();
+	});
+
+	test("clicking the inert shell background keeps ArrowDown/Enter navigation alive", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await page.locator("[data-menu-item]").first().focus();
+		await expect(page.getByRole("link", { name: "About" })).toBeFocused();
+		// Click an inert shell background point (top-left of the field, away
+		// from the menu, the name card, and the mute control): the click blurs
+		// the menu and leaves focus on the body — the bug precondition.
+		await page.mouse.click(30, 80);
+		await expect(page.locator("body")).toBeFocused();
+		await expect(page.getByRole("link", { name: "About" })).not.toBeFocused();
+		// ArrowDown still moves the cursor and restores focus into the menu.
+		await page.keyboard.press("ArrowDown");
+		await expect(page.getByRole("link", { name: "Resume" })).toBeFocused();
+		await expect(page.getByRole("link", { name: "Resume" })).toHaveAttribute(
+			"data-active",
+			/.*/,
+		);
+		// Enter still activates the active item.
 		await page.keyboard.press("Enter");
 		await expect(page).toHaveURL(/\/resume$/);
 		await expect(
@@ -101,14 +126,14 @@ test.describe("persistent keyboard-active indicator", () => {
 		await page.goto("/");
 		await page.locator("[data-menu-item]").first().focus();
 		await page.keyboard.press("ArrowUp");
-		const contact = page.getByRole("link", { name: "Contact" });
+		const skills = page.getByRole("link", { name: "Skills" });
 		const about = page.getByRole("link", { name: "About" });
-		await expect(contact).toHaveAttribute("data-active", /.*/);
-		await expect(contact).toHaveAttribute("aria-current", "page");
+		await expect(skills).toHaveAttribute("data-active", /.*/);
+		await expect(skills).toHaveAttribute("aria-current", "page");
 		await expect(about).not.toHaveAttribute("aria-current", /.*/);
 	});
 
-	test("the keyboard-focused item keeps a visible focus-visible outline", async ({
+	test("the shell focus outline is removed; the translucent wedge marks the focused item", async ({
 		page,
 	}) => {
 		await page.goto("/");
@@ -117,27 +142,299 @@ test.describe("persistent keyboard-active indicator", () => {
 		const resume = page.getByRole("link", { name: "Resume" });
 		await expect(resume).toBeFocused();
 		await expect(resume).toHaveAttribute("data-active", /.*/);
+		// Home-shell delta: the visible browser outline is dropped on the
+		// shell menu anchor — the white wedge is the focus indicator.
+		// (Chromium keeps the declared outline-width in the computed style;
+		// outline-style none is what makes it invisible.)
 		const outline = await resume.evaluate((element) => {
 			const style = getComputedStyle(element);
-			return { width: style.outlineWidth, style: style.outlineStyle };
+			return { style: style.outlineStyle };
 		});
-		expect(outline.width).toBe("2px");
-		expect(outline.style).not.toBe("none");
+		expect(outline.style).toBe("none");
+		// The focused item draws the wedge (its ::before paints translucent
+		// white), so focus stays visibly marked.
+		const wedge = await resume.evaluate(
+			(element) => getComputedStyle(element, "::before").backgroundColor,
+		);
+		expect(wedge).not.toBe("rgba(0, 0, 0, 0)");
+		const underline = await resume.evaluate(
+			(element) => getComputedStyle(element, "::after").display,
+		);
+		expect(underline).toBe("none");
 	});
 
-	test("hover mirrors the active treatment color", async ({ page }) => {
+	test("shell hover keeps the cyan label and never overrides the active black", async ({
+		page,
+	}) => {
 		await page.goto("/");
+		const about = page.getByRole("link", { name: "About" });
+		// The active item stays black while hovered.
+		await expect(about).toHaveAttribute("data-active", /.*/);
+		await about.hover();
+		await expect(about).toHaveCSS("color", "rgb(4, 6, 15)");
+		// A hovered non-active item keeps the cyan label color.
 		const projects = page.getByRole("link", { name: "Projects" });
 		await projects.hover();
-		await expect(projects).toHaveCSS("color", "rgb(93, 117, 255)");
+		await expect(projects).toHaveCSS("color", "rgb(56, 225, 255)");
+	});
+});
+
+// Browser-level proof for keyboard cursor coherence (reference-driven-view-redesign,
+// persona-navigation delta): the keyboard cursor — DOM focus, the active item,
+// and (on views) the roving tabindex — moves as one. Tab synchronizes the shell
+// cursor so Tab-then-arrow stays coherent and Tab-then-Enter activates the
+// focused item; on views, focus rests on the active item on entry, arrows move
+// focus and active together, Enter/ArrowRight open the focused item's panel,
+// Escape restores focus through the hierarchy, and inactive screens never react.
+test.describe("keyboard cursor coherence (#6186)", () => {
+	const menuItem = (page: Page, name: string) =>
+		page.getByRole("link", { name });
+
+	test("Tab then ArrowDown keeps the cursor coherent", async ({ page }) => {
+		await page.goto("/");
+		// Keyboard-only entry: the shell focuses its first item on load.
+		await expect(menuItem(page, "About")).toBeFocused();
+		// Tab to SKILLS: About → Resume → Projects → Skills.
+		await page.keyboard.press("Tab");
+		await page.keyboard.press("Tab");
+		await page.keyboard.press("Tab");
+		await expect(menuItem(page, "Skills")).toBeFocused();
+		await expect(menuItem(page, "Skills")).toHaveAttribute("data-active", /.*/);
+		await expect(menuItem(page, "Skills")).toHaveAttribute(
+			"aria-current",
+			"page",
+		);
+		// ArrowDown from the Tab-synced cursor at the last item wraps to
+		// ABOUT — no teleport.
+		await page.keyboard.press("ArrowDown");
+		await expect(menuItem(page, "About")).toBeFocused();
+		await expect(menuItem(page, "About")).toHaveAttribute("data-active", /.*/);
+		await expect(menuItem(page, "About")).toHaveAttribute(
+			"aria-current",
+			"page",
+		);
+		await expect(menuItem(page, "Skills")).not.toHaveAttribute(
+			"data-active",
+			/.*/,
+		);
+	});
+
+	test("Tab directly to an item then Enter activates the focused item", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await expect(menuItem(page, "About")).toBeFocused();
+		await page.keyboard.press("Tab");
+		await expect(menuItem(page, "Resume")).toBeFocused();
+		await expect(menuItem(page, "Resume")).toHaveAttribute("data-active", /.*/);
+		await page.keyboard.press("Enter");
+		await expect(page).toHaveURL(/\/resume$/);
+		await expect(
+			page.getByRole("heading", { level: 1, name: "Resume" }),
+		).toBeVisible();
+	});
+
+	test("Tab and Shift+Tab wrap inside the menu and keep the cursor synced", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await expect(menuItem(page, "About")).toBeFocused();
+		// Tab through all four items to the last one.
+		for (let index = 0; index < 3; index += 1) {
+			await page.keyboard.press("Tab");
+		}
+		await expect(menuItem(page, "Skills")).toBeFocused();
+		await expect(menuItem(page, "Skills")).toHaveAttribute("data-active", /.*/);
+		// Tab wraps back to the first item, cursor follows.
+		await page.keyboard.press("Tab");
+		await expect(menuItem(page, "About")).toBeFocused();
+		await expect(menuItem(page, "About")).toHaveAttribute("data-active", /.*/);
+		await expect(menuItem(page, "About")).toHaveAttribute(
+			"aria-current",
+			"page",
+		);
+		// Shift+Tab wraps back to the last item, cursor follows.
+		await page.keyboard.press("Shift+Tab");
+		await expect(menuItem(page, "Skills")).toBeFocused();
+		await expect(menuItem(page, "Skills")).toHaveAttribute("data-active", /.*/);
+	});
+
+	test("entering a list view focuses the active item", async ({ page }) => {
+		await page.goto("/projects");
+		await expect(
+			page.getByRole("button", { name: "ServiceFlow" }),
+		).toBeFocused();
+		// A hash-preselected active item receives focus on entry too.
+		await page.goto("/projects#eventcommerce");
+		await expect(
+			page.getByRole("button", { name: "EventCommerce" }),
+		).toBeFocused();
+	});
+
+	test("arrows move DOM focus and the active item together", async ({
+		page,
+	}) => {
+		await page.goto("/projects");
+		await expect(
+			page.getByRole("button", { name: "ServiceFlow" }),
+		).toBeFocused();
+		await page.keyboard.press("ArrowDown");
+		await expect(
+			page.getByRole("button", { name: "WealthQuest" }),
+		).toBeFocused();
+		await expect(
+			page.getByRole("button", { name: "WealthQuest" }),
+		).toHaveAttribute("data-active", /.*/);
+		await expect(
+			page.getByRole("button", { name: "WealthQuest" }),
+		).toHaveAttribute("aria-pressed", "true");
+		await page.keyboard.press("ArrowDown");
+		await expect(
+			page.getByRole("button", { name: "EventCommerce" }),
+		).toBeFocused();
+		await expect(
+			page.getByRole("button", { name: "EventCommerce" }),
+		).toHaveAttribute("data-active", /.*/);
+		await expect(
+			page.getByRole("button", { name: "ServiceFlow" }),
+		).not.toHaveAttribute("data-active", /.*/);
+		// Wrapping: two ArrowDowns from the last item return to the first.
+		await page.keyboard.press("ArrowDown");
+		await page.keyboard.press("ArrowDown");
+		await expect(
+			page.getByRole("button", { name: "ServiceFlow" }),
+		).toBeFocused();
+	});
+
+	test("Enter and ArrowRight open the focused item's detail panel", async ({
+		page,
+	}) => {
+		await page.goto("/projects");
+		await page.keyboard.press("ArrowDown");
+		await page.keyboard.press("ArrowDown");
+		await expect(
+			page.getByRole("button", { name: "EventCommerce" }),
+		).toBeFocused();
+		const panel = page.locator("[data-detail-panel][data-active]");
+		await page.keyboard.press("Enter");
+		await expect(panel).toContainText("EventCommerce");
+		await expect(panel).toBeFocused();
+		// After closing, ArrowRight opens the same focused item again.
+		await page.keyboard.press("Escape");
+		await expect(page.locator("[data-detail-panel][data-active]")).toHaveCount(
+			0,
+		);
+		await page.keyboard.press("ArrowRight");
+		await expect(panel).toContainText("EventCommerce");
+		await expect(panel).toBeFocused();
+	});
+
+	test("roving tabindex leaves a single tab stop in the list", async ({
+		page,
+	}) => {
+		await page.goto("/projects");
+		const serviceflow = page.getByRole("button", { name: "ServiceFlow" });
+		const wealthquest = page.getByRole("button", { name: "WealthQuest" });
+		const eventcommerce = page.getByRole("button", { name: "EventCommerce" });
+		await expect(serviceflow).toHaveAttribute("tabindex", "0");
+		await expect(wealthquest).toHaveAttribute("tabindex", "-1");
+		await expect(eventcommerce).toHaveAttribute("tabindex", "-1");
+		await page.keyboard.press("ArrowDown");
+		await expect(wealthquest).toHaveAttribute("tabindex", "0");
+		await expect(serviceflow).toHaveAttribute("tabindex", "-1");
+		// Tab leaves the single tab stop into the open panel's link — never
+		// into a sibling list item.
+		await page.keyboard.press("Tab");
+		await expect(eventcommerce).not.toBeFocused();
+		await expect(page.getByRole("link", { name: "WealthQuest" })).toBeFocused();
+	});
+
+	test("Escape closes the panel first, restores focus to the item, then returns to the menu", async ({
+		page,
+	}) => {
+		await page.goto("/projects");
+		const serviceflow = page.getByRole("button", { name: "ServiceFlow" });
+		await expect(serviceflow).toBeFocused();
+		await page.keyboard.press("Enter");
+		await expect(
+			page.locator("[data-detail-panel][data-active]"),
+		).toBeFocused();
+		await page.keyboard.press("Escape");
+		await expect(page.locator("[data-detail-panel][data-active]")).toHaveCount(
+			0,
+		);
+		await expect(serviceflow).toBeFocused();
+		await page.keyboard.press("Escape");
+		await expect(page).toHaveURL(/\/$/);
+		await expect(menuItem(page, "About")).toBeFocused();
+	});
+
+	test("inactive screens never react to cursor keys", async ({ page }) => {
+		await page.goto("/about");
+		await page.keyboard.press("ArrowDown");
+		await page.keyboard.press("ArrowUp");
+		await page.keyboard.press("Enter");
+		await expect(page).toHaveURL(/\/about$/);
+		await expect(page.locator("body")).toBeFocused();
+	});
+
+	test("keyboard-only journey: shell to list view and back, cursor stays coherent", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		await expect(menuItem(page, "About")).toBeFocused();
+		// Reach PROJECTS with keys only.
+		await page.keyboard.press("ArrowDown");
+		await page.keyboard.press("ArrowDown");
+		await expect(menuItem(page, "Projects")).toBeFocused();
+		await page.keyboard.press("Enter");
+		await expect(page).toHaveURL(/\/projects$/);
+		await expect(
+			page.getByRole("button", { name: "ServiceFlow" }),
+		).toBeFocused();
+		// Move the view cursor, open, close.
+		await page.keyboard.press("ArrowDown");
+		await expect(
+			page.getByRole("button", { name: "WealthQuest" }),
+		).toBeFocused();
+		await page.keyboard.press("Enter");
+		await expect(
+			page.locator("[data-detail-panel][data-active]"),
+		).toBeFocused();
+		await page.keyboard.press("Escape");
+		await page.keyboard.press("Escape");
+		await expect(page).toHaveURL(/\/$/);
+		// Back on the shell after the swap, then re-enter the view: the
+		// cursor must move exactly one step per key — a leaked before-swap
+		// document handler would double-move on the second visit.
+		await expect(menuItem(page, "About")).toBeFocused();
+		await page.keyboard.press("ArrowDown");
+		await expect(menuItem(page, "Resume")).toBeFocused();
+		await expect(menuItem(page, "Resume")).toHaveAttribute("data-active", /.*/);
+		await page.keyboard.press("ArrowDown");
+		await page.keyboard.press("Enter");
+		await expect(page).toHaveURL(/\/projects$/);
+		await expect(
+			page.getByRole("button", { name: "ServiceFlow" }),
+		).toBeFocused();
+		await page.keyboard.press("ArrowDown");
+		await expect(
+			page.getByRole("button", { name: "WealthQuest" }),
+		).toBeFocused();
+		await expect(
+			page.getByRole("button", { name: "EventCommerce" }),
+		).not.toBeFocused();
 	});
 });
 
 // Browser-level proof for the centered diagonal staggered menu
-// (persona-navigation): a 55vw column at desktop widths where every item
-// carries the exact design AD1 inline vars (--item-x / --item-skew /
-// --item-size, PROJECTS largest) consumed by one .menu-item rule, with
-// pairwise non-overlap; tablet halves offsets at −4°; coarse pointer and
+// (persona-navigation + home-shell contract): the menu column is horizontally
+// centered at desktop widths (the nav shrinks to its widest row and the flex
+// shell centers it; each row centers its own label), every item carries the
+// exact design AD1 inline vars (--item-x / --item-skew / --item-size,
+// PROJECTS largest) consumed by one .menu-item rule, with pairwise
+// non-overlap; regular rows sit at −14° and PROJECTS at −16°; tablet halves
+// offsets and per-item skews (calc(var(--item-skew) / 2)); coarse pointer and
 // <768px collapse to uniform-size non-colliding ≥44px targets with a 12px gap.
 
 // Parsed in the browser: returns the CSS transform matrix as
@@ -159,26 +456,23 @@ const rowMatrix = (label: string) => (page: Page) =>
 
 test.describe("diagonal staggered menu", () => {
 	const EXPECTED_DESKTOP = [
-		{ label: "About", tx: -36, skewDeg: -6 },
-		{ label: "Resume", tx: 24, skewDeg: -6 },
-		{ label: "Projects", tx: -48, skewDeg: -8 },
-		{ label: "Skills", tx: 36, skewDeg: -6 },
-		{ label: "Contact", tx: -16, skewDeg: -8 },
+		{ label: "About", tx: -36, skewDeg: -14 },
+		{ label: "Resume", tx: 24, skewDeg: -14 },
+		{ label: "Projects", tx: -48, skewDeg: -16 },
+		{ label: "Skills", tx: 36, skewDeg: -14 },
 	];
 
-	test("desktop: center-right 55vw column, exact AD1 offsets and skews, PROJECTS largest, no overlap", async ({
+	test("desktop: centered diagonal menu column, exact AD1 offsets and skews, PROJECTS largest, no overlap", async ({
 		page,
 	}) => {
 		await page.setViewportSize({ width: 1280, height: 800 });
 		await page.goto("/");
 
+		// New contract: the menu column is horizontally centered (no fixed
+		// 55vw column) — the nav box's center sits on the viewport center.
 		const nav = await page.locator("[data-menu]").boundingBox();
 		if (!nav) throw new Error("expected a visible menu column");
-		expect(nav.width).toBeGreaterThan(0.53 * 1280);
-		expect(nav.width).toBeLessThan(0.57 * 1280);
-		// Column straddles (or sits right of) the horizontal center.
-		expect(nav.x).toBeLessThanOrEqual(640);
-		expect(nav.x + nav.width).toBeGreaterThanOrEqual(640);
+		expect(Math.abs(nav.x + nav.width / 2 - 640)).toBeLessThanOrEqual(2);
 
 		for (const { label, tx, skewDeg } of EXPECTED_DESKTOP) {
 			const [a, b, c, d, actualTx, actualTy] = await rowMatrix(label)(page);
@@ -198,9 +492,9 @@ test.describe("diagonal staggered menu", () => {
 			.evaluateAll((items) =>
 				items.map((item) => parseFloat(getComputedStyle(item).fontSize)),
 			);
-		expect(fontSizes).toHaveLength(5);
+		expect(fontSizes).toHaveLength(4);
 		expect(fontSizes[2]).toBeGreaterThan(
-			Math.max(fontSizes[0], fontSizes[1], fontSizes[3], fontSizes[4]),
+			Math.max(fontSizes[0], fontSizes[1], fontSizes[3]),
 		);
 
 		// Pairwise non-overlap once the entrance animation settles.
@@ -236,16 +530,20 @@ test.describe("diagonal staggered menu", () => {
 			.toBeLessThanOrEqual(0.5);
 	});
 
-	test("tablet 768–1023px: half offsets at −4° skew", async ({ page }) => {
+	test("tablet 768–1023px: half offsets and half per-item skews", async ({
+		page,
+	}) => {
 		await page.setViewportSize({ width: 900, height: 800 });
 		await page.goto("/");
 
-		for (const { label, tx } of EXPECTED_DESKTOP) {
+		// The tablet contract halves the desktop values per item: −5° regular,
+		// −6° for PROJECTS (skewDeg / 2).
+		for (const { label, tx, skewDeg } of EXPECTED_DESKTOP) {
 			const [, , c, , actualTx] = await rowMatrix(label)(page);
 			expect(Math.abs(actualTx - tx / 2)).toBeLessThanOrEqual(1);
-			expect(Math.abs(c - Math.tan((-4 * Math.PI) / 180))).toBeLessThanOrEqual(
-				0.01,
-			);
+			expect(
+				Math.abs(c - Math.tan(((skewDeg / 2) * Math.PI) / 180)),
+			).toBeLessThanOrEqual(0.01);
 		}
 	});
 });
@@ -272,7 +570,7 @@ test.describe("diagonal staggered menu — coarse collapse", () => {
 						: "staggered";
 				}),
 			);
-		expect(transforms).toHaveLength(5);
+		expect(transforms).toHaveLength(4);
 		for (const state of transforms) expect(state).toBe("collapsed");
 
 		// Uniform clamp size across all items.
@@ -298,7 +596,7 @@ test.describe("diagonal staggered menu — coarse collapse", () => {
 				};
 			}),
 		);
-		expect(boxes).toHaveLength(5);
+		expect(boxes).toHaveLength(4);
 		for (const box of boxes) expect(box.height).toBeGreaterThanOrEqual(44);
 
 		// The 12px gap lives on the flex rows (li boxes), not the label line box.
@@ -346,5 +644,294 @@ test.describe("diagonal staggered menu — coarse collapse", () => {
 		page,
 	}) => {
 		await assertCollapsed(page);
+	});
+});
+
+// Browser-level proof for the home-shell composition (home-shell contract):
+// the shell base is a STATIC white-to-light-blue gradient (views keep the
+// dark radial glow), a huge vertical PORTFOLIO watermark bleeds off the left
+// edge behind the menu, and a small outlined identity card sits top-right —
+// all decorative markup with zero JS, aria-hidden where purely decorative.
+test.describe("home shell decorative composition", () => {
+	test("shell base is a static diagonal gradient; views keep the dark glow", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 720 });
+		await page.goto("/");
+		const shellGlow = await page.locator(".glow-layer").evaluate((el) => {
+			const style = getComputedStyle(el);
+			return { image: style.backgroundImage, animation: style.animationName };
+		});
+		expect(shellGlow.image).toContain("linear-gradient");
+		expect(shellGlow.image).toContain("112deg");
+		expect(shellGlow.animation).toBe("none");
+		// The gradient starts white and ends light blue (shell token).
+		expect(shellGlow.image).toContain("rgb(255, 255, 255)");
+		expect(shellGlow.image).toContain("rgb(188, 212, 255)");
+		expect(shellGlow.image).toContain("rgb(22, 119, 200)");
+
+		// A view route keeps the dark radial glow untouched.
+		await page.goto("/about");
+		const viewGlow = await page
+			.locator(".glow-layer")
+			.evaluate((el) => getComputedStyle(el).backgroundImage);
+		expect(viewGlow).toContain("radial-gradient");
+		expect(viewGlow).toContain("rgb(13, 37, 96)");
+	});
+
+	test("vertical PORTFOLIO watermark bleeds off the left edge, aria-hidden", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 720 });
+		await page.goto("/");
+		const watermark = page.locator(".shell-watermark");
+		await expect(watermark).toHaveText("PORTFOLIO");
+		await expect(watermark).toHaveAttribute("aria-hidden", "true");
+		await expect(watermark).toHaveCSS("writing-mode", "vertical-rl");
+		await expect(watermark).toHaveCSS("color", "rgb(4, 6, 15)");
+		const box = await watermark.boundingBox();
+		if (!box) throw new Error("expected a visible watermark");
+		// Intentionally cropped: the word starts off the left edge and only a
+		// vertical strip of the glyphs is visible, filling most of the height.
+		expect(box.x).toBeLessThan(0);
+		expect(box.x + box.width).toBeGreaterThan(0);
+		expect(box.width).toBeGreaterThan(30);
+		expect(box.height).toBeGreaterThan(0.8 * 720);
+	});
+
+	test("outlined identity card sits top-right with the owner name, not interactive", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 720 });
+		await page.goto("/");
+		const card = page.locator(".shell-name-card");
+		await expect(card).toHaveText("Jonathan Soto");
+		const box = await card.boundingBox();
+		if (!box) throw new Error("expected a visible name card");
+		expect(box.x + box.width).toBeLessThanOrEqual(1280);
+		expect(box.x).toBeGreaterThan(1280 - 300);
+		expect(box.y).toBeLessThan(80);
+		const style = await card.evaluate((el) => {
+			const computed = getComputedStyle(el);
+			return {
+				tag: el.tagName,
+				borderWidth: computed.borderWidth,
+				borderStyle: computed.borderStyle,
+			};
+		});
+		expect(style.tag).toBe("P");
+		expect(style.borderStyle).not.toBe("none");
+		expect(style.borderWidth).toBe("1px");
+		// Not interactive: it is not a link or button and never enters the
+		// shell's Tab order.
+		await expect(page.getByRole("link", { name: "Jonathan Soto" })).toHaveCount(
+			0,
+		);
+		await expect(
+			page.getByRole("button", { name: "Jonathan Soto" }),
+		).toHaveCount(0);
+	});
+});
+
+// Browser-level proof for the home-shell light-field palette (home-shell
+// contract delta): menu labels are cyan on the shell — Resume (2nd) and
+// Skills (4th) one lighter step — the keyboard-active and :focus-visible item
+// turns near-black in both states (hover never overrides it), and the
+// auxiliary text (key hints, MOVE/SELECT/BACK labels, identity card) is
+// white with a black outline over the blue gradient. Dark-route palettes
+// stay untouched.
+test.describe("home shell light-field palette", () => {
+	// Relative luminance (WCAG): true lightness ordering independent of the
+	// exact resolved color-mix rounding.
+	const luminance = (rgb: string): number => {
+		const [r, g, b] = rgb
+			.match(/\d+/g)!
+			.map(Number)
+			.map((v) => {
+				const c = v / 255;
+				return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+			});
+		return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+	};
+
+	test("menu labels are cyan, with Resume and Skills one lighter step", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		// About carries data-active on load, so it is black, not cyan; the
+		// auto-waiting assertion lets its 150ms color transition settle.
+		const about = page.getByRole("link", { name: "About" });
+		await expect(about).toHaveCSS("color", "rgb(4, 6, 15)");
+		const color = async (name: string) =>
+			page
+				.getByRole("link", { name })
+				.evaluate((el) => getComputedStyle(el).color);
+		const resume = await color("Resume");
+		const projects = await color("Projects");
+		const skills = await color("Skills");
+		expect(projects).toBe("rgb(56, 225, 255)");
+		expect(resume).not.toBe(projects);
+		expect(skills).not.toBe(projects);
+		expect(luminance(resume)).toBeGreaterThan(luminance(projects));
+		expect(luminance(skills)).toBeGreaterThan(luminance(projects));
+	});
+
+	test("the active and focus-visible shell item turns black; hover never overrides it", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		const about = page.getByRole("link", { name: "About" });
+		await expect(about).toHaveCSS("color", "rgb(4, 6, 15)");
+		await about.hover();
+		await expect(about).toHaveCSS("color", "rgb(4, 6, 15)");
+		// Tab-focusing a lighter item turns it black too.
+		await page.keyboard.press("Tab");
+		const resume = page.getByRole("link", { name: "Resume" });
+		await expect(resume).toBeFocused();
+		await expect(resume).toHaveCSS("color", "rgb(4, 6, 15)");
+	});
+
+	test("only the active/focus-visible item draws the translucent white wedge accent", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		// About carries data-active + focus on load, so its ::before is the
+		// large translucent white wedge laid over the whole word; the item
+		// isolates its stacking context so the pseudo paints at z-index 1
+		// under the crisp black .menu-label at z-index 2.
+		const beforeStyle = (locator: Locator) =>
+			locator.evaluate((el) => {
+				const style = getComputedStyle(el, "::before");
+				const rect = el.getBoundingClientRect();
+				const px = (v: string) => parseFloat(v);
+				return {
+					background: style.backgroundColor,
+					clipPath: style.clipPath,
+					zIndex: style.zIndex,
+					// The wedge's own box, from the item's rect plus its insets.
+					rect: {
+						left: rect.left + px(style.left),
+						right: rect.right - px(style.right),
+						top: rect.top + px(style.top),
+						bottom: rect.bottom - px(style.bottom),
+					},
+				};
+			});
+		const about = page.getByRole("link", { name: "About" });
+		await expect(about).toHaveCSS("isolation", "isolate");
+		const active = await beforeStyle(about);
+		// Brighter translucent white wedge: 60% white over the light-blue
+		// field (color(srgb 1 1 1 / 0.6) in Chromium), not the old cyan
+		// triangle.
+		expect(active.background).toBe("color(srgb 1 1 1 / 0.6)");
+		// Angular wedge shape with BOTH edges diagonal — left edge from 0% to
+		// 10%, right edge from 100% to 86% — a long slanted panel with a
+		// pointed end, NOT the previous 0.7em point (50% 100% apex) and not a
+		// rectangle with a straight vertical left edge (0% 100% corner).
+		expect(active.clipPath).toContain("polygon(");
+		expect(active.clipPath).toContain("86% 100%");
+		expect(active.clipPath).toContain("10% 100%");
+		expect(active.clipPath).not.toContain("50% 100%");
+		expect(active.clipPath).not.toContain("0 100%");
+		expect(active.zIndex).toBe("1");
+		// The wedge spans the whole item box — within a few px of every
+		// edge (≤5% of the item's em) — so it covers the entire word; it is
+		// NOT a small point accent. The em-based slack absorbs sub-pixel
+		// flex centering of the label span.
+		const anchor = await about.boundingBox();
+		if (!anchor) throw new Error("expected a visible menu item");
+		const fontSize = parseFloat(
+			await about.evaluate((el) => getComputedStyle(el).fontSize),
+		);
+		const emSlack = 0.05 * fontSize;
+		expect(active.rect.left).toBeLessThanOrEqual(anchor.x + 2);
+		expect(active.rect.right).toBeGreaterThanOrEqual(
+			anchor.x + anchor.width - 2,
+		);
+		expect(active.rect.top).toBeLessThanOrEqual(anchor.y + emSlack);
+		expect(active.rect.bottom).toBeGreaterThanOrEqual(
+			anchor.y + anchor.height - emSlack,
+		);
+		// And it is wider than the label span on both sides.
+		const label = await about.locator(".menu-label").boundingBox();
+		if (!label) throw new Error("expected a visible menu label span");
+		expect(active.rect.left).toBeLessThanOrEqual(label.x);
+		expect(active.rect.right).toBeGreaterThanOrEqual(label.x + label.width);
+		// The black label stays crisp above the wedge.
+		await expect(about.locator(".menu-label")).toHaveCSS("z-index", "2");
+		await expect(about.locator(".menu-label")).toHaveCSS(
+			"position",
+			"relative",
+		);
+
+		// An inactive, non-hovered item has no accent layer at all.
+		const projects = page.getByRole("link", { name: "Projects" });
+		const inactive = await beforeStyle(projects);
+		expect(inactive.background).toBe("rgba(0, 0, 0, 0)");
+		expect(inactive.clipPath).toBe("none");
+
+		// Moving focus moves the wedge: the newly focused item gets it and
+		// the previously active one loses it.
+		await page.keyboard.press("Tab");
+		const resume = page.getByRole("link", { name: "Resume" });
+		await expect(resume).toBeFocused();
+		await expect(resume).toHaveCSS("isolation", "isolate");
+		expect((await beforeStyle(resume)).background).toBe(
+			"color(srgb 1 1 1 / 0.6)",
+		);
+		expect((await beforeStyle(about)).background).toBe("rgba(0, 0, 0, 0)");
+	});
+
+	test("auxiliary shell text is white with a subtle black outline in the display face; dark routes keep their palette", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 720 });
+		await page.goto("/");
+		const strokeWidth = (locator: Locator) =>
+			locator.evaluate((el) =>
+				getComputedStyle(el).getPropertyValue("-webkit-text-stroke-width"),
+			);
+		const fontFamily = (locator: Locator) =>
+			locator.evaluate((el) => getComputedStyle(el).fontFamily);
+		const hints = page.locator(".key-hints");
+		await expect(hints).toHaveCSS("color", "rgb(255, 255, 255)");
+		// Very subtle outline: 0.3px, down from the previous 0.5px.
+		expect(await strokeWidth(hints)).toBe("0.3px");
+		// Shell auxiliary text uses the display face (Anton — the menu voice),
+		// never a system sans or the condensed label face (Bebas Neue).
+		expect(await fontFamily(hints)).toContain("Anton");
+		expect(await fontFamily(hints)).not.toContain("Bebas");
+		await expect(hints.locator("span").first()).toHaveCSS(
+			"color",
+			"rgb(255, 255, 255)",
+		);
+		const kbd = hints.locator("kbd").first();
+		await expect(kbd).toHaveCSS("color", "rgb(255, 255, 255)");
+		expect(await fontFamily(kbd)).toContain("Anton");
+		// Keycaps grow to the label step (1.25rem) so the arrow glyphs stay
+		// large and readable over the busy shell field.
+		const kbdSize = parseFloat(
+			await kbd.evaluate((el) => getComputedStyle(el).fontSize),
+		);
+		expect(kbdSize).toBeGreaterThanOrEqual(20);
+		const mute = page.locator(".mute-control");
+		await expect(mute).toHaveCSS("color", "rgb(255, 255, 255)");
+		expect(await strokeWidth(mute)).toBe("0.3px");
+		const card = page.locator(".shell-name-card");
+		await expect(card).toHaveCSS("color", "rgb(255, 255, 255)");
+		expect(await strokeWidth(card)).toBe("0.3px");
+		expect(await fontFamily(card)).toContain("Anton");
+		// The dark-route control cluster keeps the dark palette and the
+		// condensed label face.
+		await page.goto("/projects");
+		await expect(page.locator(".key-hints")).toHaveCSS(
+			"color",
+			"rgb(167, 167, 171)",
+		);
+		await expect(page.locator(".key-hints kbd").first()).toHaveCSS(
+			"color",
+			"rgb(255, 255, 255)",
+		);
+		expect(await fontFamily(page.locator(".key-hints"))).toContain("Bebas");
 	});
 });

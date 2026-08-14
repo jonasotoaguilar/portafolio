@@ -3,21 +3,19 @@
 // decoration; keyboard reality is Arrow/Enter/Escape). Hidden from assistive
 // tech (real link text carries the meaning) and by the cluster hide rules in
 // global.css on short (<560px) or coarse-pointer viewports (design AD4).
+// Key glyphs are oversized for legibility over the busy shell field.
 ---
 <footer class="key-hints flex items-center gap-4 font-label text-xl uppercase tracking-[0.08em] text-text-secondary" aria-hidden="true">
-	<span class="rounded-[2px] border border-accent-600 px-2 py-1 text-sm leading-none text-accent-300">
-		GAMEPAD
-	</span>
 	<span class="flex items-center gap-2">
-		<kbd class="rounded-[2px] border border-text-secondary/40 px-2 py-1 text-sm leading-none text-text-primary">↑↓</kbd>
+		<kbd class="inline-flex min-w-10 items-center justify-center rounded-[2px] border border-text-secondary/40 px-2.5 py-1.5 text-lg leading-none text-text-primary">↑↓</kbd>
 		move
 	</span>
 	<span class="flex items-center gap-2">
-		<kbd class="rounded-[2px] border border-text-secondary/40 px-2 py-1 text-sm leading-none text-text-primary">↵</kbd>
+		<kbd class="inline-flex min-w-10 items-center justify-center rounded-[2px] border border-text-secondary/40 px-2.5 py-1.5 text-lg leading-none text-text-primary">↵</kbd>
 		select
 	</span>
 	<span class="flex items-center gap-2">
-		<kbd class="rounded-[2px] border border-text-secondary/40 px-2 py-1 text-sm leading-none text-text-primary">Esc</kbd>
+		<kbd class="inline-flex min-w-10 items-center justify-center rounded-[2px] border border-text-secondary/40 px-2.5 py-1.5 text-lg leading-none text-text-primary">Esc</kbd>
 		back
 	</span>
 </footer>

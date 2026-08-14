@@ -95,16 +95,15 @@ const VIEWS: [string, string][] = [
 	["/resume", "Resume"],
 	["/projects", "Projects"],
 	["/skills", "Skills"],
-	["/contact", "Contact"],
 ];
 
 test.describe("game shell and view routes", () => {
-	test("shell renders exactly five menu links to the five view routes", async ({
+	test("shell renders exactly four menu links to the four view routes", async ({
 		page,
 	}) => {
 		await page.goto("/");
 		const menu = page.getByRole("navigation", { name: "Game menu" });
-		await expect(menu.getByRole("link")).toHaveCount(5);
+		await expect(menu.getByRole("link")).toHaveCount(4);
 		for (const [path, label] of VIEWS) {
 			await expect(menu.getByRole("link", { name: label })).toHaveAttribute(
 				"href",
@@ -216,24 +215,14 @@ test.describe("game shell and view routes", () => {
 		expect(text).not.toMatch(/\d+\s*\/\s*\d+/);
 	});
 
-	test("CONTACT surfaces the email CTA and safe external links", async ({
+	test("CONTACT is no longer a generated page: /contact resolves through the normal 404 behavior", async ({
 		page,
 	}) => {
-		await page.goto("/contact");
+		const response = await page.goto("/contact");
+		expect(response?.status()).toBe(404);
 		await expect(
-			page.getByRole("link", { name: "jonathansoto.dev@gmail.com" }),
-		).toHaveAttribute("href", "mailto:jonathansoto.dev@gmail.com");
-		const external: [string, string][] = [
-			["GitHub", "https://github.com/jonasotoaguilar"],
-			["WealthQuest", "https://jonasotoaguilar.itch.io/wealthquest"],
-		];
-		for (const [label, href] of external) {
-			const link = page.getByRole("link", { name: label });
-			await expect(link).toHaveAttribute("href", href);
-			await expect(link).toHaveAttribute("target", "_blank");
-			await expect(link).toHaveAttribute("rel", /noopener/);
-			await expect(link).toHaveAttribute("rel", /noreferrer/);
-		}
+			page.getByRole("heading", { level: 1, name: "404" }),
+		).toBeVisible();
 	});
 
 	test("PROJECTS renders the four projects once in declared order", async ({
@@ -368,7 +357,6 @@ test.describe("RESUME view", () => {
 			"/resume",
 			"/projects",
 			"/skills",
-			"/contact",
 			"/missing-page-xyz",
 		]) {
 			await page.goto(path);
@@ -623,19 +611,22 @@ test.describe("view-transition overlays", () => {
 	});
 });
 
-// Bottom-right control cluster (persona-navigation spec scenarios "Hints
-// cluster bottom-right without overlap" and "Coarse pointer hides hints";
-// design AD4): the cluster is fixed at bottom 1.5rem / right 1.75rem, the
-// decorative key hints hide on short (<560px) or coarse-pointer viewports,
-// and the mute control keeps a ≥44px target. Anchor boxes (the visible
-// menu items) are the non-overlap measure on the shell; the heading and the
-// back link stand for view content, which never reaches the corner region.
-test.describe("bottom-right control cluster", () => {
-	const cluster = (page: Page) => page.locator("[data-control-cluster]");
+// Control placement (persona-navigation spec scenarios "Hints cluster
+// bottom-right without overlap" and "Coarse pointer hides hints"; design
+// AD4): the persisted control root holds two corners — the decorative key
+// hints stay fixed at bottom 1.5rem / right 1.75rem, and the mute control
+// sits fixed upper-right directly below the shell identity card (right
+// 1.5rem). Hints hide on short (<560px) or coarse-pointer viewports; the
+// mute control keeps a ≥44px target. Anchor boxes (the visible menu items)
+// are the non-overlap measure on the shell; the heading and the back link
+// stand for view content, which never reaches the corners.
+test.describe("control placement", () => {
+	const hints = (page: Page) => page.locator(".key-hints");
+	const mute = (page: Page) => page.locator("[data-mute-control]");
 
-	const clusterBox = async (page: Page) => {
-		const box = await cluster(page).boundingBox();
-		if (!box) throw new Error("expected a visible control cluster box");
+	const hintsBox = async (page: Page) => {
+		const box = await hints(page).boundingBox();
+		if (!box) throw new Error("expected a visible key-hints box");
 		return box;
 	};
 
@@ -664,9 +655,11 @@ test.describe("bottom-right control cluster", () => {
 	};
 
 	const assertMuteTarget = async (page: Page) => {
-		const mute = page.getByRole("button", { name: "Sound: Off" });
-		await expect(mute).toBeVisible();
-		const box = await mute.boundingBox();
+		// Attribute locator: the accessible name flips with the probe/state,
+		// so a name-scoped locator would be non-deterministic here.
+		const control = mute(page);
+		await expect(control).toBeVisible();
+		const box = await control.boundingBox();
 		if (!box) throw new Error("expected a visible mute button box");
 		expect(box.height).toBeGreaterThanOrEqual(44);
 		expect(box.width).toBeGreaterThanOrEqual(44);
@@ -675,16 +668,30 @@ test.describe("bottom-right control cluster", () => {
 	test.use({ viewport: { width: 1280, height: 720 } });
 
 	test.describe("desktop 1280x720", () => {
-		test("shell: cluster is fixed bottom-right and never overlaps menu items", async ({
+		test("shell: hints fixed bottom-right, mute fixed top-right below the name card, no overlaps", async ({
 			page,
 		}) => {
 			await page.goto("/");
-			await expect(cluster(page)).toBeVisible();
+			await expect(hints(page)).toBeVisible();
 			expect(
-				await cluster(page).evaluate((el) => getComputedStyle(el).position),
+				await hints(page).evaluate((el) => getComputedStyle(el).position),
 			).toBe("fixed");
-			const box = await clusterBox(page);
-			assertCorner(box, 1280, 720);
+			assertCorner(await hintsBox(page), 1280, 720);
+			const control = mute(page);
+			expect(
+				await control.evaluate((el) => getComputedStyle(el).position),
+			).toBe("fixed");
+			const muteBox = await control.boundingBox();
+			if (!muteBox) throw new Error("expected a visible mute button box");
+			// Upper-right edge, aligned with the identity card (right 1.5rem).
+			expect(
+				Math.abs(1280 - 24 - (muteBox.x + muteBox.width)),
+			).toBeLessThanOrEqual(2);
+			const card = await page.locator(".shell-name-card").boundingBox();
+			if (!card) throw new Error("expected a visible name card");
+			// Directly below the card: starts at or under its bottom edge.
+			expect(muteBox.y).toBeGreaterThanOrEqual(card.y + card.height - 1);
+			expect(muteBox.y - (card.y + card.height)).toBeLessThanOrEqual(24);
 			const items = await page.locator("[data-menu-item]").evaluateAll((els) =>
 				els.map((el) => {
 					const rect = el.getBoundingClientRect();
@@ -696,27 +703,55 @@ test.describe("bottom-right control cluster", () => {
 					};
 				}),
 			);
-			expect(items).toHaveLength(5);
-			for (const item of items) assertNoOverlap(item, box);
+			expect(items).toHaveLength(4);
+			const hintRect = await hintsBox(page);
+			for (const item of items) {
+				assertNoOverlap(item, hintRect);
+				assertNoOverlap(item, muteBox);
+			}
+			assertNoOverlap(card, muteBox);
 			await assertMuteTarget(page);
 		});
 
-		test("every view: cluster stays fixed bottom-right without overlapping the header", async ({
+		test("every view: hints fixed bottom-right, mute fixed top-right, no header overlap", async ({
 			page,
 		}) => {
+			// The view heading is a full-width block, so the overlap contract
+			// measures the heading's TEXT box (Range rect), not the block box.
+			const headingTextBox = async () =>
+				page.getByRole("heading", { level: 1 }).evaluate((el) => {
+					const range = document.createRange();
+					range.selectNodeContents(el);
+					const rect = range.getBoundingClientRect();
+					return {
+						x: rect.x,
+						y: rect.y,
+						width: rect.width,
+						height: rect.height,
+					};
+				});
 			for (const [path] of VIEWS) {
 				await page.goto(path);
-				await expect(cluster(page)).toBeVisible();
-				assertCorner(await clusterBox(page), 1280, 720);
+				await expect(hints(page)).toBeVisible();
+				assertCorner(await hintsBox(page), 1280, 720);
+				const muteBox = await mute(page).boundingBox();
+				if (!muteBox) {
+					throw new Error(`expected a visible mute button box on ${path}`);
+				}
+				expect(
+					Math.abs(1280 - 24 - (muteBox.x + muteBox.width)),
+				).toBeLessThanOrEqual(2);
+				expect(muteBox.y).toBeGreaterThanOrEqual(40);
+				const heading = await headingTextBox();
 				for (const target of [
-					page.getByRole("heading", { level: 1 }),
-					page.getByRole("link", { name: "Back to menu" }),
+					heading,
+					await page.getByRole("link", { name: "Back to menu" }).boundingBox(),
 				]) {
-					const box = await target.boundingBox();
-					if (!box) {
+					if (!target) {
 						throw new Error(`expected a visible header box on ${path}`);
 					}
-					assertNoOverlap(box, await clusterBox(page));
+					assertNoOverlap(target, await hintsBox(page));
+					assertNoOverlap(target, muteBox);
 				}
 			}
 		});
@@ -733,7 +768,7 @@ test.describe("bottom-right control cluster", () => {
 			page,
 		}) => {
 			await page.goto("/");
-			await expect(page.getByText("GAMEPAD")).toBeHidden();
+			await expect(page.locator(".key-hints")).toBeHidden();
 			await assertMuteTarget(page);
 		});
 	});
@@ -743,7 +778,7 @@ test.describe("bottom-right control cluster", () => {
 
 		test("hints hidden, mute stays reachable", async ({ page }) => {
 			await page.goto("/");
-			await expect(page.getByText("GAMEPAD")).toBeHidden();
+			await expect(page.locator(".key-hints")).toBeHidden();
 			await assertMuteTarget(page);
 		});
 	});
@@ -755,7 +790,7 @@ test.describe("bottom-right control cluster", () => {
 			page,
 		}) => {
 			await page.goto("/");
-			await expect(page.getByText("GAMEPAD")).toBeHidden();
+			await expect(page.locator(".key-hints")).toBeHidden();
 			await assertMuteTarget(page);
 		});
 	});
@@ -831,7 +866,7 @@ test.describe("remediation regression boundaries", () => {
 		await mute.focus();
 		await page.keyboard.press("Enter");
 		await expect(mute).toHaveAttribute("aria-pressed", "true");
-		await expect(mute).toHaveText("Sound: Off");
+		await expect(mute).toHaveAttribute("aria-label", "Sound: Off");
 		await expect
 			.poll(() =>
 				page
@@ -839,5 +874,111 @@ test.describe("remediation regression boundaries", () => {
 					.evaluate((el) => (el as HTMLAudioElement).paused),
 			)
 			.toBe(true);
+	});
+});
+
+// Sprite pattern bounds (living-background spec "Decorative figure and
+// artifact layer" / design route-asset-matrix): owner-created sprite
+// derivatives may repeat as decorative patterns ONLY inside the locked
+// bounds — 8–15% opacity, ≤160px desktop / ≤96px mobile, pointer-events none.
+// Instances are mounted by Unit D (SpriteAccent.astro) with aria-hidden and
+// one-per-route placement (tasks 4.1/4.4); this contract guards the shared
+// utility and the canonical data-sprite-pattern hook that D must use.
+test.describe("sprite pattern bounds", () => {
+	const patternProbe = (page: Page) =>
+		page.evaluate(() => {
+			const el = document.createElement("div");
+			el.className = "sprite-pattern";
+			document.body.append(el);
+			// getComputedStyle returns a live object: read every value before
+			// removing the probe (a detached element resets to defaults).
+			const style = getComputedStyle(el);
+			const probe = {
+				opacity: parseFloat(style.opacity),
+				pointerEvents: style.pointerEvents,
+				maxWidth: parseFloat(style.maxWidth) || 0,
+				maxHeight: parseFloat(style.maxHeight) || 0,
+			};
+			el.remove();
+			return probe;
+		});
+
+	test("utility enforces the bounds: 8–15% opacity, ≤160px, pointer-events none", async ({
+		page,
+	}) => {
+		await page.goto("/");
+		const probe = await patternProbe(page);
+		expect(probe.opacity).toBeGreaterThanOrEqual(0.08);
+		expect(probe.opacity).toBeLessThanOrEqual(0.15);
+		expect(probe.pointerEvents).toBe("none");
+		expect(probe.maxWidth).toBeGreaterThan(0);
+		expect(probe.maxWidth).toBeLessThanOrEqual(160);
+		expect(probe.maxHeight).toBeGreaterThan(0);
+		expect(probe.maxHeight).toBeLessThanOrEqual(160);
+	});
+
+	test("mobile caps the pattern at 96px", async ({ page }) => {
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto("/");
+		const probe = await patternProbe(page);
+		expect(probe.maxWidth).toBeGreaterThan(0);
+		expect(probe.maxWidth).toBeLessThanOrEqual(96);
+		expect(probe.maxHeight).toBeLessThanOrEqual(96);
+	});
+
+	test("canonical instances stay decorative: density ceiling, no overflow, never blocking", async ({
+		page,
+	}) => {
+		// Per-instance aria-hidden and one-per-route placement are composition
+		// concerns Unit D mounts and verifies (tasks 4.1/4.4). Here a canonical
+		// probe (class + data hook, as D will mount it) proves the shared
+		// utility really bounds it: an over-wide 200vw instance is capped to
+		// ≤160px, so it can never overflow the viewport or block pointers.
+		for (const [path] of VIEWS) {
+			await page.goto(path);
+			const accents = page.locator("[data-sprite-pattern]");
+			expect(
+				await accents.count(),
+				`${path} at most one accent`,
+			).toBeLessThanOrEqual(1);
+			const probe = await page.evaluate(() => {
+				const el = document.createElement("div");
+				el.className = "sprite-pattern";
+				el.setAttribute("data-sprite-pattern", "");
+				el.style.position = "absolute";
+				el.style.left = "0";
+				el.style.top = "0";
+				el.style.width = "200vw";
+				el.style.height = "160px";
+				document.body.append(el);
+				const style = getComputedStyle(el);
+				const rect = el.getBoundingClientRect();
+				const top = document.elementFromPoint(
+					rect.x + rect.width / 2,
+					rect.y + rect.height / 2,
+				);
+				const result = {
+					opacity: parseFloat(style.opacity),
+					pointerEvents: style.pointerEvents,
+					rectRight: rect.right,
+					viewport: window.innerWidth,
+					// pointer-events:none → the accent is never the top hit at
+					// its own center; pointers fall through to content.
+					blocked: top === el || el.contains(top),
+				};
+				el.remove();
+				return result;
+			});
+			expect(probe.opacity, `${path} opacity 8–15%`).toBeGreaterThanOrEqual(
+				0.08,
+			);
+			expect(probe.opacity, `${path} opacity 8–15%`).toBeLessThanOrEqual(0.15);
+			expect(probe.pointerEvents, `${path} pointer-events none`).toBe("none");
+			expect(
+				probe.rectRight,
+				`${path} capped width never overflows`,
+			).toBeLessThanOrEqual(probe.viewport);
+			expect(probe.blocked, `${path} never blocks pointers`).toBe(false);
+		}
 	});
 });

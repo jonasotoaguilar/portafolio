@@ -14,6 +14,11 @@
 	--color-text-primary: #ffffff;
 	--color-text-secondary: #a7a7ab;
 	--color-scanline: #000000;
+	--color-shell-light-blue: #bcd4ff;
+	--color-shell-sea-blue: #1677c8;
+	--color-surface-light: #ffffff;
+	--color-text-on-light: #04060f;
+	--color-text-on-light-secondary: #3a4557;
 
 	--font-display: "Anton", "Arial Narrow", sans-serif;
 	--font-label: "Bebas Neue", sans-serif;
@@ -105,6 +110,23 @@ html[data-game-ready] [data-view] [data-detail-panel]:not([data-active]) {
 	}
 }
 
+/* Home shell base (home-shell contract): the shell swaps the breathing navy
+   glow for a STATIC white-to-light-blue gradient that fills the .glow-layer
+   slot (z-index -3), so the animated canvas and scanlines keep painting
+   above it. Scoped to html[data-route="shell"] — every view route keeps the
+   dark radial glow. */
+html[data-route="shell"] .glow-layer {
+	background: linear-gradient(
+		112deg,
+		var(--color-surface-light) 0%,
+		var(--color-surface-light) 20%,
+		var(--color-shell-light-blue) 25%,
+		var(--color-shell-sea-blue) 30%,
+		var(--color-shell-sea-blue) 100%
+	);
+	animation: none;
+}
+
 /* Menu active indicator (design AD2): the keyboard-active item and :hover
    share one persistent colorful treatment — accent-400 text, a diagonal
    clip-path accent layer behind the label, and a 2px cyan highlight bar.
@@ -144,14 +166,19 @@ html[data-game-ready] [data-view] [data-detail-panel]:not([data-active]) {
 	pointer-events: none;
 }
 
-/* Menu composition (design AD1): a 55vw column, horizontally centered, with
-   per-item diagonal offsets/skews/sizes. Each row carries inline vars
-   (--item-x / --item-skew / --item-size) set by GameMenu.astro; ONE rule
+/* Menu composition (design AD1): a centered column — the nav shrinks to its
+   widest row and the flex shell centers it, while each row centers its own
+   label — with per-item diagonal offsets/skews/sizes. Each row carries inline
+   vars (--item-x / --item-skew / --item-size) set by GameMenu.astro; ONE rule
    consumes them so items never overlap. The transform lives on the row (the
    <li>), not the anchor, so the JS entrance animation on the anchors never
    overrides the stagger. */
 [data-menu] {
-	width: 55vw;
+	width: fit-content;
+}
+
+[data-menu] .menu-list {
+	align-items: center;
 }
 
 [data-menu] .menu-item {
@@ -163,10 +190,13 @@ html[data-game-ready] [data-view] [data-detail-panel]:not([data-active]) {
 	font-size: var(--item-size);
 }
 
-/* Tablet 768–1023px: half offsets at −4° (design AD1). */
+/* Tablet 768–1023px: half offsets and half per-item skews — the regular −14°
+   rows drop to −7° and PROJECTS to −8° (design AD1, proportional to the
+   desktop contract). */
 @media (min-width: 768px) and (max-width: 1023px) {
 	[data-menu] .menu-item {
-		transform: translateX(calc(var(--item-x) / 2)) skewX(-4deg);
+		transform: translateX(calc(var(--item-x) / 2))
+			skewX(calc(var(--item-skew) / 2));
 	}
 }
 
@@ -184,25 +214,266 @@ html[data-game-ready] [data-view] [data-detail-panel]:not([data-active]) {
 	}
 }
 
-/* Control cluster (design AD4): fixed bottom-right at 1.5rem/1.75rem,
-   column layout, persisted across view transitions (transition:persist on
-   the element in BaseLayout). Decorative hints hide on short (<560px) or
-   coarse-pointer viewports; the mute control keeps its ≥44px target. */
+/* Home shell light field (home-shell contract): the shell base is white →
+   light blue, so the shell's menu switches to the light-field palette — cyan
+   labels with Resume (2nd) and Skills (4th) one lighter step, and the
+   keyboard-active / :focus-visible item turning near-black in both states.
+   The lighter steps live on the row (<li>) so the anchor-level active/focus
+   color always wins by direct-set precedence. Hover is gated to non-active,
+   non-focused items so it never overrides the requested active/focus color;
+   the :focus-visible outline is untouched. */
+html[data-route="shell"] [data-menu] .menu-item {
+	color: var(--color-accent-cyan);
+}
+
+html[data-route="shell"] [data-menu] .menu-item:nth-child(2),
+html[data-route="shell"] [data-menu] .menu-item:nth-child(4) {
+	color: color-mix(
+		in srgb,
+		var(--color-accent-cyan) 55%,
+		var(--color-text-primary)
+	);
+}
+
+html[data-route="shell"] [data-menu-item][data-active],
+html[data-route="shell"] [data-menu-item]:focus-visible {
+	color: var(--color-bg-base);
+}
+
+html[data-route="shell"]
+	[data-menu-item]:hover:not([data-active]):not(:focus-visible) {
+	color: var(--color-accent-cyan);
+}
+
+/* Home shell active accent (home-shell contract delta): the near-black
+   active / :focus-visible item swaps the dark-route diagonal accent layer
+   for a large translucent white wedge laid over the whole word area — a
+   long slanted panel with BOTH edges diagonal (left edge runs from 0% to
+   10% across the height, right edge from 100% to 86%), so it reads as a
+   real angular wedge/trapezoid with a pointed end, NOT a rectangle with a
+   straight vertical left edge. The item isolates its own stacking context
+   so the ::before wedge paints at z-index 1 while the crisp black
+   .menu-label sits at z-index 2 above it; the wedge is pointer-events-none
+   and translucent (60% white), so the label stays fully legible
+   through/above the panel. Hover never draws the wedge — only [data-active]
+   and :focus-visible. The 2px cyan highlight bar from the base active
+   treatment is untouched. */
+html[data-route="shell"] [data-menu-item][data-active],
+html[data-route="shell"] [data-menu-item]:focus-visible {
+	isolation: isolate;
+}
+
+html[data-route="shell"] [data-menu-item][data-active]::before,
+html[data-route="shell"] [data-menu-item]:focus-visible::before {
+	inset: 0.02em -0.35em 0.04em;
+	z-index: 1;
+	background: color-mix(in srgb, var(--color-surface-light) 60%, transparent);
+	clip-path: polygon(0 0, 100% 0, 86% 100%, 10% 100%);
+}
+
+html[data-route="shell"] [data-menu-item] .menu-label {
+	position: relative;
+	z-index: 2;
+}
+
+/* The translucent white wedge IS the shell menu's focus indicator, so the
+   visible browser outline on the selected item is dropped — scoped to the
+   shell menu anchor only; focus behavior on views and other controls keeps
+   its accent outline. The wedge still tracks focus because shell.ts moves
+   data-active with DOM focus, and :focus-visible draws it directly. */
+html[data-route="shell"] [data-menu-item]:focus-visible {
+	outline: none;
+}
+
+/* The shell wedge replaces the old active underline; keep the selected label
+   clean while preserving the focus indicator's triangular treatment. */
+html[data-route="shell"] [data-menu-item][data-active]::after,
+html[data-route="shell"] [data-menu-item]:focus-visible::after {
+	display: none;
+}
+
+/* Home shell decorations (home-shell contract): the huge vertical PORTFOLIO
+   watermark bleeds off the left edge inside a full-viewport clipping
+   container (z-index -1, painted after the canvas in DOM order, below
+   content); the small outlined identity card sits fixed top-right. Both are
+   zero-JS markup; the watermark is aria-hidden. Under 768px the word re-flows
+   to a horizontal band along the bottom edge (DESIGN.md decorative-type
+   mobile behavior), clear of the centered menu column. */
+.shell-decor {
+	position: fixed;
+	inset: 0;
+	overflow: hidden;
+	z-index: -1;
+	pointer-events: none;
+}
+
+.shell-watermark {
+	position: absolute;
+	left: -0.12em;
+	top: 50%;
+	transform: translateY(-50%);
+	writing-mode: vertical-rl;
+	font-family: var(--font-display);
+	/* Vertical Latin text advances per glyph width (~0.43em), so ~26vh fills
+	   the viewport height with the 9-letter word; the left bleed crops the
+	   first ~quarter of the glyph column. */
+	font-size: clamp(3.5rem, 26vh, 21rem);
+	line-height: 0.9;
+	letter-spacing: 0;
+	text-transform: uppercase;
+	color: var(--color-bg-base);
+	user-select: none;
+}
+
+.shell-name-card {
+	position: fixed;
+	top: 1.5rem;
+	right: 1.5rem;
+	z-index: 10;
+	margin: 0;
+	padding: 0.5rem 1rem;
+	border: 1px solid var(--color-text-primary);
+	border-radius: 2px;
+	font-family: var(--font-label);
+	font-size: 1.25rem;
+	line-height: 1;
+	letter-spacing: 0.08em;
+	color: var(--color-text-primary);
+}
+
+@media (max-width: 767px) {
+	.shell-watermark {
+		left: 1rem;
+		top: auto;
+		bottom: 1rem;
+		transform: none;
+		writing-mode: horizontal-tb;
+		font-size: clamp(2.5rem, 12vw, 5rem);
+	}
+}
+
+/* Control root (design AD4): a static persisted wrapper
+   (transition:persist on the element in BaseLayout) holding both controls.
+   The children anchor their own corners — the decorative key hints stay
+   fixed bottom-right at 1.5rem/1.75rem, and the mute control sits fixed
+   upper-right directly below the shell identity card (card at top 1.5rem /
+   right 1.5rem, ~2.375rem tall → top calc + 0.5rem gap). Hints hide on
+   short (<560px) or coarse-pointer viewports; the mute control keeps its
+   ≥44px target. */
 .control-cluster {
+	position: static;
+}
+
+.control-cluster .key-hints {
 	position: fixed;
 	right: 1.75rem;
 	bottom: 1.5rem;
 	z-index: 50;
-	display: flex;
-	flex-direction: column;
-	align-items: flex-end;
-	gap: 0.5rem;
+}
+
+.control-cluster .mute-control {
+	position: fixed;
+	top: calc(1.5rem + 2.375rem + 0.5rem);
+	right: 1.5rem;
+	z-index: 50;
+}
+
+/* Mute-control icon states: two complete SVG glyphs — a clean music note and
+   a crossed-out music note (the slash is drawn inside the crossed glyph, not
+   overlaid). Exactly one is visible: the crossed note for every off state
+   (initial no-track, muted, error) and the clean note only when the track is
+   ready or playing. The runtime only writes data-audio-state; the visibility
+   switches follow it in CSS. */
+.control-cluster .mute-control .note-glyph {
+	display: none;
+}
+
+.control-cluster .mute-control[data-audio-state="ready"] .note-glyph,
+.control-cluster .mute-control[data-audio-state="playing"] .note-glyph {
+	display: block;
+}
+
+.control-cluster .mute-control .note-muted {
+	display: block;
+}
+
+.control-cluster .mute-control[data-audio-state="ready"] .note-muted,
+.control-cluster .mute-control[data-audio-state="playing"] .note-muted {
+	display: none;
 }
 
 @media (max-height: 560px), (pointer: coarse) {
 	.control-cluster .key-hints {
 		display: none;
 	}
+}
+
+/* Control cluster on the light shell field (home-shell contract): hints, the
+   mute toggle, and the identity card switch to white text with a very
+   subtle black outline so they stay legible over the busy blue gradient — a
+   0.3px -webkit-text-stroke, with an 8-direction text-shadow fallback (also
+   0.3px) for engines without stroke support. The shell auxiliary text uses
+   the display face (Anton, already self-hosted for the menu labels) instead
+   of a system sans, so key hints, keycaps, the mute control and the identity
+   card share the video-game voice of the menu; glyphs Anton does not carry
+   (↵) fall back per-glyph to the sans stack. The mute control's music-note
+   icon inherits currentColor (white) and is drawn with its own thin SVG
+   stroke, so it stays crisp without thick text outlines. Chip borders stay
+   thin white-based 1px rectangles. */
+html[data-route="shell"] .key-hints,
+html[data-route="shell"] .key-hints span,
+html[data-route="shell"] .key-hints kbd,
+html[data-route="shell"] .mute-control,
+html[data-route="shell"] .shell-name-card {
+	color: var(--color-text-primary);
+	font-family: var(--font-display);
+	-webkit-text-stroke-width: 0.3px;
+	-webkit-text-stroke-color: var(--color-bg-base);
+}
+
+/* Anton renders tighter than the previous wide system sans, so the shell
+   re-sizes the auxiliary text for the game voice: hint labels keep the
+   component's label step (1.25rem) with Anton's no-tracking caps contract,
+   and the keycaps grow to the same step so the arrow glyphs stay large and
+   readable. The fixed bottom-right hints keep clear of the last menu item
+   (design AD4 non-overlap contract). */
+html[data-route="shell"] .key-hints {
+	letter-spacing: 0;
+	gap: 0.75rem;
+}
+
+html[data-route="shell"] .key-hints kbd {
+	font-size: 1.25rem;
+}
+
+html[data-route="shell"] .shell-name-card {
+	letter-spacing: 0;
+}
+
+@supports not (-webkit-text-stroke-width: 0.3px) {
+	html[data-route="shell"] .key-hints,
+	html[data-route="shell"] .key-hints span,
+	html[data-route="shell"] .key-hints kbd,
+	html[data-route="shell"] .mute-control,
+	html[data-route="shell"] .shell-name-card {
+		-webkit-text-stroke-width: initial;
+		-webkit-text-stroke-color: initial;
+		text-shadow:
+			0 0.3px 0 var(--color-bg-base),
+			0 -0.3px 0 var(--color-bg-base),
+			0.3px 0 0 var(--color-bg-base),
+			-0.3px 0 0 var(--color-bg-base),
+			0.3px 0.3px 0 var(--color-bg-base),
+			-0.3px 0.3px 0 var(--color-bg-base),
+			0.3px -0.3px 0 var(--color-bg-base),
+			-0.3px -0.3px 0 var(--color-bg-base);
+	}
+}
+
+html[data-route="shell"] .key-hints span,
+html[data-route="shell"] .key-hints kbd,
+html[data-route="shell"] .mute-control {
+	border-color: color-mix(in srgb, var(--color-text-primary) 60%, transparent);
 }
 
 /* Decorative figure/artifact layer (design AD3): one original inline-SVG
@@ -243,8 +514,8 @@ html[data-game-ready] [data-view] [data-detail-panel]:not([data-active]) {
 
 /* Route variant placements (DESIGN.md figure placements): shell/404
    oversized figure on the right half; projects cyan top band; skills right
-   figure framing the center; about bottom-left figure; contact bottom blue
-   wash + left figure; resume left-mid figure. */
+   figure framing the center; about bottom-left figure; resume left-mid
+   figure. */
 html[data-route="shell"] .figure-layer,
 html[data-route="404"] .figure-layer {
 	inset: 0 0 0 50%;
@@ -265,21 +536,37 @@ html[data-route="about"] .figure-layer {
 	height: 62vh;
 }
 
-html[data-route="contact"] .figure-layer {
-	inset: auto 0 0 0;
-	height: 55vh;
-}
-
 html[data-route="resume"] .figure-layer {
 	inset: 12% auto 12% 0;
 	width: 42vw;
 }
 
+/* Sprite pattern utility (design route-asset-matrix): owner-created sprite
+   derivatives may repeat as decorative patterns ONLY inside the locked
+   bounds — 8–15% opacity over the dark base, ≤160px desktop / ≤96px mobile,
+   pointer-events none. Instances additionally carry aria-hidden="true" and
+   data-sprite-pattern; exclusion zones keep them outside text runs and 44px
+   targets (route accent placement is a composition concern, not this
+   utility's). */
+.sprite-pattern {
+	opacity: 0.12;
+	pointer-events: none;
+	max-width: 160px;
+	max-height: 160px;
+}
+
+@media (max-width: 767px) {
+	.sprite-pattern {
+		max-width: 96px;
+		max-height: 96px;
+	}
+}
+
 /* View-transition overlays (site-transitions D3/D4): the shell, every view,
    and the 404 route all carry html[data-route], so one rule set covers every
    swap. The outgoing screen leaves over 300ms; the incoming screen enters on
-   a 25ms x4 stagger delay (300 + 4x25 = 400ms envelope, mirroring
-   menuOverlayOptions in keys.ts). Only transform and opacity animate; the
+   a 25ms x4 stagger delay (300 + 4x25 = 400ms envelope, the design's
+   transition moment). Only transform and opacity animate; the
    UA's default group animation (which animates backdropFilter and layout
    size) is disabled so the overlay is fully owned by these rules. */
 html[data-route]::view-transition-group(root) {

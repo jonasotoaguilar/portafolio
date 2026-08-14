@@ -15,7 +15,6 @@ export const VIEW_TITLES = {
 	resume: "Resume · Jonathan Soto",
 	projects: "Projects · Jonathan Soto",
 	skills: "Skills · Jonathan Soto",
-	contact: "Contact · Jonathan Soto",
 } as const;
 
 export type ViewRoute = keyof typeof VIEW_TITLES;

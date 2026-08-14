@@ -7,18 +7,16 @@ const SHELL_ROUTES = [
 	["Resume", "/resume"],
 	["Projects", "/projects"],
 	["Skills", "/skills"],
-	["Contact", "/contact"],
 ] as const;
 
-const SIX_ROUTES = ["/", ...SHELL_ROUTES.map(([, path]) => path)] as const;
+const FIVE_ROUTES = ["/", ...SHELL_ROUTES.map(([, path]) => path)] as const;
 
-const SIX_URLS = [
+const FIVE_URLS = [
 	"https://jonasotoaguilar.dev/",
 	"https://jonasotoaguilar.dev/about/",
 	"https://jonasotoaguilar.dev/resume/",
 	"https://jonasotoaguilar.dev/projects/",
 	"https://jonasotoaguilar.dev/skills/",
-	"https://jonasotoaguilar.dev/contact/",
 ] as const;
 
 const PROJECT_LINKS: [string, string][] = [
@@ -72,7 +70,7 @@ test.describe("links and SEO", () => {
 	test("every route embeds a JSON-LD Person block with identity and sameAs links", async ({
 		page,
 	}) => {
-		for (const path of SIX_ROUTES) {
+		for (const path of FIVE_ROUTES) {
 			await page.goto(path);
 			const person = await page
 				.locator('script[type="application/ld+json"]')
@@ -88,12 +86,13 @@ test.describe("links and SEO", () => {
 		}
 	});
 
-	test("sitemap lists the six routes and excludes the 404 page", () => {
+	test("sitemap lists the five routes and excludes the 404 page", () => {
 		const entries = readFileSync("dist/sitemap-0.xml", "utf8");
-		for (const url of SIX_URLS) {
+		for (const url of FIVE_URLS) {
 			expect(entries).toContain(url);
 		}
 		expect(entries).not.toContain("404");
+		expect(entries).not.toContain("contact");
 		const index = readFileSync("dist/sitemap-index.xml", "utf8");
 		expect(index).toContain("sitemap-0.xml");
 	});

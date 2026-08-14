@@ -7,6 +7,9 @@ const config = {
 		coverage: {
 			provider: "v8",
 			reporter: ["text", "html"],
+			// CLI scripts (scripts/**) are exercised by the CI gate/build steps,
+			// not by unit tests; excluding them keeps thresholds honest.
+			exclude: ["scripts/**"],
 			thresholds: {
 				statements: 80,
 				branches: 70,

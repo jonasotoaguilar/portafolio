@@ -14,18 +14,32 @@ function panelOpen(): boolean {
 	return panels().some((panel) => panel.hasAttribute("data-active"));
 }
 
-// The selected item and its panel share the index; data-active drives the
-// gated CSS (global.css) and the list-item-active state.
-function select(index: number, moveFocus: boolean): void {
+// Single keyboard cursor (design: roving tabindex): the active item is the
+// only tab stop (tabindex 0, others -1) and the selected item and its panel
+// share the index; data-active drives the gated CSS (global.css) and the
+// list-item-active state.
+function select(index: number): void {
 	activeIndex = index;
 	items.forEach((item, i) => {
 		item.toggleAttribute("data-active", i === index);
 		item.setAttribute("aria-pressed", i === index ? "true" : "false");
+		item.tabIndex = i === index ? 0 : -1;
 	});
 	panels().forEach((panel, i) => {
 		panel.toggleAttribute("data-active", i === index);
 	});
-	if (moveFocus) panels()[index]?.focus();
+}
+
+// Focus and active move together: the focused item always equals the active
+// item (persona-navigation keyboard scope).
+function focusItem(index: number): void {
+	items[index]?.focus();
+}
+
+// Opens the focused (active) item's panel and moves focus into it.
+function open(index: number): void {
+	select(index);
+	panels()[index]?.focus();
 }
 
 function closePanel(): void {
@@ -52,10 +66,11 @@ function onKeydown(event: KeyboardEvent): void {
 	const result = reduceListKey({ activeIndex }, event.key, items.length);
 	if (result.kind === "move") {
 		event.preventDefault();
-		select(result.activeIndex, false);
+		select(result.activeIndex);
+		focusItem(result.activeIndex);
 	} else if (result.kind === "open") {
 		event.preventDefault();
-		select(Math.max(activeIndex, 0), true);
+		open(activeIndex);
 	}
 }
 
@@ -64,7 +79,7 @@ function preselectFromHash(): void {
 	const slug = decodeURIComponent(location.hash.slice(1));
 	if (!slug) return;
 	const match = items.findIndex((item) => item.id === slug);
-	if (match >= 0) select(match, false);
+	if (match >= 0) select(match);
 }
 
 function setupView(): void {
@@ -76,13 +91,16 @@ function setupView(): void {
 	document.documentElement.dataset.gameReady = "";
 	const initial = items.findIndex((item) => item.hasAttribute("data-active"));
 	activeIndex = initial >= 0 ? initial : 0;
-	select(activeIndex, false);
+	select(activeIndex);
 	preselectFromHash();
+	// On entering a view, focus rests on the active list item
+	// (persona-navigation: initial focus on the active item).
+	items[activeIndex]?.focus();
 	items.forEach((item, index) => {
 		item.addEventListener("focus", () => {
 			activeIndex = index;
 		});
-		item.addEventListener("click", () => select(index, true));
+		item.addEventListener("click", () => open(index));
 	});
 	// Document-level but screen-scoped: view.ts only loads on view pages (one
 	// active screen per document) and tears down on swap, so Escape works even

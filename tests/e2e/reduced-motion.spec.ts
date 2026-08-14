@@ -20,6 +20,27 @@ const canvasDataUrl = (page: Page) =>
 		).toDataURL(),
 	);
 
+const getWaveCoverage = (page: Page) =>
+	page.evaluate(() => {
+		const canvas = document.getElementById(
+			"living-background",
+		) as HTMLCanvasElement;
+		const context = canvas.getContext("2d");
+		const pixels = context
+			? context.getImageData(0, 0, canvas.width, canvas.height).data
+			: new Uint8ClampedArray(0);
+		let total = 0;
+		let ocean = 0;
+		for (let y = Math.floor(canvas.height / 2); y < canvas.height; y += 8) {
+			for (let x = 0; x < canvas.width; x += 8) {
+				total++;
+				const i = (y * canvas.width + x) * 4;
+				if (pixels[i + 2] - pixels[i] >= 100) ocean++;
+			}
+		}
+		return ocean / total;
+	});
+
 test.describe("reduced motion", () => {
 	test("canvas paints one static frame with no ongoing progression", async ({
 		page,
@@ -97,18 +118,94 @@ test.describe("reduced motion", () => {
 			.poll(() => canvasDataUrl(page), { timeout: 2000 })
 			.not.toBe(initial);
 	});
+
+	test("reduced-motion static frame includes the procedural wave bands", async ({
+		page,
+	}) => {
+		// living-background spec "Static wave frame under reduced motion": the
+		// static frame must include the waves. Bottom-half samples must show
+		// cyan/light-blue tones (b-r >= 100) — produced only by the wave
+		// bands, never by the deep caustic gradient (b-r <= 83) or the sparse
+		// particles/bubbles (<1% of the sampled area).
+		await page.emulateMedia({ reducedMotion: "reduce" });
+		await page.goto("/about");
+		await expect(page.locator("#living-background")).toBeVisible();
+		const waveCoverage = await getWaveCoverage(page);
+		expect(waveCoverage).toBeGreaterThan(0.05);
+	});
+
+	test("home shell omits the procedural wave bands", async ({ page }) => {
+		await page.emulateMedia({ reducedMotion: "reduce" });
+		await page.goto("/");
+		await expect(page.locator("#living-background")).toBeVisible();
+		expect(await getWaveCoverage(page)).toBeLessThan(0.01);
+	});
+
+	test("waves are procedural and the hidden tab pauses the loop", async ({
+		page,
+	}) => {
+		// living-background specs "Waves are procedural" + "Hidden tab pauses
+		// waves": the wave rendering fetches no image/media assets (favicons
+		// are page chrome; the audio probe is a HEAD request), and the
+		// visibilitychange lifecycle freezes the canvas until the tab returns.
+		const loaded: string[] = [];
+		page.on("request", (request) => {
+			const type = request.resourceType();
+			if (
+				type === "image" ||
+				(type === "media" && !request.url().includes("/audio/"))
+			) {
+				loaded.push(request.url());
+			}
+		});
+		await page.goto("/");
+		await expect(page.locator("#living-background")).toBeVisible();
+		expect(loaded).toEqual([]);
+		const frame = () => canvasDataUrl(page);
+		await expect.poll(frame, { timeout: 2000 }).not.toBe(await frame());
+		await page.evaluate(() => {
+			Object.defineProperty(document, "hidden", {
+				configurable: true,
+				value: true,
+			});
+			document.dispatchEvent(new Event("visibilitychange"));
+		});
+		const paused = await frame();
+		// A running loop repaints every frame, so a ~250ms window of identical
+		// samples proves the loop is stopped. Timing runs page-side (same
+		// pattern as the static-frame test above); no Playwright-side sleep.
+		const frozen = await page.evaluate(async (baseline) => {
+			const canvas = document.getElementById(
+				"living-background",
+			) as HTMLCanvasElement;
+			let same = true;
+			for (let i = 0; i < 5; i++) {
+				await new Promise((resolve) => setTimeout(resolve, 50));
+				same = same && canvas.toDataURL() === baseline;
+			}
+			return same;
+		}, paused);
+		expect(frozen).toBe(true);
+		await page.evaluate(() => {
+			Object.defineProperty(document, "hidden", {
+				configurable: true,
+				value: false,
+			});
+			document.dispatchEvent(new Event("visibilitychange"));
+		});
+		await expect.poll(frame, { timeout: 2000 }).not.toBe(paused);
+	});
 });
 
 test.describe("figure layer", () => {
 	// Decorative figure/artifact layer (living-background spec scenarios
 	// "Original abstract figures render over atmosphere" / "Figures are
 	// decoration only" / "Figures static under reduced motion"; design AD3):
-	// one original inline-SVG composition per route, fixed between the canvas
-	// and content, aria-hidden, pointer-events-none, zero JS, and fully static
-	// under prefers-reduced-motion. Placements below encode the design route
-	// variants (DESIGN.md figure placements): shell/404 oversized right half,
-	// projects cyan top band, skills right figure framing the center, about
-	// bottom-left, contact bottom blue wash + left figure, resume left-mid.
+	// One original inline-SVG composition per view route, fixed between the
+	// canvas and content, aria-hidden, pointer-events-none, zero JS, and fully
+	// static under prefers-reduced-motion. The main shell intentionally has no
+	// figure layer; placements below cover projects, skills, about, resume,
+	// and 404's shell variant.
 	const figureLayer = (page: Page) => page.locator(".figure-layer");
 
 	const layerStyle = (page: Page) =>
@@ -128,11 +225,9 @@ test.describe("figure layer", () => {
 		string,
 		{ left: number; top: number; width: number; height: number },
 	][] = [
-		["/", { left: 640, top: 0, width: 640, height: 720 }],
 		["/projects", { left: 0, top: 0, width: 1280, height: 288 }],
 		["/skills", { left: 665.6, top: 0, width: 614.4, height: 720 }],
 		["/about", { left: 0, top: 273.6, width: 704, height: 446.4 }],
-		["/contact", { left: 0, top: 324, width: 1280, height: 396 }],
 		["/resume", { left: 0, top: 86.4, width: 537.6, height: 547.2 }],
 		["/404", { left: 640, top: 0, width: 640, height: 720 }],
 	];
@@ -140,7 +235,7 @@ test.describe("figure layer", () => {
 	test("decorative figure renders above the atmosphere and below content", async ({
 		page,
 	}) => {
-		await page.goto("/");
+		await page.goto("/projects");
 		const layer = figureLayer(page);
 		await expect(layer).toBeVisible();
 		await expect(layer).toHaveAttribute("aria-hidden", "true");
@@ -166,9 +261,14 @@ test.describe("figure layer", () => {
 		expect(paintsAboveCanvas).toBe(true);
 	});
 
+	test("main route omits the decorative figure layer", async ({ page }) => {
+		await page.goto("/");
+		await expect(figureLayer(page)).toHaveCount(0);
+	});
+
 	test("figures render static under reduced motion", async ({ page }) => {
 		await page.emulateMedia({ reducedMotion: "reduce" });
-		for (const path of ["/", "/projects"]) {
+		for (const path of ["/projects"]) {
 			await page.goto(path);
 			await expect(figureLayer(page)).toBeVisible();
 			const style = await layerStyle(page);
@@ -179,7 +279,7 @@ test.describe("figure layer", () => {
 		}
 	});
 
-	test("every route places its own figure variant", async ({ page }) => {
+	test("every figure route places its own variant", async ({ page }) => {
 		for (const [path, expected] of ROUTE_PLACEMENTS) {
 			await page.goto(path);
 			const layer = figureLayer(page);

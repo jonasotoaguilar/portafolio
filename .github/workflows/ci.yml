@@ -73,3 +73,6 @@ jobs:
 
       - name: Build
         run: pnpm run build
+
+      - name: Provenance gate
+        run: pnpm run gate:provenance

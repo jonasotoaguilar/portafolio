@@ -8,43 +8,37 @@ interface Props {
 const { site } = Astro.props;
 
 // Design AD1 per-item diagonal config: inline CSS vars consumed by the single
-// .menu-item rule in global.css. Offsets/skews are the exact AD1 desktop
-// values; PROJECTS is the largest item. Tablet halves the offsets at −4° and
-// coarse/<768px collapse everything via CSS — no JS involved.
+// .menu-item rule in global.css. Offsets are the exact AD1 desktop values;
+// regular items sit at −14° and the largest item (PROJECTS) at −16°. Tablet
+// halves offsets and skews via calc; coarse/<768px collapse everything via
+// CSS — no JS involved.
 const MENU_ITEMS = [
 	{
 		label: "About",
 		href: "/about",
 		offset: "-2.25rem",
-		skew: "-6deg",
+		skew: "-14deg",
 		size: "clamp(2.75rem, 9vw, 8.125rem)",
 	},
 	{
 		label: "Resume",
 		href: "/resume",
 		offset: "1.5rem",
-		skew: "-6deg",
+		skew: "-14deg",
 		size: "clamp(2.75rem, 9vw, 8.125rem)",
 	},
 	{
 		label: "Projects",
 		href: "/projects",
 		offset: "-3rem",
-		skew: "-8deg",
+		skew: "-16deg",
 		size: "clamp(3.25rem, 10.5vw, 9.5rem)",
 	},
 	{
 		label: "Skills",
 		href: "/skills",
 		offset: "2.25rem",
-		skew: "-6deg",
-		size: "clamp(2.75rem, 9vw, 8.125rem)",
-	},
-	{
-		label: "Contact",
-		href: "/contact",
-		offset: "-1rem",
-		skew: "-8deg",
+		skew: "-14deg",
 		size: "clamp(2.75rem, 9vw, 8.125rem)",
 	},
 ] as const;
@@ -52,6 +46,13 @@ const MENU_ITEMS = [
 
 <main class="game-shell flex min-h-svh flex-col items-center justify-center px-6 py-8">
 	<h1 class="sr-only">{site.name}</h1>
+	{/* Home-shell decorations (home-shell contract): the giant vertical
+	     PORTFOLIO watermark bleeds off the left edge (aria-hidden, zero JS)
+	     and the outlined identity card sits fixed top-right. */}
+	<div class="shell-decor" aria-hidden="true">
+		<span class="shell-watermark" aria-hidden="true">PORTFOLIO</span>
+	</div>
+	<p class="shell-name-card">{site.name}</p>
 	<nav
 		aria-label="Game menu"
 		data-menu
@@ -68,9 +69,13 @@ const MENU_ITEMS = [
 							href={item.href}
 							data-menu-item
 							data-entrance
-							class="group inline-flex min-h-11 items-center font-display uppercase leading-[0.95] text-text-primary transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400"
+							class="group inline-flex min-h-11 items-center font-display uppercase leading-[0.95] transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400"
 						>
-							{item.label}
+							{/* The label sits in its own span so the shell active wedge
+							    (::before on the anchor, z-index 1) stays UNDER the
+							    crisp black text (span at z-index 2) — the word is
+							    covered by the translucent panel and stays legible. */}
+							<span class="menu-label">{item.label}</span>
 						</a>
 					</li>
 				))

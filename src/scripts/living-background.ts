@@ -1,3 +1,9 @@
+import type { BubbleField } from "../lib/canvas/bubbles";
+import {
+	createBubbles,
+	renderBubbles,
+	stepBubbles,
+} from "../lib/canvas/bubbles";
 import type { ParticleField } from "../lib/canvas/particles";
 import {
 	cappedDpr,
@@ -6,12 +12,23 @@ import {
 	renderParticles,
 	stepParticles,
 } from "../lib/canvas/particles";
+import type { WaveField } from "../lib/canvas/waves";
+import { createWaveField, renderWaves, stepWaves } from "../lib/canvas/waves";
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+/** Fixed geometry seed: the same deterministic ocean on every load and swap. */
+const OCEAN_SEED = 42;
 
-/** The persisted canvas element carries the field across view-transition swaps. */
+/** Ocean sub-layers stashed on the persisted canvas across swaps. */
+interface OceanState {
+	waves: WaveField;
+	bubbles: BubbleField;
+}
+
+/** The persisted canvas carries the fields across view-transition swaps. */
 type CanvasWithField = HTMLCanvasElement & {
 	livingBackgroundField?: ParticleField;
+	livingBackgroundOcean?: OceanState;
 };
 
 // `let`: on a view-transition swap the incoming page's script runs before the
@@ -23,9 +40,25 @@ const canvas = document.getElementById(
 let ctx: CanvasRenderingContext2D | null = null;
 let media: MediaQueryList | null = null;
 let field: ParticleField | null = null;
+let ocean: OceanState | null = null;
 let rafId = 0;
 let running = false;
 let destroyed = false;
+
+/** Caustic fill: dark ocean gradient, transparent at top so the CSS glow
+ *  and scanlines keep showing through, deepest at the bottom edge. */
+function paintCaustic(g: CanvasRenderingContext2D): void {
+	const gradient = g.createLinearGradient(0, 0, 0, g.canvas.height);
+	gradient.addColorStop(0, "rgba(4, 6, 15, 0)");
+	gradient.addColorStop(1, "rgba(13, 37, 96, 0.28)");
+	g.fillStyle = gradient;
+	g.fillRect(0, 0, g.canvas.width, g.canvas.height);
+}
+
+function isShellRoute(): boolean {
+	return document.documentElement.dataset.route === "shell";
+}
+
 function resizeCanvas(): void {
 	if (!ctx || !canvas) return;
 	const dpr = cappedDpr(window.devicePixelRatio || 1);
@@ -36,17 +69,28 @@ function resizeCanvas(): void {
 	canvas.height = Math.round(height * dpr);
 	ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 	field = createParticleField(PARTICLE_CAP, width, height);
+	ocean = {
+		waves: createWaveField(OCEAN_SEED, width, height),
+		bubbles: createBubbles(OCEAN_SEED, width, height),
+	};
 }
 function paintFrame(): void {
-	if (!ctx || !field) return;
+	if (!ctx || !field || !ocean) return;
 
 	ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+	paintCaustic(ctx);
+	if (!isShellRoute()) renderWaves(ocean.waves, ctx);
+	renderBubbles(ocean.bubbles, ctx);
 	renderParticles(field, ctx);
 }
 function loopFrame(): void {
 	paintFrame();
-	if (!field) return;
+	if (!field || !ocean) return;
 	field = stepParticles(field);
+	ocean = {
+		waves: stepWaves(ocean.waves),
+		bubbles: stepBubbles(ocean.bubbles),
+	};
 	rafId = requestAnimationFrame(loopFrame);
 }
 function startLoop(): void {
@@ -63,7 +107,7 @@ function syncReducedMotion(): void {
 	if (!media || !ctx) return;
 	if (media.matches) {
 		stopLoop();
-		paintFrame();
+		paintFrame(); // exactly one static ocean frame at the fixed phase
 	} else {
 		startLoop();
 	}
@@ -81,11 +125,10 @@ function onResize(): void {
 function destroy(): void {
 	destroyed = true;
 	stopLoop();
-	if (canvas && field) {
-		// transition:persist moves this element into the next page; stash the
-		// field so the re-initialized script continues the same animation.
-		canvas.livingBackgroundField = field;
-	}
+	// transition:persist moves this element into the next page; stash the
+	// fields so the re-initialized script continues the same animation.
+	if (canvas && field) canvas.livingBackgroundField = field;
+	if (canvas && ocean) canvas.livingBackgroundOcean = ocean;
 	media?.removeEventListener("change", syncReducedMotion);
 	document.removeEventListener("visibilitychange", onVisibilityChange);
 	window.removeEventListener("resize", onResize);
@@ -98,10 +141,12 @@ function init(): void {
 	media = window.matchMedia(REDUCED_MOTION_QUERY);
 	resizeCanvas();
 
-	// A view transition swap stashed the running field on this element;
-	// adopt it so the animation continues instead of restarting.
+	// A swap stashed the running fields on this element; adopt them so the
+	// animation continues instead of restarting.
 	const stashed = canvas.livingBackgroundField;
 	if (stashed) field = stashed;
+	const stashedOcean = canvas.livingBackgroundOcean;
+	if (stashedOcean) ocean = stashedOcean;
 
 	media.addEventListener("change", syncReducedMotion);
 	document.addEventListener("visibilitychange", onVisibilityChange);
@@ -114,8 +159,8 @@ function init(): void {
 }
 
 // A swap keeps this module and its persisted canvas alive; the before-swap
-// destroy stops the loop, so astro:after-swap restarts it on the same element,
-// adopting the stashed field (animation continues, no restart).
+// destroy stops the loop, so astro:after-swap restarts it on the same element
+// adopting the stashed fields (animation continues, no restart).
 function resume(): void {
 	destroy();
 	destroyed = false;

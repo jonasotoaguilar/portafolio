@@ -6,6 +6,15 @@
 //   - data hooks consumed by the Unit 5/6 wiring and e2e
 // Preload="none" means a missing /audio/background.mp3 never 404s, so the
 // site stays silent and graceful with no track present (BYO contract).
+//
+// The control renders a music-note icon instead of visible text, as TWO
+// complete SVG states: a clean music note and a crossed-out music note (the
+// slash is drawn inside the crossed glyph, not overlaid). Exactly one is
+// visible — the crossed note whenever audio is off (no-track / muted /
+// error), the clean note when ready or playing: ambient-audio.ts drives
+// data-audio-state, and global.css switches the two icons. The accessible
+// name stays on aria-label ("Sound: Off" / "Sound: On", set at runtime by
+// ambient-audio.ts), with aria-pressed kept for the toggle state.
 ---
 <audio
 	data-audio-element
@@ -15,11 +24,40 @@
 ></audio>
 <button
 	type="button"
-	class="mute-control min-h-11 min-w-11 rounded-[2px] border border-accent-600 px-4 font-label text-xl uppercase tracking-[0.08em] text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
+	class="mute-control flex min-h-11 min-w-11 items-center justify-center rounded-[2px] border border-accent-600 px-2 text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
 	disabled
 	aria-pressed="false"
+	aria-label="Sound: Off"
 	data-mute-control
 	data-audio-state="no-track"
 >
-	Sound: Off
+	<svg
+		class="note-glyph"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="1.8"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+		aria-hidden="true"
+	>
+		<path d="M6.5 14.7V5l9.5-2v9.7" />
+		<circle cx="6.5" cy="17.5" r="2.8" />
+		<circle cx="16" cy="15.5" r="2.8" />
+	</svg>
+	<svg
+		class="note-muted"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="1.8"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+		aria-hidden="true"
+	>
+		<path d="M6.5 14.7V5l9.5-2v9.7" />
+		<circle cx="6.5" cy="17.5" r="2.8" />
+		<circle cx="16" cy="15.5" r="2.8" />
+		<path d="M4.5 20 20 4" />
+	</svg>
 </button>

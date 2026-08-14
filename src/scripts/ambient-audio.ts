@@ -76,8 +76,13 @@ function render(): void {
 	button.disabled = noTrack;
 	button.setAttribute("aria-pressed", state.muted ? "true" : "false");
 	button.dataset.audioState = state.status;
+	// The visible face is the music-note icon (crossed out off-state, clean
+	// on-state, toggled by data-audio-state in global.css); the accessible
+	// name stays on aria-label so assistive tech reads the real state.
 	const label = noTrack || state.muted ? "Sound: Off" : "Sound: On";
-	if (button.textContent !== label) button.textContent = label;
+	if (button.getAttribute("aria-label") !== label) {
+		button.setAttribute("aria-label", label);
+	}
 	writeStash();
 }
 

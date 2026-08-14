@@ -20,7 +20,8 @@
 		"check": "astro check",
 		"stryker": "stryker run",
 		"test:build-failures": "node scripts/verify-build-failures.mjs",
-		"gate:privacy": "node scripts/verify-no-phone.mjs"
+		"gate:privacy": "node scripts/verify-no-phone.mjs",
+		"gate:provenance": "node scripts/verify-provenance.mjs"
 	},
 	"dependencies": {
 		"@astrojs/sitemap": "3.7.3",

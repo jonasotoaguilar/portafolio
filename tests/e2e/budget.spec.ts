@@ -4,14 +4,13 @@ import { gzipSync } from "node:zlib";
 import { expect, test } from "@playwright/test";
 
 // Every static route ships its own document with its own script set; the
-// budget applies to each of the six routes, not just the shell.
+// budget applies to each of the five routes, not just the shell.
 const ROUTES = [
 	["/", "index.html"],
 	["/about", "about/index.html"],
 	["/resume", "resume/index.html"],
 	["/projects", "projects/index.html"],
 	["/skills", "skills/index.html"],
-	["/contact", "contact/index.html"],
 ] as const;
 
 // Exact per-route document titles (seo-metadata): asserted from the rendered
@@ -29,17 +28,18 @@ const TITLES: [string, string][] = [
 	["/resume", "Resume · Jonathan Soto"],
 	["/projects", "Projects · Jonathan Soto"],
 	["/skills", "Skills · Jonathan Soto"],
-	["/contact", "Contact · Jonathan Soto"],
 ];
 
 test.describe("first-load budget", () => {
-	test("every route ships the audio wiring inside the measured script set and the figure layer", () => {
+	test("every route ships audio wiring and view routes ship the figure layer", () => {
 		// Portfolio-page spec "Budget holds with new assets": the production
-		// build with the audio and figure layers is what the budget measures.
+		// build with the audio layer is what the budget measures. View routes
+		// also carry the static figure layer; the main shell intentionally does
+		// not render that decoration.
 		// The ambient-audio wiring (design AD5) is inlined per route by Astro
-		// and the figure layer is zero-JS static markup (design AD3) — both
-		// must be present in the built document, wherever the bundler puts
-		// the audio module.
+		// and the figure layer is zero-JS static markup (design AD3) — both are
+		// checked in the built document wherever the bundler puts the audio
+		// module.
 		for (const [route, file] of ROUTES) {
 			const html = readFileSync(`dist/${file}`, "utf8");
 			const external = [...html.matchAll(/src="(\/_astro\/[^"]+\.js)"/g)].map(
@@ -53,9 +53,10 @@ test.describe("first-load budget", () => {
 				measured.includes("no-track") && measured.includes("muted"),
 				`${route} audio wiring must be inside the measured script set`,
 			).toBe(true);
-			expect(html, `${route} must ship the figure layer markup`).toContain(
-				"figure-layer",
-			);
+			expect(
+				html.includes("data-figure-layer"),
+				`${route} figure-layer markup matches its route contract`,
+			).toBe(route !== "/");
 		}
 	});
 
@@ -149,7 +150,6 @@ test.describe("first-load budget", () => {
 			["/resume", "Ingeniería de Ejecución en Computación e Informática"],
 			["/projects", /Service-order and ticket management platform/],
 			["/skills", "FastAPI"],
-			["/contact", "jonathansoto.dev@gmail.com"],
 		];
 		for (const [route, probe] of probes) {
 			await page.goto(route);

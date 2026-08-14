@@ -102,7 +102,7 @@ async function render(page: typeof Index | typeof NotFound): Promise<string> {
 }
 
 describe("index page (game shell)", () => {
-	it("renders exactly five menu links to the five view routes in declared order", async () => {
+	it("renders exactly four menu links to the four view routes in declared order", async () => {
 		const html = await render(Index);
 		const main = html.slice(html.indexOf("<main"), html.indexOf("</main>"));
 		const anchors = [...main.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
@@ -116,7 +116,6 @@ describe("index page (game shell)", () => {
 			{ href: "/resume", text: "Resume" },
 			{ href: "/projects", text: "Projects" },
 			{ href: "/skills", text: "Skills" },
-			{ href: "/contact", text: "Contact" },
 		]);
 	});
 

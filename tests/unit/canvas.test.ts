@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+	BUBBLE_CAP,
+	createBubbles,
+	renderBubbles,
+	stepBubbles,
+} from "../../src/lib/canvas/bubbles";
+import {
 	cappedDpr,
 	createParticleField,
 	PARTICLE_CAP,
@@ -7,6 +13,12 @@ import {
 	seededRng,
 	stepParticles,
 } from "../../src/lib/canvas/particles";
+import {
+	createWaveField,
+	renderWaves,
+	stepWaves,
+	WAVE_BAND_CAP,
+} from "../../src/lib/canvas/waves";
 
 describe("PARTICLE_CAP", () => {
 	it("caps the particle field at 120", () => {
@@ -116,6 +128,119 @@ describe("renderParticles", () => {
 
 		renderParticles(field, ctx as unknown as CanvasRenderingContext2D);
 		expect(arcCalls).toBe(4);
+		expect(field).toEqual(before);
+	});
+});
+/** Minimal 2D-context double counting draw calls. */
+function mockCtx() {
+	const calls = { paths: 0, fills: 0, arcs: 0 };
+	const ctx = {
+		fillStyle: "",
+		globalAlpha: 1,
+		beginPath: () => {
+			calls.paths++;
+		},
+		moveTo: () => {},
+		lineTo: () => {},
+		closePath: () => {},
+		arc: () => {
+			calls.arcs++;
+		},
+		fill: () => {
+			calls.fills++;
+		},
+	};
+	return { ctx, calls };
+}
+describe("createWaveField", () => {
+	it("is deterministic per seed, capped at 3 bands, in-canvas geometry", () => {
+		expect(WAVE_BAND_CAP).toBe(3);
+		const a = createWaveField(42, 800, 600);
+		expect(createWaveField(42, 800, 600)).toEqual(a);
+		expect(a.bands).toHaveLength(WAVE_BAND_CAP);
+		expect(a.bands.map((band) => band.phase)).not.toEqual(
+			createWaveField(7, 800, 600).bands.map((band) => band.phase),
+		);
+		for (const band of a.bands) {
+			expect(band.baseY * 600).toBeGreaterThan(0);
+			expect(band.baseY * 600).toBeLessThan(600);
+			expect(band.amplitude).toBeGreaterThan(0);
+			expect(band.wavelength).toBeGreaterThan(0);
+			expect(band.thickness).toBeGreaterThan(0);
+			expect(band.speed).toBeGreaterThan(0);
+			expect(band.alpha).toBeGreaterThan(0);
+			expect(band.alpha).toBeLessThanOrEqual(1);
+		}
+	});
+});
+describe("stepWaves", () => {
+	it("advances every phase without mutating the field", () => {
+		const field = createWaveField(42, 800, 600);
+		const before = structuredClone(field);
+		const stepped = stepWaves(field);
+		expect(stepped).not.toBe(field);
+		expect(field).toEqual(before);
+		for (let i = 0; i < field.bands.length; i++) {
+			expect(stepped.bands[i].phase).not.toBe(field.bands[i].phase);
+		}
+	});
+});
+describe("renderWaves", () => {
+	it("paints one path per band without mutating the field", () => {
+		const { ctx, calls } = mockCtx();
+		const field = createWaveField(42, 800, 600);
+		const before = structuredClone(field);
+		renderWaves(field, ctx as unknown as CanvasRenderingContext2D);
+		expect(calls.paths).toBe(WAVE_BAND_CAP);
+		expect(calls.fills).toBe(WAVE_BAND_CAP);
+		expect(field).toEqual(before);
+	});
+});
+describe("createBubbles", () => {
+	it("is deterministic per seed, capped at 24, in-bounds", () => {
+		expect(BUBBLE_CAP).toBe(24);
+		const a = createBubbles(42, 800, 600);
+		expect(createBubbles(42, 800, 600)).toEqual(a);
+		expect(createBubbles(7, 800, 600).bubbles).not.toEqual(a.bubbles);
+		expect(createBubbles(1000, 800, 600).bubbles).toHaveLength(BUBBLE_CAP);
+		for (const bubble of a.bubbles) {
+			expect(bubble.x).toBeGreaterThanOrEqual(0);
+			expect(bubble.x).toBeLessThanOrEqual(800);
+			expect(bubble.y).toBeGreaterThanOrEqual(0);
+			expect(bubble.y).toBeLessThanOrEqual(600);
+			expect(bubble.radius).toBeGreaterThan(0);
+			expect(bubble.speed).toBeGreaterThan(0);
+			expect(bubble.opacity).toBeGreaterThan(0);
+			expect(bubble.opacity).toBeLessThanOrEqual(1);
+		}
+	});
+});
+describe("stepBubbles", () => {
+	it("rises bubbles and respawns above the top, immutably", () => {
+		const field = createBubbles(42, 800, 600);
+		const before = structuredClone(field);
+		const stepped = stepBubbles(field);
+		expect(stepped).not.toBe(field);
+		expect(field).toEqual(before);
+		for (let i = 0; i < field.bubbles.length; i++) {
+			expect(stepped.bubbles[i].y).toBe(
+				field.bubbles[i].y - field.bubbles[i].speed,
+			);
+		}
+		const escaped = stepBubbles({
+			...field,
+			bubbles: [{ ...field.bubbles[0], y: -10, radius: 4 }],
+		});
+		expect(escaped.bubbles[0].y).toBe(field.height + 4);
+	});
+});
+describe("renderBubbles", () => {
+	it("paints one arc per bubble without mutating the field", () => {
+		const { ctx, calls } = mockCtx();
+		const field = createBubbles(42, 800, 600);
+		const before = structuredClone(field);
+		renderBubbles(field, ctx as unknown as CanvasRenderingContext2D);
+		expect(calls.arcs).toBe(field.bubbles.length);
 		expect(field).toEqual(before);
 	});
 });

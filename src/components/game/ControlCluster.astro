@@ -3,14 +3,18 @@ import AudioControl from "./AudioControl.astro";
 import KeyHints from "./KeyHints.astro";
 ---
 
-<!-- Design AD4: fixed bottom-right control cluster rendered once in
-     BaseLayout. Position and hide rules live in global.css
-     (.control-cluster); transition:persist keeps the cluster — and from
-     Unit 5/6 its audio state — across view-transition swaps. -->
-<footer class="control-cluster" data-control-cluster transition:persist>
+<!-- Design AD4: the control root is a persisted (transition:persist) wrapper
+     rendered once in BaseLayout. Its two children anchor their own corners:
+     the decorative key hints stay fixed bottom-right, and the mute control
+     moves to the upper-right directly below the shell identity card (the
+     shell-name-card sits at top 1.5rem / right 1.5rem; .mute-control's
+     position in global.css mirrors it). Position and hide rules live in
+     global.css; keeping both controls inside the persisted root lets the
+     ambient-audio wiring survive view-transition swaps unchanged. -->
+<div class="control-cluster" data-control-cluster transition:persist>
 	<KeyHints />
 	<AudioControl />
-</footer>
+</div>
 
 <script>
 	import "../../scripts/ambient-audio";

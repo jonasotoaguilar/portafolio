@@ -77,8 +77,8 @@ export function escapeHierarchy(panelOpen: boolean): "close-panel" | "to-menu" {
 	return panelOpen ? "close-panel" : "to-menu";
 }
 
-// Items 300ms ease-out with 25ms stagger: the five-item shell overlay moment
-// (300 + 4x25 = 400ms) lands exactly on the design's 400ms exception.
+// Items 300ms ease-out with 25ms stagger: the shell overlay moment
+// (300 + (n-1)x25ms) lands inside the design's 400ms exception.
 export function menuOverlayOptions(reducedMotion: boolean): OverlayOptions {
 	if (reducedMotion) {
 		return { itemDuration: 200, stagger: 0, reduced: true };

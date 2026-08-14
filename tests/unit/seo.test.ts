@@ -92,12 +92,11 @@ describe("per-route document titles", () => {
 		expect(VIEW_TITLES.resume).toBe("Resume · Jonathan Soto");
 		expect(VIEW_TITLES.projects).toBe("Projects · Jonathan Soto");
 		expect(VIEW_TITLES.skills).toBe("Skills · Jonathan Soto");
-		expect(VIEW_TITLES.contact).toBe("Contact · Jonathan Soto");
 	});
 
-	it("all six route titles are distinct", () => {
+	it("all five route titles are distinct", () => {
 		const titles = new Set([SHELL_TITLE, ...Object.values(VIEW_TITLES)]);
-		expect(titles.size).toBe(6);
+		expect(titles.size).toBe(5);
 	});
 });
 
@@ -116,9 +115,6 @@ describe("canonicalUrl", () => {
 		);
 		expect(canonicalUrl("/skills", site)).toBe(
 			"https://jonasotoaguilar.dev/skills",
-		);
-		expect(canonicalUrl("/contact", site)).toBe(
-			"https://jonasotoaguilar.dev/contact",
 		);
 	});
 });
