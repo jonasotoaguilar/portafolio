@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR-0006: Bundled Pixabay-licensed ambient track over BYO](0006-bundled-licensed-ambient-track.md) (2026-08-13, `reference-driven-view-redesign`)
+
+> **Superseding note**: the "ship no bundled audio / user drops a BYO track at `/audio/background.mp3`" decision is replaced. The site now ships a committed Pixabay-licensed derivative (`public/audio/background.mp3`) by default, with `no-track` as the fallback when the derivative is absent from the build. The retained mechanics — HEAD probe (zero bytes), one-time gesture unlock, `localStorage` mute persistence, volume fades, `transition:persist` across navigation, and the distinct `error` state for real media failures — carry into ADR-0006 unchanged. This ADR remains for history; do not delete.
 
 ## Date
 

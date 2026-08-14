@@ -1,4 +1,5 @@
 import { animate } from "motion";
+import { playSelect } from "../lib/audio/effects";
 import { menuOverlayOptions, reduceMenuKey } from "../lib/menu/keys";
 import { ENTRANCE_EASE } from "../lib/motion/entrances";
 
@@ -66,6 +67,10 @@ function onKeydown(event: KeyboardEvent): void {
 		// DOM focus follows the cursor back into the menu, even when the key
 		// arrived from the inert background (focused item === active item).
 		items[result.activeIndex]?.focus();
+		// Arrow moves are cursor feedback (button_select); Enter activation
+		// below clicks the item, and the delegated click wiring plays
+		// button_click for it.
+		playSelect();
 	} else if (result.kind === "activate") {
 		const active = items[state.activeIndex];
 		if (active) {

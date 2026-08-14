@@ -1,6 +1,6 @@
 ---
 // Decorative key hints: styled keys only, no Gamepad API (spec: hints are
-// decoration; keyboard reality is Arrow/Enter/Escape). Hidden from assistive
+// decoration; keyboard reality is Arrow/Enter/Escape/M). Hidden from assistive
 // tech (real link text carries the meaning) and by the cluster hide rules in
 // global.css on short (<560px) or coarse-pointer viewports (design AD4).
 // Key glyphs are oversized for legibility over the busy shell field.
@@ -10,12 +10,16 @@
 		<kbd class="inline-flex min-w-10 items-center justify-center rounded-[2px] border border-text-secondary/40 px-2.5 py-1.5 text-lg leading-none text-text-primary">↑↓</kbd>
 		move
 	</span>
-	<span class="flex items-center gap-2">
-		<kbd class="inline-flex min-w-10 items-center justify-center rounded-[2px] border border-text-secondary/40 px-2.5 py-1.5 text-lg leading-none text-text-primary">↵</kbd>
-		select
-	</span>
-	<span class="flex items-center gap-2">
-		<kbd class="inline-flex min-w-10 items-center justify-center rounded-[2px] border border-text-secondary/40 px-2.5 py-1.5 text-lg leading-none text-text-primary">Esc</kbd>
+		<span class="flex items-center gap-2">
+			<kbd class="inline-flex min-w-10 items-center justify-center rounded-[2px] border border-text-secondary/40 px-2.5 py-1.5 text-lg leading-none text-text-primary">↵</kbd>
+			select
+		</span>
+		<span class="flex items-center gap-2">
+			<kbd class="inline-flex min-w-10 items-center justify-center rounded-[2px] border border-text-secondary/40 px-2.5 py-1.5 text-lg leading-none text-text-primary">M</kbd>
+			mute
+		</span>
+		<span class="flex items-center gap-2">
+			<kbd class="inline-flex min-w-10 items-center justify-center rounded-[2px] border border-text-secondary/40 px-2.5 py-1.5 text-lg leading-none text-text-primary">Esc</kbd>
 		back
 	</span>
 </footer>

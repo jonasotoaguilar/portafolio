@@ -6,7 +6,7 @@ This page is the foundational reading for understanding portafolio: what the sit
 
 ## The Site in One Sentence
 
-A fully static, Persona-3-inspired game-menu portfolio for Jonathan Soto: plain HTML generated at build time, a root game-menu shell at `/` whose five items each swap the complete view to its own static route (`/about`, `/resume`, `/projects`, `/skills`, `/contact`), with a decorative layered background (glow, scanlines, canvas, original figure/artifact layer) and native view transitions — and zero backend, database, or runtime state.
+A fully static, Persona-3-inspired game-menu portfolio for Jonathan Soto: plain HTML generated at build time, a root game-menu shell at `/` whose five items each swap the complete view to its own static route (`/about`, `/resume`, `/projects`, `/skills`, `/contact`), with a decorative layered background (glow, scanlines, canvas caustic/bubbles/particles) and native view transitions — and zero backend, database, or runtime state.
 
 ## The Model (per ARCHITECTURE.md)
 
@@ -21,15 +21,14 @@ Per [ARCHITECTURE.md](../../ARCHITECTURE.md), [PRD.md](../../PRD.md), [DESIGN.md
 
 ## What Exists Today
 
-The migration is complete: `src/pages/index.astro` is the game shell composing `GameMenu`; the five views live in `src/pages/{about,resume,projects,skills,contact}.astro` with components under `src/components/game/` (`GameMenu`, `GameViewShell`, `ViewHeader`, `KeyHints`, `GameList`, `GameListItem`, `DetailPanel`). The legacy landing (Hero/Featured Work/Projects/Skills/Contact sections, `CompactNav` + `MenuOverlay` dialog, `Section.astro`, `src/scripts/menu.ts`, `ProjectCard`) was deleted in Slice 6; its tests (`tests/unit/{nav,sections}.test.ts`, `tests/e2e/{menu,portfolio}.spec.ts`) were replaced by the shell/view suites. The change was delivered in six chained slices (S1 docs sync → S6 migration + verification) and is archived at `openspec/changes/archive/2026-08-11-persona-game-menu-navigation/`. The Persona UI/UX remediation (`openspec/changes/persona-ui-ux-remediation/`) then added the diagonal staggered menu, the persistent active indicator, the bottom-right control cluster, the per-route figure layer, and BYO ambient audio across seven phases.
+The migration is complete: `src/pages/index.astro` is the game shell composing `GameMenu`; the five views live in `src/pages/{about,resume,projects,skills,contact}.astro` with components under `src/components/game/` (`GameMenu`, `GameViewShell`, `ViewHeader`, `KeyHints`, `GameList`, `GameListItem`, `DetailPanel`). The legacy landing (Hero/Featured Work/Projects/Skills/Contact sections, `CompactNav` + `MenuOverlay` dialog, `Section.astro`, `src/scripts/menu.ts`, `ProjectCard`) was deleted in Slice 6; its tests (`tests/unit/{nav,sections}.test.ts`, `tests/e2e/{menu,portfolio}.spec.ts`) were replaced by the shell/view suites. The change was delivered in six chained slices (S1 docs sync → S6 migration + verification) and is archived at `openspec/changes/archive/2026-08-11-persona-game-menu-navigation/`. The Persona UI/UX remediation (`openspec/changes/persona-ui-ux-remediation/`) then added the diagonal staggered menu, the persistent active indicator, the bottom-right control cluster, the per-route figure layer (since removed — no decorative figure layer renders), and BYO ambient audio across seven phases.
 
 ## Implemented Capabilities
 
 - **Shell and view pages** — `index.astro` is the game shell (five route links); `about/resume/projects/skills/contact.astro` are full-screen views; components land under `src/components/game/` (`GameMenu`, `GameViewShell`, `ViewHeader`, `KeyHints`, `GameList`, `GameListItem`, `DetailPanel`).
 - **Menu composition and indicator** — `GameMenu.astro` carries per-item diagonal config (`--item-x`/`--item-skew`/`--item-size`) consumed by one `.menu-item` rule in `global.css`; `src/scripts/shell.ts` sets `data-active` + `aria-current="page"` on every move (design AD1/AD2).
 - **Control cluster** — `ControlCluster.astro` (KeyHints + `AudioControl`) renders once in `BaseLayout` with `transition:persist`; hide rules for coarse/short viewports live in `global.css` (design AD4).
-- **Ambient audio** — pure reducer in `src/lib/audio/state.ts` (`no-track → ready ⇄ playing ⇄ muted`) + DOM wiring in `src/scripts/ambient-audio.ts` (HEAD probe once, gesture unlock, fades, localStorage persistence); BYO contract in `public/audio/README.txt` (design AD5).
-- **Figure layer** — `src/components/FigureLayer.astro` renders one original inline-SVG composition per route, `aria-hidden` + `pointer-events-none`, positioned by `html[data-route]` CSS (design AD3).
+- **Ambient audio** — pure reducer in `src/lib/audio/state.ts` (`no-track → ready ⇄ playing ⇄ muted`) + DOM wiring in `src/scripts/ambient-audio.ts` (HEAD probe once, gesture unlock, fades, localStorage persistence); BYO contract in `public/audio/README.txt` (design AD5). Volume levels live in `src/lib/audio/levels.ts`; navigation effect sounds (`src/lib/audio/effects.ts` + `src/scripts/navigation-sounds.ts`) play independently of the ambient mute.
 - **Keyboard model** — `reduceMenuKey` for the shell; `reduceListKey` + `escapeHierarchy` scope LIST/detail and Escape handling to the active screen — never global keydown (the reference's verified bug).
 - **Resume content** — a `resume` content collection typed from Jona's August 2026 CV (education, experience, projects, skills, languages), schema-validated, with a no-phone privacy gate; no ranks, levels, or metrics.
 - **Test migration** — shell/list-detail tests replace the anchor/scroll/section tests; E2E `views.spec.ts` covers routes, zero-JS, keys, 404, view-transition overlays, and the full-page fallback; remediation regressions are pinned in `keyboard.spec.ts`, `views.spec.ts`, `budget.spec.ts`, `reduced-motion.spec.ts`, and `ambient-audio.spec.ts`.
@@ -49,19 +48,18 @@ Astro/Vite build  +  Tailwind CSS 4  +  client scripts (shell/list-detail keys, 
 Static output (HTML/CSS/JS) -> any static host / CDN
         |
         v
-Browser: View Transitions + CSS layers + Canvas + figure layer (progressive enhancement)
+Browser: View Transitions + CSS layers + Canvas (progressive enhancement)
 ```
 
 Content is the single source of truth; pages render it at build time; the browser only enhances what was already served as static HTML. There are no runtime data dependencies and no server-side state.
 
 ## The Layered Background
 
-Per [DESIGN.md](../../DESIGN.md), the Persona-3 feel comes from four stacked visual forces behind the content:
+Per [DESIGN.md](../../DESIGN.md), the Persona-3 feel comes from three stacked visual forces behind the content:
 
 1. **CSS radial glow** — a near-black navy base with a breathing radial blue glow.
 2. **CSS CRT scanlines** — a scanline overlay.
-3. **Canvas 2D particles/fog** — a living layer (implemented in `src/lib/canvas/particles.ts` + `src/scripts/living-background.ts`; see ADR-0002).
-4. **Figure/artifact layer** — one original inline-SVG composition per route (implemented in `src/components/FigureLayer.astro`; design AD3), `aria-hidden`, `pointer-events-none`, zero JavaScript, static under reduced motion.
+3. **Canvas 2D caustic/bubbles/particles** — a living layer (implemented in `src/lib/canvas/particles.ts` + `src/lib/canvas/bubbles.ts` + `src/scripts/living-background.ts`; see ADR-0002): a deep caustic gradient at the bottom edge, rising bubbles, and drifting fog particles.
 
 The design contract: depth comes from light layers, not elevation — flat, sharp, no shadows, no soft radii.
 
@@ -69,7 +67,7 @@ The design contract: depth comes from light layers, not elevation — flat, shar
 
 [ADR-0002](../adr/0002-canvas-2d-background-over-video-assets.md) fixes the background implementation as a Canvas 2D layer in pure TypeScript:
 
-- A `requestAnimationFrame` game loop with the shape **clear -> update -> draw**, rendering particles/fog.
+- A `requestAnimationFrame` game loop with the shape **clear -> update -> draw**, rendering the caustic gradient, bubbles, and particles.
 - The canvas element carries `transition:persist` so it survives Astro View Transitions across routes (only one instance ever exists).
 - The layer is decorative: `aria-hidden` and `pointer-events-none`.
 - Zero rendering dependencies.
@@ -78,16 +76,16 @@ The design contract: depth comes from light layers, not elevation — flat, shar
 
 - With `prefers-reduced-motion: reduce`, the canvas paints a single static frame and never starts the loop.
 - The glow and scanline layers render without the canvas, and content renders if the canvas is unsupported or JS is disabled (progressive enhancement).
-- The figure layer renders static with no entrance motion; ambient audio never starts automatically (the mute toggle stays operable).
+- The figure layer is removed; the background contract is glow/scanlines + canvas only. Ambient audio never starts automatically (the mute toggle stays operable).
 - View transition overlays become opacity-only of at most 200ms under reduced motion (300ms default / 400ms exception otherwise).
 - Enforced by E2E tests with emulated `prefers-reduced-motion`.
 
 ## Entry Points and Reading Order
 
 1. `src/pages/index.astro` — the game shell with the five route links.
-2. `src/styles/global.css` — Tailwind entry point (tokens, glow/scanlines, menu composition, cluster, figure placements, view-transition overlays, reduced motion).
-3. `src/components/game/*` + `src/scripts/{shell,view,ambient-audio}.ts` — shell menu, view LIST/detail behavior, and ambient-audio wiring; the audio reducer lives in `src/lib/audio/state.ts`.
-4. `src/components/FigureLayer.astro` — the per-route decorative figure compositions.
+2. `src/styles/global.css` — Tailwind entry point (tokens, glow/scanlines, menu composition, cluster, view-transition overlays, reduced motion).
+3. `src/components/game/*` + `src/scripts/{shell,view,ambient-audio,navigation-sounds}.ts` — shell menu, view LIST/detail behavior, and audio wiring; the audio reducer lives in `src/lib/audio/state.ts` and the volume levels in `src/lib/audio/levels.ts`.
+4. `src/scripts/living-background.ts` + `src/lib/canvas/*` — the canvas background game loop and its pure field modules.
 5. `astro.config.mjs` — build configuration (site URL, sitemap, Tailwind plugin).
 6. `PRD.md` and `DESIGN.md` — the product and visual system.
 7. `ARCHITECTURE.md` and `docs/adr/` — how the site is built and why.

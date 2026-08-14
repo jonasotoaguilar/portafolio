@@ -17,8 +17,10 @@
 	--color-shell-light-blue: #bcd4ff;
 	--color-shell-sea-blue: #1677c8;
 	--color-surface-light: #ffffff;
+	--color-surface-light-muted: #e8edf5;
 	--color-text-on-light: #04060f;
 	--color-text-on-light-secondary: #3a4557;
+	--color-accent-on-light: #2f46b8;
 
 	--font-display: "Anton", "Arial Narrow", sans-serif;
 	--font-label: "Bebas Neue", sans-serif;
@@ -110,12 +112,21 @@ html[data-game-ready] [data-view] [data-detail-panel]:not([data-active]) {
 	}
 }
 
-/* Home shell base (home-shell contract): the shell swaps the breathing navy
-   glow for a STATIC white-to-light-blue gradient that fills the .glow-layer
-   slot (z-index -3), so the animated canvas and scanlines keep painting
-   above it. Scoped to html[data-route="shell"] — every view route keeps the
-   dark radial glow. */
-html[data-route="shell"] .glow-layer {
+/* Global light contrast-cut field (field contract): the shell AND the four
+   view routes swap the breathing navy glow for a STATIC white-to-light-blue-
+   to-sea-blue diagonal gradient that fills the .glow-layer slot (z-index -3),
+   so the animated canvas and scanlines keep painting above it. Scoped
+   explicitly to the five known routes — everything else (the 404 route and
+   any unknown path rendered by 404.astro, which carries its own data-route
+   value) keeps the dark radial glow as the error identity. Body copy on the
+   light field switches to the dark navy light-field palette. */
+:is(
+	html[data-route="shell"],
+	html[data-route="about"],
+	html[data-route="resume"],
+	html[data-route="projects"],
+	html[data-route="skills"]
+) .glow-layer {
 	background: linear-gradient(
 		112deg,
 		var(--color-surface-light) 0%,
@@ -125,6 +136,17 @@ html[data-route="shell"] .glow-layer {
 		var(--color-shell-sea-blue) 100%
 	);
 	animation: none;
+}
+
+:is(
+		html[data-route="shell"],
+		html[data-route="about"],
+		html[data-route="resume"],
+		html[data-route="projects"],
+		html[data-route="skills"]
+	)
+	body {
+	color: var(--color-text-on-light);
 }
 
 /* Menu active indicator (design AD2): the keyboard-active item and :hover
@@ -295,10 +317,11 @@ html[data-route="shell"] [data-menu-item]:focus-visible::after {
 /* Home shell decorations (home-shell contract): the huge vertical PORTFOLIO
    watermark bleeds off the left edge inside a full-viewport clipping
    container (z-index -1, painted after the canvas in DOM order, below
-   content); the small outlined identity card sits fixed top-right. Both are
-   zero-JS markup; the watermark is aria-hidden. Under 768px the word re-flows
-   to a horizontal band along the bottom edge (DESIGN.md decorative-type
-   mobile behavior), clear of the centered menu column. */
+   content). It is zero-JS markup and aria-hidden; the top-right utility
+   position belongs to the persisted mute control (ControlCluster), the old
+   identity card is removed. Under 768px the word re-flows to a horizontal
+   band along the bottom edge (DESIGN.md decorative-type mobile behavior),
+   clear of the centered menu column. */
 .shell-decor {
 	position: fixed;
 	inset: 0;
@@ -325,22 +348,6 @@ html[data-route="shell"] [data-menu-item]:focus-visible::after {
 	user-select: none;
 }
 
-.shell-name-card {
-	position: fixed;
-	top: 1.5rem;
-	right: 1.5rem;
-	z-index: 10;
-	margin: 0;
-	padding: 0.5rem 1rem;
-	border: 1px solid var(--color-text-primary);
-	border-radius: 2px;
-	font-family: var(--font-label);
-	font-size: 1.25rem;
-	line-height: 1;
-	letter-spacing: 0.08em;
-	color: var(--color-text-primary);
-}
-
 @media (max-width: 767px) {
 	.shell-watermark {
 		left: 1rem;
@@ -356,8 +363,8 @@ html[data-route="shell"] [data-menu-item]:focus-visible::after {
    (transition:persist on the element in BaseLayout) holding both controls.
    The children anchor their own corners — the decorative key hints stay
    fixed bottom-right at 1.5rem/1.75rem, and the mute control sits fixed
-   upper-right directly below the shell identity card (card at top 1.5rem /
-   right 1.5rem, ~2.375rem tall → top calc + 0.5rem gap). Hints hide on
+   top-right at 1.5rem/1.5rem (the former shell identity card is removed;
+   the mute control is the only top-right utility control). Hints hide on
    short (<560px) or coarse-pointer viewports; the mute control keeps its
    ≥44px target. */
 .control-cluster {
@@ -373,7 +380,7 @@ html[data-route="shell"] [data-menu-item]:focus-visible::after {
 
 .control-cluster .mute-control {
 	position: fixed;
-	top: calc(1.5rem + 2.375rem + 0.5rem);
+	top: 1.5rem;
 	right: 1.5rem;
 	z-index: 50;
 }
@@ -408,54 +415,129 @@ html[data-route="shell"] [data-menu-item]:focus-visible::after {
 	}
 }
 
-/* Control cluster on the light shell field (home-shell contract): hints, the
-   mute toggle, and the identity card switch to white text with a very
-   subtle black outline so they stay legible over the busy blue gradient — a
-   0.3px -webkit-text-stroke, with an 8-direction text-shadow fallback (also
-   0.3px) for engines without stroke support. The shell auxiliary text uses
-   the display face (Anton, already self-hosted for the menu labels) instead
-   of a system sans, so key hints, keycaps, the mute control and the identity
-   card share the video-game voice of the menu; glyphs Anton does not carry
-   (↵) fall back per-glyph to the sans stack. The mute control's music-note
-   icon inherits currentColor (white) and is drawn with its own thin SVG
-   stroke, so it stays crisp without thick text outlines. Chip borders stay
-   thin white-based 1px rectangles. */
-html[data-route="shell"] .key-hints,
-html[data-route="shell"] .key-hints span,
-html[data-route="shell"] .key-hints kbd,
-html[data-route="shell"] .mute-control,
-html[data-route="shell"] .shell-name-card {
+/* Control cluster on the light field (field contract): hints and the mute
+   toggle switch to white text with a very subtle black outline so they stay
+   legible over the busy blue gradient — a 0.3px -webkit-text-stroke, with an
+   8-direction text-shadow fallback (also 0.3px) for engines without stroke
+   support. Auxiliary text uses the display face (Anton, already self-hosted
+   for the menu labels) instead of a system sans, so key hints, keycaps and
+   the mute control share the video-game voice of the menu; glyphs Anton does
+   not carry (↵) fall back per-glyph to the sans stack. The mute control's
+   music-note icon inherits currentColor (white) and is drawn with its own
+   thin SVG stroke, so it stays crisp without thick text outlines. Chip
+   borders stay thin white-based 1px rectangles. Applied on every light-field
+   route (shell + views); the 404 and unknown paths keep the dark palette. */
+:is(
+	html[data-route="shell"],
+	html[data-route="about"],
+	html[data-route="resume"],
+	html[data-route="projects"],
+	html[data-route="skills"]
+) .key-hints,
+:is(
+		html[data-route="shell"],
+		html[data-route="about"],
+		html[data-route="resume"],
+		html[data-route="projects"],
+		html[data-route="skills"]
+	)
+	.key-hints
+	span,
+:is(
+		html[data-route="shell"],
+		html[data-route="about"],
+		html[data-route="resume"],
+		html[data-route="projects"],
+		html[data-route="skills"]
+	)
+	.key-hints
+	kbd,
+:is(
+		html[data-route="shell"],
+		html[data-route="about"],
+		html[data-route="resume"],
+		html[data-route="projects"],
+		html[data-route="skills"]
+	)
+	.mute-control,
+:is(
+		html[data-route="shell"],
+		html[data-route="about"],
+		html[data-route="resume"],
+		html[data-route="projects"],
+		html[data-route="skills"]
+	)
+	.key-hints {
 	color: var(--color-text-primary);
 	font-family: var(--font-display);
 	-webkit-text-stroke-width: 0.3px;
 	-webkit-text-stroke-color: var(--color-bg-base);
 }
 
-/* Anton renders tighter than the previous wide system sans, so the shell
-   re-sizes the auxiliary text for the game voice: hint labels keep the
-   component's label step (1.25rem) with Anton's no-tracking caps contract,
-   and the keycaps grow to the same step so the arrow glyphs stay large and
-   readable. The fixed bottom-right hints keep clear of the last menu item
-   (design AD4 non-overlap contract). */
-html[data-route="shell"] .key-hints {
+/* Anton renders tighter than the previous wide system sans, so the light
+   field re-sizes the auxiliary text for the game voice: hint labels keep
+   the component's label step (1.25rem) with Anton's no-tracking caps
+   contract, and the keycaps grow to the same step so the arrow glyphs stay
+   large and readable. The fixed bottom-right hints keep clear of the last
+   menu item (design AD4 non-overlap contract). */
+:is(
+	html[data-route="shell"],
+	html[data-route="about"],
+	html[data-route="resume"],
+	html[data-route="projects"],
+	html[data-route="skills"]
+) .key-hints {
 	letter-spacing: 0;
 	gap: 0.75rem;
 }
 
-html[data-route="shell"] .key-hints kbd {
+:is(
+		html[data-route="shell"],
+		html[data-route="about"],
+		html[data-route="resume"],
+		html[data-route="projects"],
+		html[data-route="skills"]
+	)
+	.key-hints
+	kbd {
 	font-size: 1.25rem;
 }
 
-html[data-route="shell"] .shell-name-card {
-	letter-spacing: 0;
-}
-
 @supports not (-webkit-text-stroke-width: 0.3px) {
-	html[data-route="shell"] .key-hints,
-	html[data-route="shell"] .key-hints span,
-	html[data-route="shell"] .key-hints kbd,
-	html[data-route="shell"] .mute-control,
-	html[data-route="shell"] .shell-name-card {
+	:is(
+			html[data-route="shell"],
+			html[data-route="about"],
+			html[data-route="resume"],
+			html[data-route="projects"],
+			html[data-route="skills"]
+		)
+		.key-hints,
+	:is(
+			html[data-route="shell"],
+			html[data-route="about"],
+			html[data-route="resume"],
+			html[data-route="projects"],
+			html[data-route="skills"]
+		)
+		.key-hints
+		span,
+	:is(
+			html[data-route="shell"],
+			html[data-route="about"],
+			html[data-route="resume"],
+			html[data-route="projects"],
+			html[data-route="skills"]
+		)
+		.key-hints
+		kbd,
+	:is(
+			html[data-route="shell"],
+			html[data-route="about"],
+			html[data-route="resume"],
+			html[data-route="projects"],
+			html[data-route="skills"]
+		)
+		.mute-control {
 		-webkit-text-stroke-width: initial;
 		-webkit-text-stroke-color: initial;
 		text-shadow:
@@ -470,75 +552,94 @@ html[data-route="shell"] .shell-name-card {
 	}
 }
 
-html[data-route="shell"] .key-hints span,
-html[data-route="shell"] .key-hints kbd,
-html[data-route="shell"] .mute-control {
+:is(
+		html[data-route="shell"],
+		html[data-route="about"],
+		html[data-route="resume"],
+		html[data-route="projects"],
+		html[data-route="skills"]
+	)
+	.key-hints
+	span,
+:is(
+		html[data-route="shell"],
+		html[data-route="about"],
+		html[data-route="resume"],
+		html[data-route="projects"],
+		html[data-route="skills"]
+	)
+	.key-hints
+	kbd,
+:is(
+		html[data-route="shell"],
+		html[data-route="about"],
+		html[data-route="resume"],
+		html[data-route="projects"],
+		html[data-route="skills"]
+	)
+	.mute-control {
 	border-color: color-mix(in srgb, var(--color-text-primary) 60%, transparent);
 }
 
-/* Decorative figure/artifact layer (design AD3): one original inline-SVG
-   composition per route, fixed between the canvas (also z-index -1 but
-   painted earlier in DOM order) and content; aria-hidden and
-   pointer-events-none, zero JS. Route placements below position the
-   container per DESIGN.md figure placements; the SVG slices to fill it. */
-.figure-layer {
-	position: fixed;
-	z-index: -1;
+/* Light-field view surfaces (field contract): the shared semantic surface
+   classes used by the view components (GameListItem, DetailPanel,
+   ViewHeader) and the view pages. Cards are flat white 2px-radius panels
+   with muted-light separation states; the selected list item echoes the
+   shell menu's active treatment — muted surface, dark-blue accent text, and
+   a 2px cyan highlight bar along the bottom edge (cyan stays a
+   decorative/highlight color, never body copy). The active selectors key on
+   the PRESENCE of data-active because the enhancement layer (view.ts)
+   toggles the attribute to an empty value after load; the SSR state writes
+   data-active="true". Links and labels use the dark-blue accent and deepen
+   toward near-black on hover, mirroring the shell active-item language. */
+.view-list-item {
+	position: relative;
+	background-color: var(--color-surface-light);
+	color: var(--color-text-on-light);
+	border-radius: 2px;
+	transition:
+		background-color 150ms ease-out,
+		color 150ms ease-out;
+}
+
+.view-list-item:hover {
+	background-color: var(--color-surface-light-muted);
+}
+
+.view-list-item[data-active] {
+	background-color: var(--color-surface-light-muted);
+	color: var(--color-accent-on-light);
+}
+
+.view-list-item[data-active]::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 2px;
+	background: var(--color-accent-cyan);
 	pointer-events: none;
 }
 
-.figure-layer svg {
-	display: block;
-	width: 100%;
-	height: 100%;
+.view-panel {
+	background-color: var(--color-surface-light);
+	border-radius: 2px;
 }
 
-/* Gated entrance (design AD3 motion): one 400ms opacity fade on first
-   paint, only with JS enhancement active (html[data-game-ready]) and no
-   reduced-motion preference; otherwise the layer is fully static. */
-@media (prefers-reduced-motion: no-preference) {
-	html[data-game-ready] .figure-layer {
-		animation: figure-layer-in 400ms ease-out both;
-	}
+.view-chip {
+	background-color: var(--color-surface-light-muted);
+	color: var(--color-text-on-light);
+	border-radius: 2px;
 }
 
-@keyframes figure-layer-in {
-	from {
-		opacity: 0;
-	}
-
-	to {
-		opacity: 1;
-	}
+.view-link {
+	color: var(--color-accent-on-light);
+	transition: color 150ms ease-out;
 }
 
-/* Route variant placements (DESIGN.md figure placements): shell/404
-   oversized figure on the right half; projects cyan top band; skills right
-   figure framing the center; about bottom-left figure; resume left-mid
-   figure. */
-html[data-route="shell"] .figure-layer,
-html[data-route="404"] .figure-layer {
-	inset: 0 0 0 50%;
-}
-
-html[data-route="projects"] .figure-layer {
-	inset: 0 0 auto 0;
-	height: 40vh;
-}
-
-html[data-route="skills"] .figure-layer {
-	inset: 0 0 0 52%;
-}
-
-html[data-route="about"] .figure-layer {
-	inset: auto auto 0 0;
-	width: 55vw;
-	height: 62vh;
-}
-
-html[data-route="resume"] .figure-layer {
-	inset: 12% auto 12% 0;
-	width: 42vw;
+.view-link:hover {
+	color: var(--color-bg-base);
 }
 
 /* Sprite pattern utility (design route-asset-matrix): owner-created sprite

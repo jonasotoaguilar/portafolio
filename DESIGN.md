@@ -14,6 +14,11 @@ colors:
   text-primary: "#ffffff"
   text-secondary: "#a7a7ab"
   scanline: "#000000"
+  surface-light: "#ffffff"
+  surface-light-muted: "#e8edf5"
+  text-on-light: "#04060f"
+  text-on-light-secondary: "#3a4557"
+  accent-on-light: "#2f46b8"
 typography:
   display:
     fontFamily: Anton
@@ -88,41 +93,31 @@ components:
     typography: "{typography.label}"
     rounded: "{rounded.sm}"
     padding: 16px
-  project-card:
-    backgroundColor: "{colors.glow-end}"
-    textColor: "{colors.text-primary}"
-    rounded: "{rounded.none}"
-    padding: 24px
-  project-card-hover:
-    backgroundColor: "{colors.glow-start}"
-    textColor: "{colors.text-primary}"
-    rounded: "{rounded.none}"
-    padding: 24px
   list-item:
-    backgroundColor: "{colors.glow-end}"
-    textColor: "{colors.text-primary}"
+    backgroundColor: "{colors.surface-light}"
+    textColor: "{colors.text-on-light}"
     typography: "{typography.display}"
-    rounded: "{rounded.none}"
+    rounded: "{rounded.sm}"
     padding: 16px
   list-item-active:
-    backgroundColor: "{colors.glow-start}"
-    textColor: "{colors.accent-300}"
+    backgroundColor: "{colors.surface-light-muted}"
+    textColor: "{colors.accent-on-light}"
     typography: "{typography.display}"
-    rounded: "{rounded.none}"
+    rounded: "{rounded.sm}"
     padding: 16px
   detail-panel:
-    backgroundColor: "{colors.glow-end}"
-    textColor: "{colors.text-primary}"
-    rounded: "{rounded.none}"
+    backgroundColor: "{colors.surface-light}"
+    textColor: "{colors.text-on-light}"
+    rounded: "{rounded.sm}"
     padding: 24px
   watermark:
-    textColor: "{colors.accent-600}"
+    textColor: "{colors.bg-base}"
     typography: "{typography.watermark}"
 ---
 
 ## Overview
 
-A dark, cinematic Persona-3-inspired system for a game-menu portfolio. The interaction world is the P3 menu: the site is a full-screen game shell — no scrolling landing — where a centered/center-right, diagonally staggered menu of five route items (ABOUT, RESUME, PROJECTS, SKILLS, CONTACT) selects the complete view. Selecting an item changes the URL and swaps the whole screen; Escape or Browser Back returns to the menu. The visual identity is built on stacked atmospheric forces: a near-black navy base with a breathing radial blue glow, a CRT scanline overlay, a living Canvas 2D particle/fog layer, and an original decorative figure/artifact layer (faceted abstract silhouette plus angular blue/cyan artifacts) placed per route. Keyboard/control hints and the ambient-audio mute toggle form a fixed bottom-right cluster. Giant condensed uppercase headings (Anton) carry the voice; Bebas Neue handles labels. Everything is flat and sharp — no shadows, no soft radii — with depth produced entirely by light layers and diagonal cut geometry, not elevation. The geometry is inspired by the original Persona 3 menu (skewed labels, diagonal accent cuts, blue sweep overlays) but no characters, assets, or reference defects are copied. Tokens below are named for direct mapping into the Tailwind 4 theme (`bg-base`, `accent-500`, `text-primary`, ...) so components reference tokens, never literals.
+A dark-navy-on-light, cinematic Persona-3-inspired system for a game-menu portfolio. The interaction world is the P3 menu: the site is a full-screen game shell — no scrolling landing — where a centered/center-right, diagonally staggered menu of four route items (ABOUT, RESUME, PROJECTS, SKILLS) selects the complete view. Selecting an item changes the URL and swaps the whole screen; Escape or Browser Back returns to the menu. The visual identity is built on stacked atmospheric forces: every non-404 route renders on a static white→light-blue→sea-blue diagonal contrast-cut field (the shell and the four views share it; the 404 keeps the dark breathing navy glow as the error identity), overlaid with CRT scanlines and a living Canvas 2D layer (a deep caustic wash at the bottom edge, rising bubbles, and drifting fog particles). On the light field, dark navy text (≈20:1) and dark-blue accent links carry the content, while white contrast-cut panels give cards and detail surfaces their separation. Keyboard/control hints and the ambient-audio mute toggle form a fixed cluster. Giant condensed uppercase headings (Anton) carry the voice; Bebas Neue handles labels. Everything is flat and sharp — no shadows, no soft radii — with depth produced entirely by light layers and diagonal cut geometry, not elevation. The geometry is inspired by the original Persona 3 menu (skewed labels, diagonal accent cuts, blue sweep overlays) but no characters, assets, or reference defects are copied. Tokens below are named for direct mapping into the Tailwind 4 theme (`bg-base`, `accent-500`, `text-primary`, ...) so components reference tokens, never literals.
 
 ## Colors
 
@@ -135,12 +130,17 @@ A dark, cinematic Persona-3-inspired system for a game-menu portfolio. The inter
 | `accent-400` | #5d75ff | Accent hover, active menu item |
 | `accent-300` | #7c92ff | Accent highlights on dark surfaces |
 | `accent-600` | #2f46b8 | Accent pressed / watermark wash |
-| `accent-cyan` | #38e1ff | Decorative cyan accents: figure rims, highlight bars, artifact slashes — never body text |
-| `text-primary` | #ffffff | Headings and primary text |
-| `text-secondary` | #a7a7ab | Muted body text (white at reduced opacity over `bg-base`) |
+| `accent-cyan` | #38e1ff | Decorative cyan accents: highlight bars — never body text |
+| `text-primary` | #ffffff | Headings and primary text on the dark 404 identity |
+| `text-secondary` | #a7a7ab | Muted body text on the dark 404 identity |
 | `scanline` | #000000 | CRT scanline overlay, rendered at low opacity (~15%) |
+| `surface-light` | #ffffff | White contrast-cut panels and the light-field gradient origin |
+| `surface-light-muted` | #e8edf5 | Secondary light surface: list-item hover/active, chips |
+| `text-on-light` | #04060f | Body/heading text on light surfaces (≈20:1) |
+| `text-on-light-secondary` | #3a4557 | Muted text on light (≈7:1) |
+| `accent-on-light` | #2f46b8 | Links/accents on light surfaces (≈8:1) |
 
-The palette is fixed and dark-only: no light theme. The glow renders as a fixed radial gradient layer (`glow-start` to `glow-end`) with a slow breathing animation; the accent family is reserved for interactive elements, active states, and large translucent watermarks — never for body text. `accent-cyan` is the decorative-system accent: figure rim strokes, the active-item highlight bar, and artifact slashes. On the dark navy base it holds strong contrast; it is never used for body copy.
+The palette is fixed: there is no theme toggle (PRD non-goal intact). Every non-404 route — the shell and the four views — renders on the **light contrast-cut field**, a static white→light-blue→sea-blue diagonal gradient, with a dark navy text family: headings and body use `text-on-light` (≈20:1 on white), muted copy `text-on-light-secondary` (≈7:1), and links/labels `accent-on-light` (≈8:1, deepening toward near-black on hover). White (`surface-light`) and muted-light (`surface-light-muted`) surfaces separate panels and list items; `accent-cyan` stays decorative-only: the active-item highlight bar — never body copy. The dark ocean family (`bg-base`, `glow-start`, `glow-end`, `text-primary`) survives as the 404 error identity and as the near-black active/focus label color on the shell; `accent-500` stays dark-surface-only for text. The glow renders as a fixed radial gradient layer (`glow-start` to `glow-end`) with a slow breathing animation on the 404 route only. The accent family is reserved for interactive elements, active states, and large translucent watermarks — never for body text.
 
 ## Typography
 
@@ -159,27 +159,27 @@ All Anton sizes render uppercase with tight leading (0.9-1.05) and no letter spa
 
 ## Layout
 
-Every route is a full-viewport game screen (`100dvh`, `overflow: hidden` by default): the root route `/` is the game shell with a centered/center-right, diagonally staggered menu column; each view route (`/about`, `/resume`, `/projects`, `/skills`, `/contact`) is its own complete screen composition with a heading zone, a LIST column, and — for PROJECTS, RESUME, and SKILLS — a detail panel. The keyboard/control cluster (key hints + audio mute toggle) is fixed at bottom-right (`bottom: 24px; right: 28px`) on every route. Internal scrolling happens only inside detail panels when content exceeds the viewport. The no-scroll constraint is applied by the enhancement layer, never unconditionally: without JavaScript every route renders all content in normal document flow, so nothing is hidden from no-JS visitors or crawlers. Spacing follows the 4px scale (`space-xs` to `space-5xl`), with generous rhythm (96-128px) to give the giant type room to breathe. The background stack is fixed, full-viewport, and `pointer-events-none`, layered behind all content: CSS glow (1), scanlines (2), Canvas 2D (3), figure/artifact layer (4).
+Every route is a full-viewport game screen (`100dvh`, `overflow: hidden` by default): the root route `/` is the game shell with a centered/center-right, diagonally staggered menu column; each view route (`/about`, `/resume`, `/projects`, `/skills`) is its own complete screen composition with a heading zone; PROJECTS, RESUME, and SKILLS carry a LIST column + detail panel. The keyboard/control cluster (key hints + audio mute toggle) is fixed (bottom-right hints; mute top-right below the identity card) on every route. Internal scrolling happens only inside detail panels when content exceeds the viewport. The no-scroll constraint is applied by the enhancement layer, never unconditionally: without JavaScript every route renders all content in normal document flow, so nothing is hidden from no-JS visitors or crawlers. Spacing follows the 4px scale (`space-xs` to `space-5xl`), with generous rhythm (96-128px) to give the giant type room to breathe. The background stack is fixed, full-viewport, and `pointer-events-none`, layered behind all content: light field (1 — the static white→light-blue→sea-blue gradient on every non-404 route; the breathing navy glow only on 404), scanlines (2), Canvas 2D (3).
 
 ## Elevation & Depth
 
-No box shadows and no elevation system: depth comes from light layering and angular cut geometry. The stacking order is `glow -> scanlines -> canvas -> figure layer -> content`, and the glow's breathing animation provides perceived depth. Cards are flat surfaces with a subtle tonal lift over `bg-base` (`glow-end` base, `glow-start` on hover) rather than raised geometry. The active menu item's diagonal accent layer sits behind its label, cut with a polygon clip-path — depth by geometry, not shadow. The figure layer builds depth the same way: stacked translucent polygons with cyan rim strokes, no gradients outside the glow family, no shadows.
+No box shadows and no elevation system: depth comes from light layering and angular cut geometry. The stacking order is `field/glow -> scanlines -> canvas -> content`, and the field's fixed diagonal gradient provides depth through tonal contrast (the glow's breathing animation survives only on the dark 404 route). Cards are flat white surfaces over the light field, with a muted-light hover/active lift (`surface-light-muted`) rather than raised geometry. The active menu item's diagonal accent layer sits behind its label, cut with a polygon clip-path — depth by geometry, not shadow.
 
 ## Shapes
 
-Sharp and geometric, matching the Persona-3 angular identity. The base radius is `0` (`rounded-none`); the only radius in the system is `rounded-sm` (2px) on primary buttons. Polygon clip-paths are the accent shape language: giant menu labels carry a light italic skew, the selected item is cut by a diagonal accent layer (`clip-path` polygon, accent-400) plus a 2px cyan highlight bar, and per-view transition overlays sweep as angular blue panels, stripes, or clip reveals. The decorative figure layer is hand-authored SVG polygon geometry: a faceted, featureless abstract bust (no face, hair, or uniform reads — never a copied character silhouette) in deep-blue fills with cyan rims, surrounded by rotated bars, chevrons, triangle chips, and thin cyan slashes at 15-45% opacity. Never use soft, pill, or fully rounded corners.
+Sharp and geometric, matching the Persona-3 angular identity. The base radius is `0` (`rounded-none`); `rounded-sm` (2px) is the only radius in the system, used on primary buttons, list-item surfaces, detail panels, and chips. Polygon clip-paths are the accent shape language: giant menu labels carry a light italic skew, the shell's selected item is overlaid by a large translucent white wedge (both edges diagonal) with a 2px cyan highlight bar, the view list's selected item carries the same 2px cyan bottom bar, and per-view transition overlays sweep as angular blue panels, stripes, or clip reveals. Never use soft, pill, or fully rounded corners.
 
 ## Components
 
-- **Game menu (root shell)**: full-screen route list of five giant skewed `menu-label` links (ABOUT, RESUME, PROJECTS, SKILLS, CONTACT), centered/center-right with per-item diagonal offsets, skews, and sizes (PROJECTS largest). Each item carries inline CSS vars (`--item-x`, `--item-skew`, `--item-size`); the stagger collapses on coarse-pointer viewports. The keyboard-active item (`data-active` + `aria-current="page"`) renders `accent-400` text over a diagonal clip-path accent layer with a 2px cyan highlight bar; `:hover` mirrors the same treatment; `:focus-visible` keeps its accent outline alongside the indicator. Navigation is keyboard-first (ArrowUp/ArrowDown wraps, Enter activates — existing `reduceMenuKey` logic); items enter with a 25ms stagger. Key hints live in the bottom-right cluster, not in the menu column.
-- **Decorative figure layer**: one original inline-SVG composition per route (`FigureLayer`), fixed between canvas and content, `aria-hidden` and `pointer-events-none`, zero JavaScript. `html[data-route]` CSS places each variant: shell → oversized figure on the right half; projects → cyan top band; skills → right figure framing the center; about → bottom-left figure; contact → bottom blue wash + left figure; resume → left-mid figure; 404 → shell variant. Renders static at final state (entrance fade only, gated); fully static under reduced motion.
-- **Control cluster**: fixed bottom-right column (key hints + ambient-audio mute toggle), shared on every route and persisted across View Transitions. Hints hide on coarse-pointer viewports and on short viewports (< 560px height); the mute toggle always stays reachable (≥44px).
-- **Ambient audio control**: a real button with `aria-pressed` and a visible label (Mute/Unmute ambient audio). Enabled state plays the user-provided `/audio/background.mp3` (never bundled) after the first pointer/key gesture; the no-track state renders the control disabled with the label staying "Sound: Off"; muted state persists to `localStorage` and survives navigation.
+- **Game menu (root shell)**: full-screen route list of four giant skewed `menu-label` links (ABOUT, RESUME, PROJECTS, SKILLS), centered/center-right with per-item diagonal offsets, skews, and sizes (PROJECTS largest). Each item carries inline CSS vars (`--item-x`, `--item-skew`, `--item-size`); the stagger collapses on coarse-pointer viewports. The keyboard-active item (`data-active` + `aria-current="page"`) renders near-black text over a large translucent white wedge with a 2px cyan highlight bar on the shell's light field; `:hover` keeps the cyan label and never overrides the active/focus color; `:focus-visible` draws the wedge directly (the browser outline is dropped on the shell menu only — views and other controls keep their accent outline). Navigation is keyboard-first (ArrowUp/ArrowDown wraps, Enter activates — existing `reduceMenuKey` logic); items enter with a 25ms stagger. Key hints live in the bottom-right cluster, not in the menu column.
+- **Home shell decorations**: the shell-only (`GameMenu` markup + `global.css`) decorative layer: a huge vertical `PORTFOLIO` word in near-black Anton bleeds off the left edge inside a full-viewport `overflow:hidden` container (`aria-hidden`, `pointer-events-none`, zero JS), re-flowing to a horizontal band along the bottom edge below 768px. There is no identity card on the shell — the top-right utility position belongs to the persisted mute control (see Control cluster). No other route renders oversized type.
+- **Global light field & view surfaces**: the shared surface contract implemented in `global.css` and used by `GameViewShell`, `ViewHeader`, `GameListItem`, `DetailPanel`, and the view pages. Every non-404 route renders on the static white→light-blue→sea-blue diagonal field (`.glow-layer`); view text uses the light-field palette (dark navy headings/body, dark-blue accent links). Semantic classes — `.view-list-item` (white 2px card, muted-light hover, active state with dark-blue accent text + 2px cyan bottom bar), `.view-panel` (white detail surface), `.view-chip` (muted-light badge), `.view-link` (dark-blue accent deepening to near-black on hover) — keep the visual contract in one place instead of page-specific styling.
+- **Control cluster**: a persisted (View Transitions) wrapper holding the key hints fixed bottom-right and the ambient-audio mute toggle fixed top-right (1.5rem/1.5rem — the only top-right utility control), shared on every route. Hints hide on coarse-pointer viewports and on short viewports (< 560px height); the mute toggle always stays reachable (≥44px). Navigation effect sounds (button_click / button_select / menu_close) play independently of the ambient mute.
+- **Ambient audio control**: a real button with `aria-pressed` and a visible label (Mute/Unmute ambient audio). Enabled state plays the committed licensed derivative `/audio/background.mp3` (Pixabay Content License; never a bundled official soundtrack) after the first pointer/key gesture, with zero bytes fetched before that (`preload="none"` + HEAD probe); the no-track state renders the control disabled with the label staying "Sound: Off" (derivative absent from build); muted state persists to `localStorage` and survives navigation.
 - **View header**: per-view composition header with the view's `display-lg` heading, a back-to-menu control (Esc returns to `/`), and key hints; ArrowLeft is offered on detail views.
 - **LIST/detail**: a LIST column of `list-item` surfaces; the selected item (`list-item-active`) opens a `detail-panel` on the right with badges, description, stack, and external link. Selection state is per-view client-side; PROJECTS deep links (`#slug`) preselect an item. Focus moves into the panel on open and back to the list on close.
-- **Primary button**: `accent-500` fill, `label` typography, 2px radius, 16px padding. Hover brightens to `accent-400`; press deepens to `accent-600` and scales to 0.97 (100-160ms). Used for the Contact CTA and external project links.
+- **Primary button**: `accent-500` fill, `label` typography, 2px radius, 16px padding. Hover brightens to `accent-400`; press deepens to `accent-600` and scales to 0.97 (100-160ms). Used for the 404 back-to-home action and external project links.
 - **Project surface**: projects render exactly once, as `list-item` surfaces in the PROJECTS LIST; the selected item opens its `detail-panel` with description, stack, and external link (WealthQuest links to itch.io). There is no separate card grid — LIST/detail is the only project surface.
-- **Watermark**: translucent `accent-600` Anton text at up to 300px behind view content, decorative and `aria-hidden`, per-view wording.
 
 ## Do's and Don'ts
 
@@ -188,40 +188,39 @@ Sharp and geometric, matching the Persona-3 angular identity. The base radius is
 - Do: keep keyboard handlers scoped to the active screen — never global `window` key listeners (a verified reference bug).
 - Do: keep content renderable without JavaScript; apply the no-scroll viewport as an enhancement, not a dependency.
 - Do: animate only `transform` and `opacity`; keep decorative layers `pointer-events-none` and `aria-hidden`.
-- Do: honor `prefers-reduced-motion` with a static canvas frame, a static figure layer, and opacity-only transitions <= 200ms.
-- Don't: add shadows, soft radii, gradients outside the glow family, or a light theme.
+- Do: honor `prefers-reduced-motion` with a static canvas frame and opacity-only transitions <= 200ms.
+- Don't: add shadows, soft radii, gradients outside the field/glow families, or a theme toggle.
 - Don't: introduce a body font package or an external font CDN; display fonts are self-hosted via fontsource.
 - Don't: place interactive elements on or under the background layers, and never block content rendering on the canvas.
 - Don't: copy reference defects — dead routes, global key interception, missing mobile detail, missing landmarks, low contrast, or fake ranks/metrics.
-- Don't: copy or bundle any Persona/ATLUS character art, game fonts, or audio; figures are original vector geometry and audio is BYO licensed only.
+- Don't: copy or bundle any Persona/ATLUS character art, game fonts, or audio; the only audio is the registered Pixabay-licensed derivative.
 - Don't: add layout-animating properties (height, width, margins) to transitions.
 
 ## User Flows & Navigation
 
 | Route / Flow | Purpose | Entry point | Primary action |
 |---|---|---|---|
-| `/` | Game menu shell: five route items | Root menu | Select a view (ArrowUp/Down + Enter) |
+| `/` | Game menu shell: four route items | Root menu | Select a view (ArrowUp/Down + Enter) |
 | `/about` | Identity, role, focus areas | Menu item ABOUT | Return to menu (Esc) |
-| `/resume` | CV-backed LIST + detail panel | Menu item RESUME | Browse entries; Esc to menu |
+| `/resume` | CV-backed LIST + detail (education, experience, projects, skills, languages) | Menu item RESUME | Browse entries; Esc to menu |
 | `/projects` | Four verified projects LIST + detail | Menu item PROJECTS | Select project detail (`#slug` deep link) |
 | `/skills` | Grouped skills LIST + detail | Menu item SKILLS | Select group detail |
-| `/contact` | Email, GitHub, WealthQuest links | Menu item CONTACT | Copy / open contact link |
 | `/404` | Unknown-path fallback on-brand | Server/browser 404 | Return to `/` |
 | List/detail keyboard flow | Move, open, close detail | ArrowUp/Down, Enter (or ArrowRight) | Open detail; Esc closes one level |
-| External links | WealthQuest itch.io page, contact email | Project detail panels, Contact view | Open link in new tab |
+| External links | WealthQuest itch.io page, project links | Project detail panels | Open link in new tab |
 
 ## Accessibility Contract
 
-- Landmarks & contrast: exactly one `h1` and a single `<main>` per page; `text-primary` on `bg-base` exceeds AA; `text-secondary` is used for body text only at sizes >= 1rem; accent on dark surfaces keeps a 4.5:1 minimum for text use.
+- Landmarks & contrast: exactly one `h1` and a single `<main>` per page; on the light field `text-on-light` on `surface-light` exceeds AA (≈20:1) and `accent-on-light` holds ≈8:1 for links/labels; on the dark 404 route `text-primary` on `bg-base` exceeds AA; `text-on-light-secondary` is used for body text only at sizes >= 1rem; accent on dark surfaces keeps a 4.5:1 minimum for text use.
 - Keyboard & focus contract: menu fully operable with ArrowUp/ArrowDown/Enter; list/detail with ArrowUp/Down, Enter/ArrowRight to open, Esc closes one level or returns to `/`; handlers scoped to the active screen (never global); focus moves into the detail panel on open and back to the list item on close; `:focus-visible` states use the accent family with visible outlines that are never suppressed by the active treatment. The shell keyboard-active item exposes `data-active` + `aria-current="page"`; the audio mute toggle is a keyboard-operable button with `aria-pressed` and a visible label.
-- Screen readers: background layers (canvas and figure layer) are `aria-hidden` and `pointer-events-none`; decorative watermark text is hidden; key hints are supplementary to real link text; all project LIST items and detail-panel links carry real link text.
-- `prefers-reduced-motion: reduce`: canvas paints one static frame, breathing glow holds, entrances become opacity-only transitions under 200ms, the figure layer renders static with no entrance motion, and ambient audio never starts automatically (the mute toggle stays operable). Fewer and gentler, not zero.
+- Screen readers: the background layer (canvas) is `aria-hidden` and `pointer-events-none`; decorative watermark text is hidden; key hints are supplementary to real link text; all project LIST items and detail-panel links carry real link text.
+- `prefers-reduced-motion: reduce`: canvas paints one static frame, breathing glow holds, entrances become opacity-only transitions under 200ms, and ambient audio never starts automatically (the mute toggle stays operable). Fewer and gentler, not zero.
 
 ## Responsive Behavior
 
 - Mobile-first: single column below 768px; LIST and detail stack vertically on small screens, with the detail panel gaining its own internal scroll region (fixes the reference's missing mobile detail). On coarse-pointer viewports the menu stagger/skew collapses (uniform size, zero offsets, 44px targets) and the decorative key hints hide while interactive controls stay reachable.
 - Fluid type: `menu-label` and `watermark` sizes scale via `clamp()`; the 130px and 300px values are desktop maxima; menu items scale per item on desktop and collapse to a uniform size on touch.
-- The background and figure layers stay fixed on all viewports; canvas re-sizes with `devicePixelRatio` caps on high-DPR screens. The figure layer scales/repositions per route variant so it never covers content; on short viewports (< 560px height) hints hide and the cluster shrinks to the mute toggle.
+- The background layer stays fixed on all viewports; canvas re-sizes with `devicePixelRatio` caps on high-DPR screens. On short viewports (< 560px height) hints hide and the cluster shrinks to the mute toggle.
 - Touch targets: interactive elements are at least 44px tall; hover-only motion is gated behind `(hover: hover) and (pointer: fine)`; key hints hide on touch devices.
 
 ## Performance
@@ -237,15 +236,15 @@ Sharp and geometric, matching the Persona-3 angular identity. The base radius is
 
 - One `h1` per page, one `<main>` landmark per view; per-view titles (e.g. "Projects · Jonathan Soto").
 - JSON-LD `Person` block with `name`, `jobTitle`, `email`, and `sameAs` links (GitHub and the WealthQuest itch.io page).
-- `@astrojs/sitemap` generates `sitemap.xml` at build time listing the index plus the five view routes; the 404 page is excluded.
+- `@astrojs/sitemap` generates `sitemap.xml` at build time listing the index plus the four view routes; the 404 page is excluded.
 - One canonical URL per page; indexable by default; PROJECTS detail is deep-linkable via fragment anchors (`#slug`).
 
 ## Content & States
 
 - Copy is English, first-person, professional; no emojis in UI strings.
-- RESUME content derives only from the verified CV: education (USACH 2020-2025, technical telecommunications 2017-2019), experience (Productos Barber Chile 2020-2026, Policomp internship Jan-Mar 2020), projects (ServiceFlow, WealthQuest), WealthQuest academic publication (May 2025), and languages (Spanish native; English basic technical reading). No ranks, metrics, or phone number.
+- RESUME content derives only from the verified CV: education (USACH 2020-2025, technical telecommunications 2017-2019), experience (Productos Barber Chile 2020-2026, Policomp internship Jan-Mar 2020), projects (ServiceFlow, WealthQuest), the WealthQuest academic publication (May 2025), skills, and languages (Spanish native; English basic technical reading). No ranks, metrics, or phone number.
 - LIST items have one static state plus a selected state (active item opens the detail panel); no loading or empty states exist (static content, built at compile time).
-- Ambient audio states: `no-track` (disabled button labeled "Sound: Off" — the default deployed state), `ready` (track present, awaiting first gesture), `playing`, and `muted` (persisted). State changes fade volume linearly over 400ms (200ms under reduced motion); storage failure keeps an in-memory state.
+- Ambient audio states: `ready` (track present — the default with the committed derivative — awaiting first gesture), `playing`, `muted` (persisted), `no-track` (derivative absent from build — disabled button labeled "Sound: Off"), and `error` (derivative present but failed to load/decode — disabled button labeled "Sound: Error", `data-audio-state="error"`, observably distinct from `no-track`). State changes fade volume linearly over 400ms (200ms under reduced motion); storage failure keeps an in-memory state.
 - Error state: the 404 page reuses the visual identity with a single action (back to `/`).
 - External link behavior: open in a new tab with `rel="noopener noreferrer"`.
 
@@ -256,17 +255,18 @@ Motion is ambient and identity-driven, following the ui-motion contract (sub-300
 | Effect | Token / values | Rationale |
 |---|---|---|
 | Glow breathing (CSS, zero JS) | ~8s cycle, strong `ease-in-out` (cubic-bezier(0.77, 0, 0.175, 1)), opacity 0.75 -> 1, optional scale 1 -> 1.02 | Ambient constant motion; `transform`/`opacity` only; no layout paint |
-| Canvas particles/fog | rAF game loop, `linear` per-particle motion, drift 0.2-0.5 px/frame at 60fps, capped count and DPR | Constant motion is linear; the loop pauses on hidden tabs |
+| Canvas caustic/bubbles/particles | rAF game loop: caustic gradient fill, `linear` per-particle/bubble motion, drift 0.2-0.5 px/frame at 60fps, capped count and DPR | Constant motion is linear; the loop pauses on hidden tabs |
 | View transitions (menu <-> views) | Per-view overlay moments (blue panel, stripe, or clip-path sweep) at 300ms default, up to 400ms total as a documented exception, strong `ease-out` (cubic-bezier(0.23, 1, 0.32, 1)) | The reference's 450-600ms overlays violate the contract; capped at 400ms |
 | Menu item entrance | Stagger 25ms between items, `translateY(8px) -> 0` + opacity, 300ms `ease-out` | Group entrance stagger; no `scale(0)` entries |
 | Active indicator state | 150ms color transition only; the accent layer and highlight bar toggle with state, no entrance motion | Persistent indicator follows keyboard; instant affordance, no distraction |
-| Figure layer entrance | One 400ms opacity fade on first paint (`ease-out`), then fully static | Ambient decoration; no loop, no drift |
 | Ambient audio fades | 400ms linear volume fade default; 200ms under reduced motion | Audible transitions inside the 200-450ms spec band |
 | Card / link hover | 150-200ms, `ease`, color shift to accent | Hover/color change uses `ease`; gated to fine pointers |
 | Button press | `scale(0.97)`, transition 160ms `ease-out` | Press feedback, 100-160ms band |
-| Reduced motion | Canvas paints one static frame and never starts the loop; glow holds; entrances and view transitions become opacity-only <= 200ms; figure layer static with no entrance; audio never starts automatically | Fewer and gentler, not zero |
+| Reduced motion | Canvas paints one static frame and never starts the loop; glow holds; entrances and view transitions become opacity-only <= 200ms; audio never starts automatically | Fewer and gentler, not zero |
 
 Motion runs on `motion` 13.0.0's vanilla API in scripts (or CSS animations for the glow); no React runtime is used for motion unless the game menu requires an island. Never animate layout properties; never use keyframes for rapidly repeated UI triggers (transitions only).
+
+**Route transition vs in-view selection**: cross-page motion uses named View Transition groups (`panel`, `menu` via `transition:name`) — outgoing dissolves/recedes toward its bottom edge, incoming enters from the top edge, both 300ms `cubic-bezier(0.23,1,0.32,1)`, incoming groups staggered 40ms (max 3 → ≤400ms). In-view selection is distinct and same-page: the list cursor move (ArrowUp/Down) is keyboard-initiated and does **not** animate; the detail panel open/close is a 200ms opacity-only interruptible CSS `transition`. Under reduced motion both collapse to opacity-only ≤200ms with no travel.
 
 ## UI Libraries & Usage Boundaries
 

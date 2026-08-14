@@ -4,7 +4,7 @@
 
 ## System Overview **[ALWAYS]**
 
-A fully static personal portfolio for Jonathan Soto, Backend & Full-Stack Engineer, built as a Persona-3 game-menu shell. The root route `/` is a full-screen menu of five items (ABOUT, RESUME, PROJECTS, SKILLS, CONTACT) — centered/center-right, diagonally staggered, with a persistent colorful keyboard-active indicator — and selecting one changes the complete view to its own static route (`/about`, `/resume`, `/projects`, `/skills`, `/contact`), with the 404 page preserved for unknown paths. Astro 7.2.0 generates plain HTML at build time from Markdown Content Collections; a fixed layered background (CSS radial glow, CSS CRT scanlines, Canvas 2D particles, and an original decorative figure/artifact SVG layer) plus native View Transitions provide the Persona-3 feel. A fixed bottom-right control cluster holds keyboard hints and the ambient-audio mute toggle; optional audio plays only a user-provided licensed track (`/audio/background.mp3`) after the first gesture. There is no backend, database, or cache: the product has zero server-side state (audio preference persists client-side in `localStorage`) and no build-time network dependency. The landing model is fully replaced: `src/` implements the shell, views, figure layer, control cluster, and ambient-audio wiring described below (see [Migration Notes](#migration-notes)).
+A fully static personal portfolio for Jonathan Soto, Backend & Full-Stack Engineer, built as a Persona-3 game-menu shell. The root route `/` is a full-screen menu of four items (ABOUT, RESUME, PROJECTS, SKILLS) — centered/center-right, diagonally staggered, with a persistent colorful keyboard-active indicator — and selecting one changes the complete view to its own static route (`/about`, `/resume`, `/projects`, `/skills`), with the 404 page preserved for unknown paths. Astro 7.2.0 generates plain HTML at build time from Markdown Content Collections; a fixed layered background (a static white→light-blue→sea-blue light contrast-cut field on every non-404 route — the dark breathing CSS radial glow survives only on the 404 error route — plus CSS CRT scanlines and a Canvas 2D layer of caustic gradient, rising bubbles, and drifting particles) plus native View Transitions provide the Persona-3 feel. A fixed control cluster holds keyboard hints and the ambient-audio mute toggle; optional audio plays only the committed Pixabay-licensed derivative (`/audio/background.mp3`) after the first gesture. There is no backend, database, or cache: the product has zero server-side state (audio preference persists client-side in `localStorage`) and no build-time network dependency. The landing model is fully replaced: `src/` implements the shell, views, control cluster, and ambient-audio wiring described below (see [Migration Notes](#migration-notes)).
 
 ---
 
@@ -12,7 +12,7 @@ A fully static personal portfolio for Jonathan Soto, Backend & Full-Stack Engine
 
 **Chosen pattern**: Static Site Generation (SSG) with progressive enhancement
 
-**Why this pattern**: The portfolio is a brochure site with four projects, authored entirely in Markdown, presented as five small static views. SSG gives the fastest possible first paint, per-view crawlability for recruiters arriving from search or LinkedIn, zero runtime infrastructure, and a fully deterministic build. All interactivity (menu motion, list/detail selection, canvas background, view transitions, the no-scroll viewport) is progressive enhancement on top of plain HTML: without JavaScript every route renders all content in normal document flow.
+**Why this pattern**: The portfolio is a brochure site with four projects, authored entirely in Markdown, presented as four small static views. SSG gives the fastest possible first paint, per-view crawlability for recruiters arriving from search or LinkedIn, zero runtime infrastructure, and a fully deterministic build. All interactivity (menu motion, list/detail selection, canvas background, view transitions, the no-scroll viewport) is progressive enhancement on top of plain HTML: without JavaScript every route renders all content in normal document flow.
 
 **Alternatives evaluated**:
 - **React SPA (reference repo approach)**: Vite + React 19 + react-router 7 delivers the aesthetic but ships a client-rendered shell and a custom router where Astro's static output plus native View Transitions suffice. See ADR-0001.
@@ -30,7 +30,7 @@ A fully static personal portfolio for Jonathan Soto, Backend & Full-Stack Engine
 graph TD
     subgraph "Build Time (pnpm build)"
         CC["Content Collections (projects, skills, siteConfig)"]
-        Pages["Root Shell + Five View Pages + 404"]
+        Pages["Root Shell + Four View Pages + 404"]
         TW["Tailwind CSS 4.3.3"]
         JS["Client Scripts (menu, list/detail, canvas)"]
         Vite["Astro/Vite Build"]
@@ -125,12 +125,11 @@ sequenceDiagram
 
 | Route | Page | Role |
 |-------|------|------|
-| `/` | `index.astro` | Game-menu shell: five giant skewed route links, keyboard-first |
+| `/` | `index.astro` | Game-menu shell: four giant skewed route links, keyboard-first |
 | `/about` | `about.astro` | Identity, role, focus areas from `site.config.yaml` |
-| `/resume` | `resume.astro` | CV-backed LIST (EDUCATION, EXPERIENCE, PROJECTS) + detail panel |
+| `/resume` | `resume.astro` | CV-backed LIST + detail (EDUCATION, EXPERIENCE, PROJECTS, SKILLS, LANGUAGES) |
 | `/projects` | `projects.astro` | LIST of the four verified projects + detail panel; `#slug` deep links |
 | `/skills` | `skills.astro` | Grouped skills LIST + detail panel (no ranks or metrics) |
-| `/contact` | `contact.astro` | Email CTA, GitHub, WealthQuest links |
 | `/404` | `404.astro` | Unknown paths; visual identity preserved; excluded from sitemap |
 
 ---
@@ -140,7 +139,7 @@ sequenceDiagram
 ### Build pipeline (Astro 7.2.0 + Vite)
 
 - **Technology**: Astro 7.2.0 (SSG), TypeScript 6.0.3 (strict; TS 7.x breaks `astro check`'s language server, so the 6.x line is pinned), `@astrojs/sitemap` 3.7.3, pnpm, Node >= 24.
-- **Responsibility**: Compiles Content Collections, the shell, five view pages, styles, and client scripts into a deterministic static output. No scaling applies — output is static files served by any static host/CDN.
+- **Responsibility**: Compiles Content Collections, the shell, four view pages, styles, and client scripts into a deterministic static output. No scaling applies — output is static files served by any static host/CDN.
 - **Dependencies**: Content Collections (Markdown/YAML), Tailwind via `@tailwindcss/vite`, fontsource packages.
 - **Failure modes**: A content schema violation or TypeScript error fails the build; CI catches it before deploy.
 
@@ -153,30 +152,30 @@ sequenceDiagram
 ### Game-menu shell (root `/`)
 
 - **Technology**: `index.astro` + the shell keyboard model (existing `reduceMenuKey` reused: ArrowUp/ArrowDown wrap, Enter activates) and `motion` 13.0.0 vanilla entrances.
-- **Responsibility**: Render the full-screen game shell: five giant skewed `menu-label` links, centered/center-right with per-item diagonal offsets/skews/sizes (inline CSS vars consumed by one `.menu-item` rule), staggered entrance, and a persistent keyboard-active indicator. `shell.ts` sets `data-active` + `aria-current="page"` on the active item (initial, on ArrowUp/Down, cleared on teardown); CSS renders the shared active treatment for `data-active` and `:hover` while `:focus-visible` keeps its outline. Activating an item navigates to its real route. Fixed at exactly five items; without JS the menu is a plain vertical list of real links and every view stays reachable.
+- **Responsibility**: Render the full-screen game shell: four giant skewed `menu-label` links, centered/center-right with per-item diagonal offsets/skews/sizes (inline CSS vars consumed by one `.menu-item` rule), staggered entrance, and a persistent keyboard-active indicator. `shell.ts` sets `data-active` + `aria-current="page"` on the active item (initial, on ArrowUp/Down, cleared on teardown); CSS renders the shell's light-field active treatment — near-black label over a large translucent white wedge with a 2px cyan bar (`:focus-visible` draws the wedge directly and drops the browser outline on the shell menu only). The shell-only home decorations live in `GameMenu.astro` markup + `global.css`: a huge vertical `PORTFOLIO` watermark in near-black Anton bleeding off the left edge inside a fixed `overflow:hidden` container (`aria-hidden`, `pointer-events-none`, zero JS; re-flows to a horizontal bottom band below 768px) and a small outlined identity card fixed top-right. Activating an item navigates to its real route. Fixed at exactly four items; without JS the menu is a plain vertical list of real links and every view stays reachable.
 
-### Decorative figure layer
+### Global light contrast-cut field & shared view surfaces
 
-- **Technology**: `FigureLayer.astro` — one hand-authored inline-SVG composition per route, positioned by `html[data-route]`-scoped CSS in `global.css`; zero JavaScript, zero asset weight (ADR-0002-compliant).
-- **Responsibility**: Original abstract figure/artifacts (faceted featureless bust in deep-blue fills with cyan rims, plus angular bars/chevrons/chips/slashes) between the canvas and content on every route. Route variants: shell → oversized figure on the right half; projects → cyan top band; skills → right figure framing center; about → bottom-left figure; contact → bottom blue wash + left figure; resume → left-mid figure; 404 → shell variant. Decorative only: `aria-hidden`, `pointer-events-none`; static under reduced motion (no entrance fade).
-- **Failure modes**: none — static SVG/CSS renders without JS and without the canvas.
+- **Technology**: `.glow-layer` in `global.css`, scoped to `html[data-route]:not([data-route="404"])` — the static white→light-blue→sea-blue diagonal gradient replaces the breathing navy radial glow on the shell and all four views; the 404 route keeps the dark glow as its error identity. Light-field palette tokens (`surface-light`, `surface-light-muted`, `text-on-light`, `text-on-light-secondary`, `accent-on-light`) map to Tailwind utilities; semantic surface classes (`.view-list-item`, `.view-panel`, `.view-chip`, `.view-link`) live in `global.css` and are consumed by the shared view components and pages.
+- **Responsibility**: one product-wide visual language. Body copy on light-field routes defaults to `text-on-light`; view headings, panels, list items, chips, links, and the control cluster (key hints + mute toggle switch to white text with a subtle black outline, same as the shell) all render against the light field. The selected list item echoes the shell menu: muted-light surface, `accent-on-light` text, and a 2px cyan bottom bar (the CSS keys on the presence of `data-active` because `view.ts` toggles the attribute to an empty value after load).
+- **Failure modes**: a regression to dark-route tokens would render white text on the light field; the shared classes keep the palette in one place, and the E2E field test asserts the gradient on a view route and on the 404.
 
 ### Control cluster & ambient audio
 
-- **Technology**: `ControlCluster.astro` (KeyHints content + `AudioControl` markup) rendered in `BaseLayout` with `transition:persist`; `src/lib/audio/state.ts` pure reducer (`no-track → ready ⇄ playing ⇄ muted`) + `src/scripts/ambient-audio.ts` DOM wiring (lifecycle mirrors `living-background.ts`: rebind on `astro:page-load`, teardown on `astro:before-swap`). The HEAD probe runs exactly once per module init / persisted-island lifecycle: module-level in-flight guard keeps it idempotent, the result is stashed on the persisted cluster element, and route swaps adopt it without re-probing; in-flight probes abort on teardown.
-- **Responsibility**: Fixed bottom-right cluster (bottom 1.5rem / right 1.75rem) with decorative key hints and the ambient-audio mute button (`aria-pressed`, visible label). Track presence detected via a HEAD request (zero body bytes); `<audio loop preload="none">` loads bytes only on play; playback starts silent and unlocks once on first `pointerdown`/`keydown`; no autostart under reduced motion. Muted state persists to `localStorage["portfolio:audio:muted"]` (try/catch; storage failure → in-memory). `public/audio/README.txt` documents the BYO licensed-track contract; no bundled audio ships (ADR-0004).
-- **Failure modes**: missing track → disabled no-track state, site stays silent; autoplay blocked → silent until first gesture; storage unavailable/throwing → in-memory toggle, never throws; HEAD unsupported (405/network error) → optimistic ready, and a later `<audio>` error dispatches the reducer `audio-error` event → disabled no-track state.
+- **Technology**: `ControlCluster.astro` (KeyHints content + `AudioControl` markup) rendered in `BaseLayout` with `transition:persist`; `src/lib/audio/state.ts` pure reducer (`no-track → ready ⇄ playing ⇄ muted`, plus a terminal `error` state for real media failures) + `src/scripts/ambient-audio.ts` DOM wiring (lifecycle mirrors `living-background.ts`: rebind on `astro:page-load`, teardown on `astro:before-swap`). The HEAD probe runs exactly once per module init / persisted-island lifecycle: module-level in-flight guard keeps it idempotent, the result is stashed on the persisted cluster element, and route swaps adopt it without re-probing; in-flight probes abort on teardown.
+- **Responsibility**: Fixed bottom-right cluster (bottom 1.5rem / right 1.75rem) with decorative key hints and the ambient-audio mute button (`aria-pressed`, visible label). Track presence detected via a HEAD request (zero body bytes); `<audio loop preload="none">` loads bytes only on play; playback starts silent and unlocks once on first `pointerdown`/`keydown`; no autostart under reduced motion. Muted state persists to `localStorage["portfolio:audio:muted"]` (try/catch; storage failure → in-memory). `public/audio/README.txt` documents the licensed-track provenance/maintenance (source `assets/music/background.mp3` → derivative `public/audio/background.mp3`, register entry in `assets/PROVENANCE.yaml`); the only audio that ships is the registered Pixabay-licensed derivative (ADR-0006, superseding the BYO ADR-0004).
+- **Failure modes**: missing track → disabled no-track state, site stays silent; autoplay blocked → silent until first gesture; storage unavailable/throwing → in-memory toggle, never throws; HEAD unsupported (405/network error) → optimistic ready, and a later `<audio>` error dispatches the reducer `audio-error` event → a distinct `error` state (disabled "Sound: Error", `data-audio-state="error"`, console warn) distinguishable from the expected no-track state.
 
-### View pages (five static routes)
+### View pages (four static routes)
 
-- **Technology**: One `.astro` page per route (`about`, `resume`, `projects`, `skills`, `contact`), each with its own `<title>`, exactly one `<h1>` inside a single `<main>` landmark, and per-view JSON-LD.
+- **Technology**: One `.astro` page per route (`about`, `resume`, `projects`, `skills`), each with its own `<title>`, exactly one `<h1>` inside a single `<main>` landmark, and per-view JSON-LD.
 - **Responsibility**: Full-viewport game screens (`100dvh`, `overflow: hidden` applied by the enhancement layer) with a view header, back-to-menu control, LIST column, and detail panel where applicable. Static pages, no view-state routing logic; a view without JS scrolls normally and renders all content in document flow — nothing hides behind a script.
 
 ### LIST/detail panels (state boundaries)
 
 - **Technology**: Per-view vanilla script + `motion` 13.0.0; selection state is **client-side and per-view** — never persisted across routes.
 - **Responsibility**: PROJECTS, RESUME, and SKILLS render a LIST column of `list-item` surfaces; the selected item opens a `detail-panel` with badges, description, stack, and external links.
-- **State boundaries**: selection lives only inside the view's script; the URL carries at most a fragment (`/projects#serviceflow`), which preselects on load. Opening a panel moves focus into it; closing returns focus to the list item. On mobile the panel stacks below the list and gains its own internal scroll region (fixed list sizes: 4 projects, grouped skills, resume sections).
+- **State boundaries**: selection lives only inside the view's script; the URL carries at most a fragment (`/projects#serviceflow`), which preselects on load. Opening a panel moves focus into it; closing returns focus to the list item. On mobile the panel stacks below the list and gains its own internal scroll region (fixed list sizes: 4 projects, 5 resume sections, grouped skills).
 - **Failure modes**: Without JS all detail content is rendered in document flow; deep-link fragments scroll to the entry.
 
 ### Keyboard model
@@ -187,14 +186,20 @@ sequenceDiagram
 ### Client interaction layer
 
 - **Technology**: `motion` 13.0.0 (vanilla API in scripts), Astro native View Transitions (`<ClientRouter/>` with `fallback="none"`), Canvas 2D TypeScript.
-- **Responsibility**: Menu/card motion, cross-page view transitions with per-view overlay moments (<= 400ms total; 300ms default, 400ms documented exception; opacity-only <= 200ms under reduced motion), and the living canvas background (clear -> update -> draw). The figure layer is static SVG/CSS (one gated entrance fade only); the control cluster persists across swaps via `transition:persist` so audio playback never restarts. Fixed cost: the canvas caps particle count and devicePixelRatio and pauses when the tab is hidden.
+- **Responsibility**: Menu/card motion, cross-page view transitions with per-view overlay moments (<= 400ms total; 300ms default, 400ms documented exception; opacity-only <= 200ms under reduced motion), and the living ocean canvas background (clear -> update -> draw: caustic gradient → bubbles → particles). The control cluster persists across swaps via `transition:persist` so audio playback never restarts. Fixed cost: the canvas caps particle count (120), bubbles (24), and devicePixelRatio, and pauses when the tab is hidden.
 - **Dependencies**: None beyond the browser.
-- **Failure modes**: View Transitions unsupported — full-page navigation fallback; canvas unsupported or JS disabled — content still renders and CSS glow/scanlines/figure layer remain; reduced motion — canvas paints a static frame and audio never autostarts.
+- **Failure modes**: View Transitions unsupported — full-page navigation fallback; canvas unsupported or JS disabled — content still renders and CSS glow/scanlines remain; reduced motion — canvas paints a static frame and audio never autostarts.
 
 ### SEO layer
 
 - **Technology**: `src/lib/seo/person.ts` (JSON-LD `Person` with `sameAs`), `src/lib/seo/sitemap.ts` (`isSitemapEligible`), `@astrojs/sitemap` 3.7.3.
-- **Responsibility**: Per-view titles (e.g. "Projects · Jonathan Soto"), exactly one `h1` per page, one `<main>` landmark per view, JSON-LD on the shell and views, and a build-time `sitemap.xml` listing the index plus the five view routes (404 excluded). Static; a missing title/h1 fails E2E checks and the sitemap filter keeps 404 out by construction.
+- **Responsibility**: Per-view titles (e.g. "Projects · Jonathan Soto"), exactly one `h1` per page, one `<main>` landmark per view, JSON-LD on the shell and views, and a build-time `sitemap.xml` listing the index plus the four view routes (404 excluded). Static; a missing title/h1 fails E2E checks and the sitemap filter keeps 404 out by construction.
+
+### Asset provenance & licensed audio pipeline
+
+- **Technology**: a provenance register `assets/PROVENANCE.yaml` (owner-created + licensed-music origin classes) enforced by the CI gate `scripts/verify-provenance.mjs`; the licensed ambient derivative `public/audio/background.mp3` is regenerated from `assets/music/background.mp3` by `scripts/optimize-audio.mjs` (system `ffmpeg`).
+- **Responsibility**: every owned production asset (persona/sprite PNGs in `assets/persona`/`assets/sprites`) must have a register entry (creator Jonathan Soto), and `dist` may ship no reference material, no original bytes, and no audio other than the single registered Pixabay-licensed derivative (ADR-0006, superseding ADR-0004). The persona/sprite PNGs are not yet referenced by any route or component — no principal-persona or sprite-accent layer renders anywhere in the current source — so they ship in no build; the register and gates govern them the moment wiring lands. The register entry for the music records the full Pixabay license fields including `standalone-redistribution=false`, Content ID, AI-modified/generated, and manual identity confirmation. `docs/assets/examples` is reference-only and never copied into `dist`.
+- **Failure modes**: an unregistered or malformed asset fails the provenance gate (CI); original PNGs and the raw music source are never requested at runtime (only `dist/_astro` image derivatives when images are wired, and the single registered audio derivative load); any audio in `dist` other than the registered derivative fails the gate.
 
 ### Quality toolchain
 
@@ -217,13 +222,13 @@ sequenceDiagram
 
 - Exactly one `h1` and a single `<main>` per view; `text-primary` on `bg-base` exceeds AA; accent on dark surfaces keeps 4.5:1 minimum for text.
 - Menu and list/detail fully operable by keyboard; handlers scoped to the active screen (never global); `:focus-visible` accent outlines remain visible alongside the active indicator (never suppressed); the shell active item exposes `data-active` + `aria-current="page"`; the mute toggle is keyboard-operable with `aria-pressed` and a visible label; touch targets >= 44px.
-- Background and figure layers are `aria-hidden` and `pointer-events-none`; decorative watermarks and key hints hidden from assistive tech.
-- `prefers-reduced-motion: reduce`: canvas paints one static frame, glow holds, entrances and view transitions become opacity-only, the figure layer renders static, and ambient audio never starts automatically.
+- The background layer is `aria-hidden` and `pointer-events-none`; decorative watermarks and key hints hidden from assistive tech.
+- `prefers-reduced-motion: reduce`: canvas paints one static frame, glow holds, entrances and view transitions become opacity-only, and ambient audio never starts automatically.
 
 ### Security
 
 - No server, no user input, no cookies, no secrets, no third-party scripts.
-- The ambient-audio mute preference persists in `localStorage` only (client-side; fails safely to an in-memory state when storage is unavailable or throws). No bundled copyrighted audio or art ships — figures are original vectors and audio is BYO licensed (ADR-0004).
+- The ambient-audio mute preference persists in `localStorage` only (client-side; fails safely to an in-memory state when storage is unavailable or throws). No bundled copyrighted audio or art ships — the only audio is the registered Pixabay-licensed derivative (ADR-0006).
 - External links open with `rel="noopener noreferrer"`; the CV phone number is never published.
 
 ### Maintainability
@@ -244,7 +249,7 @@ sequenceDiagram
 |-------|------|---------|-------|
 | Unit | Vitest (`getViteConfig` from `astro/config`) | 4.1.10 | Content schemas, shell menu keys, list/detail selection state, canvas/motion pure logic, SEO helpers. `@astrojs/vitest` is deleted from npm; plain Vitest with Astro's Vite config is the supported path |
 | Coverage | `@vitest/coverage-v8` | 4.1.10 | Coverage report on unit tests |
-| E2E | `@playwright/test` | 1.62.1 | Shell menu navigation (active indicator `aria-current`/`data-active`, stagger non-overlap, coarse-pointer collapse), five view routes, LIST/detail + `#slug` deep links, Escape/Back return, no-keyboard-hijack, control cluster placement, ambient audio (no-track state, gesture gate, mute persistence, navigation survival), mobile stacked detail, 404 page, reduced-motion static canvas + static figures, link checks, sitemap presence |
+| E2E | `@playwright/test` | 1.62.1 | Shell menu navigation (active indicator `aria-current`/`data-active`, stagger non-overlap, coarse-pointer collapse), four view routes, LIST/detail + `#slug` deep links, Escape/Back return, no-keyboard-hijack, control cluster placement, ambient audio (no-track state, gesture gate, mute persistence, navigation survival), mobile stacked detail, 404 page, reduced-motion static canvas + removed-layer absence, link checks, sitemap presence, global light-field gradient on shell/views vs dark 404 |
 | Mutation readiness | `@stryker-mutator/core` + vitest-runner | 9.6.1 | `dryRunOnly` validation gates the toolchain; full campaigns are a later hardening step |
 | Lint / format | `@biomejs/biome` | 2.5.7 | Style and correctness gates, enforced in CI and via Lefthook |
 
@@ -257,16 +262,16 @@ sequenceDiagram
 | Astro 7.2.0 SSG over React SPA | Static output, best first paint and crawlability, zero runtime infrastructure for a brochure site | React SPA (reference repo), SSR Node server — see ADR-0001 |
 | Real static view routes + in-view detail over client-only state | Each view keeps its own URL, title, h1, JSON-LD, and sitemap entry; native Back; zero-JS reachability | Client-only view state (single `/` + JS switch) — see ADR-0003 |
 | In-view LIST/detail panels with `#slug` deep links over detail sub-routes | Matches the game-panel interaction; per-project pages stay a v2.0 option | `/projects/:slug` and `/resume/:section` sub-routes — see ADR-0003 |
-| Game-menu shell at `/` with five real route links | The approved product model: selecting an item changes the complete view, never a scroll | Scrolling single-page landing (previous model — replaced by the shell) |
+| Game-menu shell at `/` with four real route links | The approved product model: selecting an item changes the complete view, never a scroll | Scrolling single-page landing (previous model — replaced by the shell) |
 | No backend, database, or cache | No server-side state exists; static files are the simplest correct architecture | Supabase/other BaaS — rejected, adds cost and surface for no feature |
 | Markdown Content Collections | Schema-validated, versioned, editor-friendly content pipeline | JSON data files, headless CMS — rejected |
 | Astro native View Transitions (`<ClientRouter/>`, `fallback="none"`) | Browser-driven cross-page motion with a full-page fallback and per-view overlays <= 400ms; no SPA router | react-router + AnimatePresence (reference repo) — removed |
 | `motion` 13.0.0 vanilla API | Menu/card/list-detail motion in scripts with no React runtime; React islands reserved for the game menu only | framer-motion 12 React API (reference repo) |
-| Canvas 2D particles/fog as the living layer | TypeScript-only, zero dependencies, persists across view transitions | Video assets (Remotion transparent WebM, MP4) — see ADR-0002 |
+| Canvas 2D caustic/bubbles/particles as the living layer | TypeScript-only, zero dependencies, persists across view transitions | Video assets (Remotion transparent WebM, MP4) — see ADR-0002 |
 | Scoped keyboard handlers, never global | The reference's global key interception is a verified bug; unsupported keys no-op | Global window keydown listeners — rejected |
 | CSS layers for glow and scanlines | Zero-JS ambient base; canvas is the only animated JS layer | JS-driven background — rejected |
-| Original inline-SVG figure/artifact layer | Angular aesthetic with zero copyright risk, zero JS, zero asset weight; per-route compositions via `html[data-route]` CSS | Copied character art (reference repos) — rejected as infringement |
-| BYO licensed ambient audio (HEAD probe, gesture unlock, localStorage mute) | License-safe optional audio; no bytes until play; silent default; persistent mute without a backend | Bundled Persona soundtrack — rejected (copyright); Web Audio synthesized pad — deferred to keep scope bounded; build-time file check — cannot see post-build BYO files. See ADR-0004 |
+| Global light contrast-cut field + shared light-field view palette (static white→light-blue→sea-blue gradient on every non-404 route; dark navy text/white panel family; cyan decorative-only; 404 keeps the dark error identity) | The home-shell visual language becomes one product-wide contract: views feel like the same product as the menu; dark navy text holds ≈20:1 on white, links ≈8:1; no theme toggle (PRD non-goal) | Per-view dark shells (rejected — fragments the product); theme toggle (PRD non-goal) |
+| Bundled licensed ambient audio — deterministic ffmpeg derivative (HEAD probe, gesture unlock, localStorage mute, distinct error state) | License-safe optional audio; committed derivative (CI-safe), no bytes until play; silent before gesture; persistent mute without a backend | Bundled Persona soundtrack — rejected (copyright); BYO user-drop track — superseded by ADR-0006; Web Audio synthesized pad — deferred to keep scope bounded. See ADR-0006 |
 | Tailwind CSS 4.3.3 via `@tailwindcss/vite` | Single styling system, build-time purging, token-aligned with DESIGN.md | Hand-written CSS, CSS modules |
 | Vitest via `getViteConfig` (no `@astrojs/vitest`) | `@astrojs/vitest` is deleted from npm; plain Vitest with Astro's Vite config is the supported integration | `@astrojs/vitest` — unavailable |
 | Stryker 9.6.1 `dryRunOnly` for mutation readiness | Validates the mutation toolchain without gating on full campaigns | Full mutation campaigns in CI — deferred |
@@ -282,7 +287,7 @@ sequenceDiagram
 | Active indicator missing after keyboard move | Keyboard-active item indistinguishable (documented-but-missing contract) | `shell.ts` sets `data-active` + `aria-current` on every move; E2E asserts both follow ArrowUp/Down |
 | Menu items overlap after stagger | Unreadable/clickable-collision menu | Stacked column + fixed gap; per-item offsets alternate sign with >= 1rem separation; coarse-pointer viewports collapse offsets/skew (E2E bounding-box assertions) |
 | Cluster overlaps content on small screens | Hints/controls cover menu or view content | Hints hide on coarse-pointer and short (<560px height) viewports; mute stays reachable >= 44px; E2E asserts non-overlap at desktop |
-| Copyrighted audio/art ships | Infringement risk | No bundled media; original inline-SVG figures; BYO licensed track contract in `public/audio/README.txt` (ADR-0004); E2E covers the no-track state. Future gap: no automated check yet asserts that no audio file ships in `dist` |
+| Copyrighted audio/art ships | Infringement risk | No bundled official media; the provenance gate (`verify-provenance.mjs`) rejects unregistered assets and allows only the registered Pixabay-licensed derivative in `dist`; E2E covers the no-track and error states |
 | Autoplay policy blocks audio | Track never audible | Silent default; one-time `pointerdown`/`keydown` unlock; play() only after gesture; E2E asserts silence before first gesture |
 | Missing track file | Dead control or console errors | HEAD probe (no body bytes) → disabled no-track state; `<audio>` error event resolves optimistic cases; site stays silent |
 | localStorage unavailable or throwing | Audio preference lost or script crash | try/catch reads/writes; in-memory fallback; E2E asserts toggle still works |
@@ -290,6 +295,7 @@ sequenceDiagram
 | View transition overlays exceed 400ms | Motion contract violation | Durations capped (300ms default, 400ms exception); reduced motion becomes opacity-only <= 200ms; E2E timing assertions |
 | View Transitions unsupported (older browser) | No cross-page motion | `<ClientRouter/>` falls back to full-page navigation; the full-page fallback is E2E-verified in Chromium. Future gap: Playwright currently runs no Firefox/Safari project matrix, so cross-browser coverage is not yet automated |
 | Mobile detail panel overflow | Detail unreachable on small screens (reference bug) | Panel stacks below the list and scrolls internally on < 768px |
+| Light-field contrast regression | Dark-route tokens (white text, glow-end panels) render unreadable on the light field | Shared `.view-*` semantic classes hold the light-field palette in one place; the E2E field test asserts the gradient on a view route and the dark glow on the 404 |
 | Reduced-motion user | Motion sickness / distraction | Canvas paints one static frame; entrances and overlays opacity-only; enforced by E2E with emulated `prefers-reduced-motion` |
 | External link rot (itch.io, GitHub) | Dead project links | Link-check assertions in the E2E suite fail CI when a link stops resolving |
 | Tab hidden while canvas animates | Battery drain on idle tabs | rAF loop pauses on `visibilitychange`; particle count and devicePixelRatio are capped |
@@ -302,8 +308,8 @@ sequenceDiagram
 
 The landing model is fully replaced and this document describes the current code.
 
-- **Landed**: the single-page landing (Hero/Featured Work/Projects/Skills/Contact sections, `CompactNav` + `MenuOverlay`, anchor navigation, duplicated project grids) was replaced by the game-menu shell + five static view routes (delivered in the archived change `openspec/changes/archive/2026-08-11-persona-game-menu-navigation/`); the Featured Work grid, the dialog overlay, and the `#featured-work`/`#projects`/`#skills`/`#contact` anchor contract are deleted.
-- **Remediation landed**: the Persona UI/UX remediation (`openspec/changes/persona-ui-ux-remediation/`) then added the diagonal staggered menu composition (AD1), the persistent keyboard-active indicator (AD2), the original per-route figure layer (AD3), the fixed bottom-right control cluster (AD4), and the BYO ambient-audio island (AD5) — all described in Component Details above.
+- **Landed**: the single-page landing (Hero/Featured Work/Projects/Skills/Contact sections, `CompactNav` + `MenuOverlay`, anchor navigation, duplicated project grids) was replaced by the game-menu shell + static view routes (delivered in the archived change `openspec/changes/archive/2026-08-11-persona-game-menu-navigation/`); the Featured Work grid, the dialog overlay, and the `#featured-work`/`#projects`/`#skills`/`#contact` anchor contract are deleted. The contact view was removed in the shell-finalize commit, leaving four view routes; the global light contrast-cut field then made the shell's visual language product-wide.
+- **Remediation landed**: the Persona UI/UX remediation (`openspec/changes/persona-ui-ux-remediation/`) then added the diagonal staggered menu composition (AD1), the persistent keyboard-active indicator (AD2), the original per-route figure layer (AD3 — since removed; no decorative figure layer renders), the fixed bottom-right control cluster (AD4), and the BYO ambient-audio island (AD5) — all described in Component Details above.
 - **Preserved through both changes**: content collections and schemas (including the typed `resume` collection), fontsource fonts, DESIGN.md tokens and `global.css` layers (glow/scanlines, reduced motion), `Background.astro` + `particles.ts` + `transition:persist`, `JsonLd.astro` + `person.ts` + sitemap filtering, the 404 page, reduced-motion and link-check E2E patterns, the JS budget spec, and the toolchain/CI.
 - **Docs synchronized**: `README.md`, `docs/CODEBASE-GUIDE.md`, and `docs/codebase/mental-model.md` were refreshed with the shell + views + remediation product, the BYO audio setup, and the current file map.
 
@@ -314,4 +320,6 @@ The landing model is fully replaced and this document describes the current code
 - [ADR-0001: Astro 7 static architecture over React SPA](docs/adr/0001-astro-static-over-react-spa.md)
 - [ADR-0002: Canvas 2D living background over video assets](docs/adr/0002-canvas-2d-background-over-video-assets.md)
 - [ADR-0003: Real static view routes over client-view state](docs/adr/0003-static-view-routes-over-client-view-state.md)
-- [ADR-0004: BYO licensed ambient audio over bundled soundtrack](docs/adr/0004-byo-licensed-ambient-audio.md)
+- [ADR-0004: BYO licensed ambient audio over bundled soundtrack](docs/adr/0004-byo-licensed-ambient-audio.md) — **Superseded** by ADR-0006
+- [ADR-0005: Owner-created persona/sprite assets with provenance register over external asset sets](docs/adr/0005-owner-created-assets-provenance.md)
+- [ADR-0006: Bundled Pixabay-licensed ambient track over BYO](docs/adr/0006-bundled-licensed-ambient-track.md)

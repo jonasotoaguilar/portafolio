@@ -22,6 +22,10 @@ const audioState = (page: Page) =>
 const paused = (page: Page) => audioState(page).then((s) => s.paused);
 const volume = (page: Page) => audioState(page).then((s) => s.volume);
 
+// Ambient fade target (levels.ts): the music is a very quiet background bed —
+// never full scale, so the navigation effects sit clearly above it.
+const AMBIENT_TARGET = 0.1;
+
 const unlock = (page: Page) => page.keyboard.press("Shift");
 
 interface VolumeSample {
@@ -173,8 +177,9 @@ test.describe("ambient audio", () => {
 		await unlock(page);
 		await expect.poll(() => paused(page)).toBe(false);
 		// "Given audio playing": wait for the fade-in to become audible before
-		// muting, so the fade-out provably ramps from full volume.
-		await expect.poll(() => volume(page)).toBe(1);
+		// muting, so the fade-out provably ramps from the ambient target
+		// volume (0.1), not full scale.
+		await expect.poll(() => volume(page)).toBe(AMBIENT_TARGET);
 		await mute.focus();
 		// Mute: the fade is gradual and lands in the design band; the watcher
 		// starts before the keystroke so the whole ramp is captured.
@@ -187,12 +192,12 @@ test.describe("ambient audio", () => {
 		expect(
 			await page.evaluate(() => localStorage.getItem("portfolio:audio:muted")),
 		).toBe("1");
-		// Unmute restores playback with a fade-in.
+		// Unmute restores playback with a fade-in to the ambient target.
 		const fadeIn = watchVolume(page);
 		await page.keyboard.press("Enter");
 		await expect(mute).toHaveAttribute("aria-pressed", "false");
 		await expect(mute).toHaveAttribute("aria-label", "Sound: On");
-		assertFade(await fadeIn, 1);
+		assertFade(await fadeIn, AMBIENT_TARGET);
 		await expect.poll(() => paused(page)).toBe(false);
 	});
 
@@ -260,8 +265,9 @@ test.describe("ambient audio", () => {
 		).toHaveAttribute("data-audio-state", "ready");
 		await unlock(page);
 		await expect.poll(() => paused(page)).toBe(false);
-		// Mute once the fade-in completes so the fade-out starts from full volume.
-		await expect.poll(() => volume(page)).toBe(1);
+		// Mute once the fade-in completes so the fade-out starts from the
+		// ambient target volume (0.1).
+		await expect.poll(() => volume(page)).toBe(AMBIENT_TARGET);
 		const mute = page.locator("[data-control-cluster] [data-mute-control]");
 		await mute.focus();
 		await page.keyboard.press("Enter");
@@ -378,5 +384,107 @@ test.describe("ambient audio", () => {
 		await expect(mute).toHaveAttribute("aria-label", "Sound: On");
 		await expect.poll(() => paused(page)).toBe(false);
 		expect(pageErrors).toEqual([]);
+	});
+});
+
+test.describe("mute control focus and M shortcut", () => {
+	test("clicking the mute control leaves the button focused, first click included", async ({
+		page,
+	}) => {
+		const track: TrackCounts = { heads: 0, gets: 0 };
+		await installTrack(page, track);
+		await page.goto("/");
+		const mute = page.locator("[data-mute-control]");
+		await expect(mute).toHaveAttribute("data-audio-state", "ready");
+		// First click doubles as the unlock gesture; the double render
+		// must never blur the focused control.
+		await mute.focus();
+		await expect(mute).toBeFocused();
+		await mute.click();
+		await expect(mute).toHaveAttribute("aria-pressed", "true");
+		await expect(mute).toBeFocused();
+		// A second click (pure toggle) keeps focus too.
+		await mute.click();
+		await expect(mute).toHaveAttribute("aria-pressed", "false");
+		await expect(mute).toBeFocused();
+	});
+
+	test("M toggles ambient playback and preserves focus on a menu item", async ({
+		page,
+	}) => {
+		const track: TrackCounts = { heads: 0, gets: 0 };
+		await installTrack(page, track);
+		await page.goto("/");
+		const mute = page.locator("[data-mute-control]");
+		await expect(mute).toHaveAttribute("data-audio-state", "ready");
+		await unlock(page);
+		await expect.poll(() => volume(page)).toBe(AMBIENT_TARGET);
+		const about = page.getByRole("link", { name: "About" });
+		await about.focus();
+		await expect(about).toBeFocused();
+		// Lowercase M mutes; focus never leaves the menu item.
+		await page.keyboard.press("m");
+		await expect(mute).toHaveAttribute("aria-pressed", "true");
+		await expect(mute).toHaveAttribute("data-audio-state", "muted");
+		await expect(about).toBeFocused();
+		// Uppercase M (Shift+M) unmutes — case-insensitive.
+		await page.keyboard.press("M");
+		await expect(mute).toHaveAttribute("aria-pressed", "false");
+		await expect(mute).toHaveAttribute("data-audio-state", "playing");
+		await expect(about).toBeFocused();
+	});
+
+	test("M as the first gesture unlocks playback exactly once (no double toggle)", async ({
+		page,
+	}) => {
+		const track: TrackCounts = { heads: 0, gets: 0 };
+		await installTrack(page, track);
+		await page.goto("/");
+		const mute = page.locator("[data-mute-control]");
+		await expect(mute).toHaveAttribute("data-audio-state", "ready");
+		// M is the first gesture: it unlocks AND counts as the toggle —
+		// the state must land on playing, never flip twice to muted.
+		await page.keyboard.press("m");
+		await expect(mute).toHaveAttribute("data-audio-state", "playing");
+		await expect(mute).toHaveAttribute("aria-pressed", "false");
+		await expect.poll(() => track.gets).toBe(1);
+		await expect.poll(() => paused(page)).toBe(false);
+	});
+
+	test("M is ignored inside editable fields and repeats", async ({ page }) => {
+		const track: TrackCounts = { heads: 0, gets: 0 };
+		await installTrack(page, track);
+		await page.goto("/");
+		const mute = page.locator("[data-mute-control]");
+		await expect(mute).toHaveAttribute("data-audio-state", "ready");
+		await unlock(page);
+		await expect.poll(() => paused(page)).toBe(false);
+		// No page ships an input; inject one to prove the typing-surface
+		// guard with real keystrokes.
+		await page.evaluate(() => {
+			const input = document.createElement("input");
+			input.id = "probe-input";
+			document.body.append(input);
+			input.focus();
+		});
+		const probe = page.locator("#probe-input");
+		await expect(probe).toBeFocused();
+		await page.keyboard.type("m");
+		await expect(probe).toHaveValue("m");
+		await expect(mute).toHaveAttribute("aria-pressed", "false");
+		await expect(mute).toHaveAttribute("data-audio-state", "playing");
+		await expect(probe).toBeFocused();
+		// Synthetic repeated keydowns are ignored as well.
+		await page.evaluate(() => {
+			document.dispatchEvent(
+				new KeyboardEvent("keydown", {
+					key: "m",
+					repeat: true,
+					bubbles: true,
+				}),
+			);
+		});
+		await expect(mute).toHaveAttribute("aria-pressed", "false");
+		await expect(mute).toHaveAttribute("data-audio-state", "playing");
 	});
 });

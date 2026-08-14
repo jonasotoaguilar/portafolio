@@ -647,13 +647,12 @@ test.describe("diagonal staggered menu — coarse collapse", () => {
 	});
 });
 
-// Browser-level proof for the home-shell composition (home-shell contract):
-// the shell base is a STATIC white-to-light-blue gradient (views keep the
-// dark radial glow), a huge vertical PORTFOLIO watermark bleeds off the left
-// edge behind the menu, and a small outlined identity card sits top-right —
-// all decorative markup with zero JS, aria-hidden where purely decorative.
-test.describe("home shell decorative composition", () => {
-	test("shell base is a static diagonal gradient; views keep the dark glow", async ({
+// Browser-level proof for the global light contrast-cut field (field
+// contract): every non-404 route — the shell AND the four views — shares the
+// STATIC white-to-light-blue diagonal gradient, while the 404 error route
+// keeps the dark radial glow untouched.
+test.describe("global light field composition", () => {
+	test("shell and views share the static diagonal gradient; the 404 keeps the dark glow", async ({
 		page,
 	}) => {
 		await page.setViewportSize({ width: 1280, height: 720 });
@@ -665,18 +664,34 @@ test.describe("home shell decorative composition", () => {
 		expect(shellGlow.image).toContain("linear-gradient");
 		expect(shellGlow.image).toContain("112deg");
 		expect(shellGlow.animation).toBe("none");
-		// The gradient starts white and ends light blue (shell token).
+		// The gradient starts white and ends sea blue (field tokens).
 		expect(shellGlow.image).toContain("rgb(255, 255, 255)");
 		expect(shellGlow.image).toContain("rgb(188, 212, 255)");
 		expect(shellGlow.image).toContain("rgb(22, 119, 200)");
 
-		// A view route keeps the dark radial glow untouched.
+		// A view route shares the same static light field.
 		await page.goto("/about");
 		const viewGlow = await page
 			.locator(".glow-layer")
 			.evaluate((el) => getComputedStyle(el).backgroundImage);
-		expect(viewGlow).toContain("radial-gradient");
-		expect(viewGlow).toContain("rgb(13, 37, 96)");
+		expect(viewGlow).toContain("linear-gradient");
+		expect(viewGlow).toContain("112deg");
+		expect(viewGlow).toContain("rgb(255, 255, 255)");
+		expect(viewGlow).toContain("rgb(22, 119, 200)");
+
+		// The 404 error route keeps the dark radial glow untouched — both the
+		// literal /404 route and unknown paths (e.g. /contact), which render
+		// 404.astro with their own data-route value.
+		for (const path of ["/404", "/contact"]) {
+			await page.goto(path);
+			const notFoundGlow = await page
+				.locator(".glow-layer")
+				.evaluate((el) => getComputedStyle(el).backgroundImage);
+			expect(notFoundGlow, `${path} keeps the dark glow`).toContain(
+				"radial-gradient",
+			);
+			expect(notFoundGlow).toContain("rgb(13, 37, 96)");
+		}
 	});
 
 	test("vertical PORTFOLIO watermark bleeds off the left edge, aria-hidden", async ({
@@ -699,31 +714,20 @@ test.describe("home shell decorative composition", () => {
 		expect(box.height).toBeGreaterThan(0.8 * 720);
 	});
 
-	test("outlined identity card sits top-right with the owner name, not interactive", async ({
+	test("name card removed: the top-right utility position holds only the mute control", async ({
 		page,
 	}) => {
 		await page.setViewportSize({ width: 1280, height: 720 });
 		await page.goto("/");
-		const card = page.locator(".shell-name-card");
-		await expect(card).toHaveText("Jonathan Soto");
-		const box = await card.boundingBox();
-		if (!box) throw new Error("expected a visible name card");
-		expect(box.x + box.width).toBeLessThanOrEqual(1280);
-		expect(box.x).toBeGreaterThan(1280 - 300);
-		expect(box.y).toBeLessThan(80);
-		const style = await card.evaluate((el) => {
-			const computed = getComputedStyle(el);
-			return {
-				tag: el.tagName,
-				borderWidth: computed.borderWidth,
-				borderStyle: computed.borderStyle,
-			};
-		});
-		expect(style.tag).toBe("P");
-		expect(style.borderStyle).not.toBe("none");
-		expect(style.borderWidth).toBe("1px");
-		// Not interactive: it is not a link or button and never enters the
-		// shell's Tab order.
+		// The outlined identity card is gone from the shell; the owner name
+		// still exists as the page's sr-only heading.
+		await expect(page.locator(".shell-name-card")).toHaveCount(0);
+		await expect(
+			page.getByRole("heading", { name: "Jonathan Soto" }),
+		).toBeVisible();
+		// The utility position is occupied by the mute control alone, and the
+		// name never surfaces as an interactive control.
+		await expect(page.locator("[data-mute-control]")).toBeVisible();
 		await expect(page.getByRole("link", { name: "Jonathan Soto" })).toHaveCount(
 			0,
 		);
@@ -737,7 +741,7 @@ test.describe("home shell decorative composition", () => {
 // contract delta): menu labels are cyan on the shell — Resume (2nd) and
 // Skills (4th) one lighter step — the keyboard-active and :focus-visible item
 // turns near-black in both states (hover never overrides it), and the
-// auxiliary text (key hints, MOVE/SELECT/BACK labels, identity card) is
+// auxiliary text (key hints, MOVE/SELECT/BACK labels, mute control) is
 // white with a black outline over the blue gradient. Dark-route palettes
 // stay untouched.
 test.describe("home shell light-field palette", () => {
@@ -882,7 +886,7 @@ test.describe("home shell light-field palette", () => {
 		expect((await beforeStyle(about)).background).toBe("rgba(0, 0, 0, 0)");
 	});
 
-	test("auxiliary shell text is white with a subtle black outline in the display face; dark routes keep their palette", async ({
+	test("auxiliary shell text is white with a subtle black outline in the display face; views share it, dark error routes keep their palette", async ({
 		page,
 	}) => {
 		await page.setViewportSize({ width: 1280, height: 720 });
@@ -917,13 +921,16 @@ test.describe("home shell light-field palette", () => {
 		const mute = page.locator(".mute-control");
 		await expect(mute).toHaveCSS("color", "rgb(255, 255, 255)");
 		expect(await strokeWidth(mute)).toBe("0.3px");
-		const card = page.locator(".shell-name-card");
-		await expect(card).toHaveCSS("color", "rgb(255, 255, 255)");
-		expect(await strokeWidth(card)).toBe("0.3px");
-		expect(await fontFamily(card)).toContain("Anton");
-		// The dark-route control cluster keeps the dark palette and the
-		// condensed label face.
+		// A view route shares the same light-field auxiliary treatment.
 		await page.goto("/projects");
+		await expect(page.locator(".key-hints")).toHaveCSS(
+			"color",
+			"rgb(255, 255, 255)",
+		);
+		expect(await fontFamily(page.locator(".key-hints"))).toContain("Anton");
+		// The dark error route keeps the dark palette and the condensed label
+		// face.
+		await page.goto("/404");
 		await expect(page.locator(".key-hints")).toHaveCSS(
 			"color",
 			"rgb(167, 167, 171)",
@@ -933,5 +940,27 @@ test.describe("home shell light-field palette", () => {
 			"rgb(255, 255, 255)",
 		);
 		expect(await fontFamily(page.locator(".key-hints"))).toContain("Bebas");
+	});
+});
+
+test.describe("mute shortcut hint", () => {
+	test("shows M mute immediately before Esc back", async ({ page }) => {
+		await page.goto("/");
+		const hints = page.locator(".key-hints");
+		await expect(hints.locator("kbd").nth(2)).toHaveText("M");
+		await expect(hints.locator("span").nth(2)).toContainText("mute");
+		await expect(hints.locator("kbd").nth(3)).toHaveText("Esc");
+		await expect(hints.locator("span").nth(3)).toContainText("back");
+
+		const order = await hints.evaluate((element) => {
+			const keys = [...element.querySelectorAll("kbd")];
+			return Boolean(
+				keys[2] &&
+					keys[3] &&
+					keys[2].compareDocumentPosition(keys[3]) &
+						Node.DOCUMENT_POSITION_FOLLOWING,
+			);
+		});
+		expect(order).toBe(true);
 	});
 });

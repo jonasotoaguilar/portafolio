@@ -1,6 +1,8 @@
 ---
 import { getCollection } from "astro:content";
 
+import GameList from "../components/game/GameList.astro";
+import GameListItem from "../components/game/GameListItem.astro";
 import GameViewShell from "../components/game/GameViewShell.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { VIEW_TITLES } from "../lib/seo/titles";
@@ -17,23 +19,11 @@ const groups = Object.entries(skillsEntry.data);
 <BaseLayout title={VIEW_TITLES.skills} site={site}>
 	<GameViewShell title="Skills">
 		<section class="flex flex-col gap-6 md:flex-row md:items-start md:gap-10">
-			<ol class="flex flex-col gap-2 md:min-w-64" data-list aria-label="Skill groups">
-				{
-					groups.map(([group], index) => (
-						<li>
-							<button
-								type="button"
-								data-list-item
-								data-active={index === 0 ? "true" : undefined}
-								aria-pressed={index === 0 ? "true" : "false"}
-								class="min-h-11 w-full rounded-[2px] bg-glow-end px-4 font-display text-2xl uppercase leading-[1.05] text-text-primary transition-colors duration-150 ease-out hover:bg-glow-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400 data-[active=true]:bg-glow-start data-[active=true]:text-accent-300"
-							>
-								{group}
-							</button>
-						</li>
-					))
-				}
-			</ol>
+			<GameList label="Skill groups">
+				{groups.map(([group], index) => (
+					<GameListItem title={group} active={index === 0} />
+				))}
+			</GameList>
 			{
 				groups.map(([group, names], index) => (
 					<aside
@@ -41,17 +31,15 @@ const groups = Object.entries(skillsEntry.data);
 						data-active={index === 0 ? "true" : undefined}
 						tabindex="-1"
 						aria-label={`${group} skills`}
-						class="max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 rounded-[2px] bg-glow-end p-6"
+						class="view-panel max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 p-6"
 					>
-						<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-primary">
+						<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-on-light">
 							{group}
 						</h2>
 						<ul class="mt-4 flex flex-wrap gap-2">
 							{
 								names.map((name) => (
-									<li class="rounded-[2px] bg-bg-base px-3 py-1 text-text-primary">
-										{name}
-									</li>
+									<li class="view-chip px-3 py-1">{name}</li>
 								))
 							}
 						</ul>

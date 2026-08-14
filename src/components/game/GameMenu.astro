@@ -47,12 +47,12 @@ const MENU_ITEMS = [
 <main class="game-shell flex min-h-svh flex-col items-center justify-center px-6 py-8">
 	<h1 class="sr-only">{site.name}</h1>
 	{/* Home-shell decorations (home-shell contract): the giant vertical
-	     PORTFOLIO watermark bleeds off the left edge (aria-hidden, zero JS)
-	     and the outlined identity card sits fixed top-right. */}
+	     PORTFOLIO watermark bleeds off the left edge (aria-hidden, zero JS).
+	     The old outlined identity card is gone — the top-right utility
+	     position belongs to the persisted mute control (ControlCluster). */}
 	<div class="shell-decor" aria-hidden="true">
 		<span class="shell-watermark" aria-hidden="true">PORTFOLIO</span>
 	</div>
-	<p class="shell-name-card">{site.name}</p>
 	<nav
 		aria-label="Game menu"
 		data-menu

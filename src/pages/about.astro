@@ -16,19 +16,17 @@ const site = siteEntry.data;
 	<GameViewShell title="About">
 		<section class="flex flex-col items-start gap-8">
 			<h2 class="sr-only">Role</h2>
-			<p class="font-display text-[clamp(1.75rem,4.5vw,3.5rem)] uppercase leading-[1.05] text-text-primary">
+			<p class="font-display text-[clamp(1.75rem,4.5vw,3.5rem)] uppercase leading-[1.05] text-text-on-light">
 				{site.role}
 			</p>
 			<div class="flex flex-col gap-3">
-				<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-300">
+				<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-on-light">
 					Focus areas
 				</h3>
 				<ul class="flex flex-wrap gap-2">
 					{
 						site.focusAreas.map((area) => (
-							<li class="rounded-[2px] bg-glow-end px-4 py-2 text-text-primary">
-								{area}
-							</li>
+							<li class="view-chip px-4 py-2">{area}</li>
 						))
 					}
 				</ul>

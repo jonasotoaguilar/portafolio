@@ -15,6 +15,8 @@
 // data-audio-state, and global.css switches the two icons. The accessible
 // name stays on aria-label ("Sound: Off" / "Sound: On", set at runtime by
 // ambient-audio.ts), with aria-pressed kept for the toggle state.
+// aria-keyshortcuts advertises the M shortcut (handled case-insensitively by
+// ambient-audio.ts), and the title gives a pointer-hover hint for it.
 ---
 <audio
 	data-audio-element
@@ -28,6 +30,8 @@
 	disabled
 	aria-pressed="false"
 	aria-label="Sound: Off"
+	aria-keyshortcuts="M"
+	title="Toggle ambient music (M)"
 	data-mute-control
 	data-audio-state="no-track"
 >

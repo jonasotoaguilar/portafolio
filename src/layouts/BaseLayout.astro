@@ -3,7 +3,6 @@ import { ClientRouter } from "astro:transitions";
 
 import "../styles/global.css";
 import Background from "../components/Background.astro";
-import FigureLayer from "../components/FigureLayer.astro";
 import ControlCluster from "../components/game/ControlCluster.astro";
 import JsonLd from "../components/JsonLd.astro";
 import type { SiteConfig } from "../lib/content/schemas";
@@ -46,7 +45,6 @@ const canonical = is404
 		<div class="glow-layer" aria-hidden="true"></div>
 		<div class="scanlines-layer" aria-hidden="true"></div>
 		<Background />
-		{route !== "shell" && <FigureLayer />}
 		<slot />
 		<ControlCluster />
 	</body>

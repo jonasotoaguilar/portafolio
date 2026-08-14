@@ -36,19 +36,19 @@ const sections = [
 				data-active="true"
 				tabindex="-1"
 				aria-label="Education"
-				class="max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 rounded-[2px] bg-glow-end p-6"
+				class="view-panel max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 p-6"
 			>
-				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-primary">
+				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-on-light">
 					Education
 				</h2>
 				<ul class="mt-4 flex flex-col gap-4">
 					{resume.education.map((entry) => (
 						<li>
-							<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-300">
+							<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-on-light">
 								{entry.institution}
 							</h3>
-							<p class="mt-1 text-text-secondary">{entry.title}</p>
-							<p class="text-text-secondary">{entry.period}</p>
+							<p class="mt-1 text-text-on-light-secondary">{entry.title}</p>
+							<p class="text-text-on-light-secondary">{entry.period}</p>
 						</li>
 					))}
 				</ul>
@@ -57,21 +57,21 @@ const sections = [
 				data-detail-panel
 				tabindex="-1"
 				aria-label="Experience"
-				class="max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 rounded-[2px] bg-glow-end p-6"
+				class="view-panel max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 p-6"
 			>
-				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-primary">
+				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-on-light">
 					Experience
 				</h2>
 				<ul class="mt-4 flex flex-col gap-4">
 					{resume.experience.map((entry) => (
 						<li>
-							<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-300">
+							<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-on-light">
 								{entry.company}
 							</h3>
-							<p class="mt-1 text-text-secondary">{entry.role}</p>
-							<p class="text-text-secondary">{entry.period}</p>
+							<p class="mt-1 text-text-on-light-secondary">{entry.role}</p>
+							<p class="text-text-on-light-secondary">{entry.period}</p>
 							{entry.details.length > 0 && (
-								<ul class="mt-2 list-disc pl-5 text-text-secondary">
+								<ul class="mt-2 list-disc pl-5 text-text-on-light-secondary">
 									{entry.details.map((detail) => (
 										<li>{detail}</li>
 									))}
@@ -85,21 +85,21 @@ const sections = [
 				data-detail-panel
 				tabindex="-1"
 				aria-label="Projects"
-				class="max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 rounded-[2px] bg-glow-end p-6"
+				class="view-panel max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 p-6"
 			>
-				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-primary">
+				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-on-light">
 					Projects
 				</h2>
 				<ul class="mt-4 flex flex-col gap-4">
 					{resume.projects.map((entry) => (
 						<li>
-							<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-300">
+							<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-on-light">
 								{entry.name}
 							</h3>
 							{entry.published && (
-								<p class="mt-1 text-accent-400">Academic publication · {entry.published}</p>
+								<p class="mt-1 text-accent-on-light">Academic publication · {entry.published}</p>
 							)}
-							<p class="mt-1 text-text-secondary">{entry.description}</p>
+							<p class="mt-1 text-text-on-light-secondary">{entry.description}</p>
 						</li>
 					))}
 				</ul>
@@ -108,14 +108,14 @@ const sections = [
 				data-detail-panel
 				tabindex="-1"
 				aria-label="Skills"
-				class="max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 rounded-[2px] bg-glow-end p-6"
+				class="view-panel max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 p-6"
 			>
-				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-primary">
+				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-on-light">
 					Skills
 				</h2>
 				<ul class="mt-4 flex flex-wrap gap-2">
 					{resume.skills.map((name) => (
-						<li class="rounded-[2px] bg-bg-base px-3 py-1 text-text-primary">
+						<li class="view-chip px-3 py-1">
 							{name}
 						</li>
 					))}
@@ -125,18 +125,18 @@ const sections = [
 				data-detail-panel
 				tabindex="-1"
 				aria-label="Languages"
-				class="max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 rounded-[2px] bg-glow-end p-6"
+				class="view-panel max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 p-6"
 			>
-				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-primary">
+				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-on-light">
 					Languages
 				</h2>
 				<ul class="mt-4 flex flex-col gap-4">
 					{resume.languages.map((entry) => (
 						<li>
-							<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-300">
+							<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-on-light">
 								{entry.name}
 							</h3>
-							<p class="mt-1 text-text-secondary">{entry.proficiency}</p>
+							<p class="mt-1 text-text-on-light-secondary">{entry.proficiency}</p>
 						</li>
 					))}
 				</ul>

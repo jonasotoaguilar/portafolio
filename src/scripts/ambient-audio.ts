@@ -1,3 +1,4 @@
+import { AMBIENT_VOLUME } from "../lib/audio/levels";
 import {
 	type AudioState,
 	createAudioState,
@@ -16,6 +17,9 @@ const FADE_MS = 400;
 const REDUCED_FADE_MS = 200;
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 const GESTURE_EVENTS = ["pointerdown", "keydown"] as const;
+// Case-insensitive keyboard shortcut for the mute control (aria-keyshortcuts
+// in AudioControl.astro mirrors this).
+const MUTE_SHORTCUT_KEY = "m";
 
 type ProbeResult = "ok" | "fail" | null;
 
@@ -119,7 +123,10 @@ function playWithFade(): void {
 	void el.play().catch(() => {
 		// Transient autoplay/failure: the error event drives the machine.
 	});
-	fadeVolume(1);
+	// The music is a quiet background bed: the fade ramps to the reduced
+	// ambient target (levels.ts), never full scale — UI feedback would be
+	// masked at volume 1.
+	fadeVolume(AMBIENT_VOLUME);
 }
 
 function muteWithFade(): void {
@@ -147,21 +154,61 @@ function armGesture(): void {
 	}
 }
 
-function onToggle(): void {
+// Shared toggle path for the click handler and the M shortcut: flips through
+// the same reducer, fades, and persists — one state machine, never a second.
+// Click-originated toggles capture the button's focus before render() mutates
+// disabled/aria attributes and restore it afterwards, so a pointer click
+// always leaves the control focused; keyboard/M toggles never move focus.
+function applyToggle(restoreClickFocus: boolean): void {
+	const restoreFocus = restoreClickFocus && document.activeElement === button;
 	// The first click doubles as the unlock gesture: its pointer/keydown
 	// fires first and starts playback, then the click's toggle flips it
-	// (design data flow: gesture → toggle).
+	// (design data flow: gesture → toggle). For later toggles this is a
+	// no-op guard.
 	onGesture();
 	const next = reduceAudio(state, { kind: "toggle" });
-	if (next === state) return;
+	if (next === state) {
+		if (restoreFocus) button?.focus();
+		return;
+	}
 	state = next;
 	render();
+	if (restoreFocus) button?.focus();
 	if (state.status === "playing") {
 		playWithFade();
 	} else if (state.status === "muted") {
 		muteWithFade();
 	}
 	persistMuted();
+}
+
+function onToggle(event: MouseEvent): void {
+	// detail > 0 marks a pointer-originated click (keyboard activation sends
+	// detail 0): only pointer clicks get the focus-restore treatment.
+	applyToggle(event.detail > 0);
+}
+
+// Typing surfaces own their keys; the shortcut never fires from them.
+function isTypingSurface(target: EventTarget | null): boolean {
+	return (
+		target instanceof HTMLElement &&
+		target.closest("input, textarea, select, [contenteditable]") !== null
+	);
+}
+
+function onMShortcut(event: KeyboardEvent): void {
+	if (event.repeat) return;
+	if (event.key.toLowerCase() !== MUTE_SHORTCUT_KEY) return;
+	if (isTypingSurface(event.target)) return;
+	// Still locked (ready): this very keydown IS the first gesture. Unlock
+	// here — onGesture() disarms the generic first-gesture listener
+	// mid-dispatch, so this keydown cannot fire it again — and skip the
+	// toggle: one M press, one transition, never a double flip.
+	if (state.status === "ready") {
+		onGesture();
+		return;
+	}
+	applyToggle(false);
 }
 
 function onAudioError(): void {
@@ -204,6 +251,9 @@ async function runProbe(): Promise<void> {
 function bindAudioEvents(): void {
 	audio?.addEventListener("error", onAudioError);
 	button?.addEventListener("click", onToggle);
+	// Registered before armGesture() so the shortcut always runs ahead of the
+	// generic first-gesture keydown listener (see onMShortcut).
+	document.addEventListener("keydown", onMShortcut);
 }
 
 function teardownAudio(): void {
@@ -211,6 +261,7 @@ function teardownAudio(): void {
 	cancelFade();
 	audio?.removeEventListener("error", onAudioError);
 	button?.removeEventListener("click", onToggle);
+	document.removeEventListener("keydown", onMShortcut);
 	cluster = null;
 	audio = null;
 	button = null;

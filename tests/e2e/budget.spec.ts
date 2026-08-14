@@ -31,14 +31,13 @@ const TITLES: [string, string][] = [
 ];
 
 test.describe("first-load budget", () => {
-	test("every route ships audio wiring and view routes ship the figure layer", () => {
+	test("every route ships audio wiring and no route ships the removed figure layer", () => {
 		// Portfolio-page spec "Budget holds with new assets": the production
-		// build with the audio layer is what the budget measures. View routes
-		// also carry the static figure layer; the main shell intentionally does
-		// not render that decoration.
+		// build with the audio layer is what the budget measures. The
+		// decorative figure layer is removed, so no route document may carry
+		// its markup hook.
 		// The ambient-audio wiring (design AD5) is inlined per route by Astro
-		// and the figure layer is zero-JS static markup (design AD3) — both are
-		// checked in the built document wherever the bundler puts the audio
+		// — checked in the built document wherever the bundler puts the audio
 		// module.
 		for (const [route, file] of ROUTES) {
 			const html = readFileSync(`dist/${file}`, "utf8");
@@ -55,8 +54,8 @@ test.describe("first-load budget", () => {
 			).toBe(true);
 			expect(
 				html.includes("data-figure-layer"),
-				`${route} figure-layer markup matches its route contract`,
-			).toBe(route !== "/");
+				`${route} must not ship the removed figure-layer markup`,
+			).toBe(false);
 		}
 	});
 

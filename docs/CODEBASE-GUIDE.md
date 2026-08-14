@@ -14,7 +14,7 @@ Every link below points to a file that exists in this repository.
 
 ## Mental Model
 
-portafolio is a fully static Persona-3 game-menu portfolio for Jonathan Soto (jonasotoaguilar): Astro 7.2.0 generates plain HTML at build time from Content Collections, with a root game-menu shell at `/` and five view routes (`/about`, `/resume`, `/projects`, `/skills`, `/contact`), while a fixed four-layer background (CSS radial glow, CSS CRT scanlines, Canvas 2D particles, and an original decorative figure/artifact layer) plus a bottom-right control cluster and native View Transitions provide the Persona-3 feel in the browser. There is no backend, database, or runtime state; the output is served by any static host.
+portafolio is a fully static Persona-3 game-menu portfolio for Jonathan Soto (jonasotoaguilar): Astro 7.2.0 generates plain HTML at build time from Content Collections, with a root game-menu shell at `/` and five view routes (`/about`, `/resume`, `/projects`, `/skills`, `/contact`), while a fixed layered background (CSS radial glow, CSS CRT scanlines, and a Canvas 2D layer of caustic gradient, rising bubbles, and drifting particles) plus a bottom-right control cluster and native View Transitions provide the Persona-3 feel in the browser. There is no backend, database, or runtime state; the output is served by any static host.
 
 - `docs/codebase/mental-model.md` — the foundational detail page: how the site fits together, data flow, the canvas game-loop pattern, and the reduced-motion contract.
 
@@ -59,10 +59,10 @@ Static-first and content-driven: everything a visitor sees is generated at build
 ├── public/                  # static assets: favicon.ico, favicon.svg, audio/README.txt (BYO track contract)
 ├── scripts/                 # release hooks: release-preflight, release-publish, release-verify
 ├── src/
-│   ├── components/          # game/ shell+view components; preserved: Background, JsonLd, Watermark; FigureLayer (per-route SVG)
+│   ├── components/          # game/ shell+view components; preserved: Background, JsonLd, Watermark
 │   ├── content/             # content collections: projects/*.md, skills.yaml, site.config.yaml, resume.yaml (+ content.config.ts)
-│   ├── layouts/             # BaseLayout.astro (head, transitions, FigureLayer + ControlCluster)
-│   ├── lib/                 # audio/state.ts (reducer), canvas/particles.ts, content/schemas.ts + projects.ts, menu/keys.ts, motion/, seo/
+│   ├── layouts/             # BaseLayout.astro (head, transitions, ControlCluster)
+│   ├── lib/                 # audio/state.ts (reducer), audio/levels.ts (volume), audio/effects.ts (nav sounds), canvas/particles.ts + bubbles.ts, content/schemas.ts + projects.ts, menu/keys.ts, motion/, seo/
 │   ├── pages/               # index.astro (game shell), 404.astro, and the five view routes
 │   ├── scripts/             # shell.ts, view.ts, entrances.ts, living-background.ts, ambient-audio.ts
 │   └── styles/              # global.css (Tailwind entry point)

@@ -1,3 +1,4 @@
+import { playClick, playSelect } from "../lib/audio/effects";
 import { escapeHierarchy, reduceListKey } from "../lib/menu/keys";
 
 let root: HTMLElement | null = null;
@@ -57,8 +58,13 @@ function onKeydown(event: KeyboardEvent): void {
 	if (event.key === "Escape") {
 		event.preventDefault();
 		if (escapeHierarchy(panelOpen()) === "close-panel") {
+			// Closing the panel stays inside the view — no sound; feedback
+			// only plays when a menu is actually left (to-menu below).
 			closePanel();
 		} else {
+			// Leaving the view back to the shell is the close moment: the
+			// back link's click is a real click event, and the delegated
+			// effect wiring plays menu_close for a[href="/"].
 			goToMenu();
 		}
 		return;
@@ -68,9 +74,14 @@ function onKeydown(event: KeyboardEvent): void {
 		event.preventDefault();
 		select(result.activeIndex);
 		focusItem(result.activeIndex);
+		playSelect();
 	} else if (result.kind === "open") {
 		event.preventDefault();
 		open(activeIndex);
+		// Keyboard activation never produces a native click event, so the
+		// click sound is played explicitly (mouse clicks are covered by the
+		// delegated click wiring).
+		playClick();
 	}
 }
 

@@ -615,11 +615,12 @@ test.describe("view-transition overlays", () => {
 // bottom-right without overlap" and "Coarse pointer hides hints"; design
 // AD4): the persisted control root holds two corners — the decorative key
 // hints stay fixed at bottom 1.5rem / right 1.75rem, and the mute control
-// sits fixed upper-right directly below the shell identity card (right
-// 1.5rem). Hints hide on short (<560px) or coarse-pointer viewports; the
-// mute control keeps a ≥44px target. Anchor boxes (the visible menu items)
-// are the non-overlap measure on the shell; the heading and the back link
-// stand for view content, which never reaches the corners.
+// sits fixed top-right at 1.5rem/1.5rem (the former shell identity card is
+// removed, so the mute control owns the top-right utility position). Hints
+// hide on short (<560px) or coarse-pointer viewports; the mute control
+// keeps a ≥44px target. Anchor boxes (the visible menu items) are the
+// non-overlap measure on the shell; the heading and the back link stand
+// for view content, which never reaches the corners.
 test.describe("control placement", () => {
 	const hints = (page: Page) => page.locator(".key-hints");
 	const mute = (page: Page) => page.locator("[data-mute-control]");
@@ -668,7 +669,7 @@ test.describe("control placement", () => {
 	test.use({ viewport: { width: 1280, height: 720 } });
 
 	test.describe("desktop 1280x720", () => {
-		test("shell: hints fixed bottom-right, mute fixed top-right below the name card, no overlaps", async ({
+		test("shell: hints fixed bottom-right, mute fixed top-right, no overlaps", async ({
 			page,
 		}) => {
 			await page.goto("/");
@@ -683,15 +684,13 @@ test.describe("control placement", () => {
 			).toBe("fixed");
 			const muteBox = await control.boundingBox();
 			if (!muteBox) throw new Error("expected a visible mute button box");
-			// Upper-right edge, aligned with the identity card (right 1.5rem).
+			// Top-right utility position: right 1.5rem and top 1.5rem — the
+			// former identity card is removed, so the mute control anchors
+			// the corner directly.
 			expect(
 				Math.abs(1280 - 24 - (muteBox.x + muteBox.width)),
 			).toBeLessThanOrEqual(2);
-			const card = await page.locator(".shell-name-card").boundingBox();
-			if (!card) throw new Error("expected a visible name card");
-			// Directly below the card: starts at or under its bottom edge.
-			expect(muteBox.y).toBeGreaterThanOrEqual(card.y + card.height - 1);
-			expect(muteBox.y - (card.y + card.height)).toBeLessThanOrEqual(24);
+			expect(Math.abs(muteBox.y - 24)).toBeLessThanOrEqual(2);
 			const items = await page.locator("[data-menu-item]").evaluateAll((els) =>
 				els.map((el) => {
 					const rect = el.getBoundingClientRect();
@@ -709,7 +708,6 @@ test.describe("control placement", () => {
 				assertNoOverlap(item, hintRect);
 				assertNoOverlap(item, muteBox);
 			}
-			assertNoOverlap(card, muteBox);
 			await assertMuteTarget(page);
 		});
 
@@ -741,7 +739,10 @@ test.describe("control placement", () => {
 				expect(
 					Math.abs(1280 - 24 - (muteBox.x + muteBox.width)),
 				).toBeLessThanOrEqual(2);
-				expect(muteBox.y).toBeGreaterThanOrEqual(40);
+				// Top-right utility position (1.5rem) on views too — the
+				// identity card is removed, so the mute control anchors the
+				// corner directly.
+				expect(Math.abs(muteBox.y - 24)).toBeLessThanOrEqual(2);
 				const heading = await headingTextBox();
 				for (const target of [
 					heading,
@@ -799,10 +800,11 @@ test.describe("control placement", () => {
 // Regression boundaries for the remediated system (portfolio-page spec
 // "Remediation regression boundaries"): the shell active indicator is
 // re-established when returning from a view, and the mute control stays
-// keyboard-operable on view routes. (Figure aria-hidden is asserted for all
-// seven routes in reduced-motion.spec.ts; shell indicator movement in
-// keyboard.spec.ts; shell keyboard toggle in ambient-audio.spec.ts — the
-// cases below cover the view-boundary angles those specs do not.)
+// keyboard-operable on view routes. (The removed decorative figure layer is
+// asserted absent on every route in reduced-motion.spec.ts; shell indicator
+// movement in keyboard.spec.ts; shell keyboard toggle in
+// ambient-audio.spec.ts — the cases below cover the view-boundary angles
+// those specs do not.)
 test.describe("remediation regression boundaries", () => {
 	// A zero-filled MPEG-1 Layer III frame decodes as silence in Chromium;
 	// serves as the "licensed track present" setup for view-route playback.
@@ -877,8 +879,7 @@ test.describe("remediation regression boundaries", () => {
 	});
 });
 
-// Sprite pattern bounds (living-background spec "Decorative figure and
-// artifact layer" / design route-asset-matrix): owner-created sprite
+// Sprite pattern bounds (design route-asset-matrix): owner-created sprite
 // derivatives may repeat as decorative patterns ONLY inside the locked
 // bounds — 8–15% opacity, ≤160px desktop / ≤96px mobile, pointer-events none.
 // Instances are mounted by Unit D (SpriteAccent.astro) with aria-hidden and

@@ -1,7 +1,8 @@
 ---
 interface Props {
-	/** Entry slug; matches the `#slug` deep link fragment. */
-	id: string;
+	/** Entry slug; matches the `#slug` deep link fragment. Optional: views
+	    without deep-link fragments (e.g. SKILLS) omit it. */
+	id?: string;
 	title: string;
 	active?: boolean;
 }
@@ -16,7 +17,7 @@ const { id, title, active = false } = Astro.props;
 		data-list-item
 		data-active={active ? "true" : undefined}
 		aria-pressed={active ? "true" : "false"}
-		class="min-h-11 w-full rounded-[2px] bg-glow-end px-4 font-display text-2xl uppercase leading-[1.05] text-text-primary transition-colors duration-150 ease-out hover:bg-glow-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400 data-[active=true]:bg-glow-start data-[active=true]:text-accent-300"
+		class="view-list-item min-h-11 w-full px-4 font-display text-2xl uppercase leading-[1.05] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400"
 	>
 		{title}
 	</button>

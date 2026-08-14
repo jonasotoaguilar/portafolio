@@ -20,7 +20,12 @@ const canvasDataUrl = (page: Page) =>
 		).toDataURL(),
 	);
 
-const getWaveCoverage = (page: Page) =>
+// Cyan-band coverage in the lower half of the canvas: the removed procedural
+// wave bands were the only painter of solid cyan/light-blue strips (b-r >=
+// 100). With waves gone, every route must stay near zero — the deep caustic
+// gradient (b-r <= 83) and the sparse particles/bubbles (<1% of the sampled
+// area) never reach the threshold.
+const getCyanBandCoverage = (page: Page) =>
 	page.evaluate(() => {
 		const canvas = document.getElementById(
 			"living-background",
@@ -30,15 +35,15 @@ const getWaveCoverage = (page: Page) =>
 			? context.getImageData(0, 0, canvas.width, canvas.height).data
 			: new Uint8ClampedArray(0);
 		let total = 0;
-		let ocean = 0;
+		let cyan = 0;
 		for (let y = Math.floor(canvas.height / 2); y < canvas.height; y += 8) {
 			for (let x = 0; x < canvas.width; x += 8) {
 				total++;
 				const i = (y * canvas.width + x) * 4;
-				if (pixels[i + 2] - pixels[i] >= 100) ocean++;
+				if (pixels[i + 2] - pixels[i] >= 100) cyan++;
 			}
 		}
-		return ocean / total;
+		return cyan / total;
 	});
 
 test.describe("reduced motion", () => {
@@ -119,35 +124,29 @@ test.describe("reduced motion", () => {
 			.not.toBe(initial);
 	});
 
-	test("reduced-motion static frame includes the procedural wave bands", async ({
-		page,
-	}) => {
-		// living-background spec "Static wave frame under reduced motion": the
-		// static frame must include the waves. Bottom-half samples must show
-		// cyan/light-blue tones (b-r >= 100) — produced only by the wave
-		// bands, never by the deep caustic gradient (b-r <= 83) or the sparse
-		// particles/bubbles (<1% of the sampled area).
+	test("no procedural wave bands render on any route", async ({ page }) => {
+		// The procedural wave layer is removed (living-background contract):
+		// no route — shell or view — paints solid cyan wave bands. The static
+		// frame keeps caustic gradient + bubbles + particles only.
 		await page.emulateMedia({ reducedMotion: "reduce" });
-		await page.goto("/about");
-		await expect(page.locator("#living-background")).toBeVisible();
-		const waveCoverage = await getWaveCoverage(page);
-		expect(waveCoverage).toBeGreaterThan(0.05);
+		for (const path of ["/", "/about", "/projects"]) {
+			await page.goto(path);
+			await expect(page.locator("#living-background")).toBeVisible();
+			expect(
+				await getCyanBandCoverage(page),
+				`${path} must not paint cyan wave bands`,
+			).toBeLessThan(0.01);
+		}
 	});
 
-	test("home shell omits the procedural wave bands", async ({ page }) => {
-		await page.emulateMedia({ reducedMotion: "reduce" });
-		await page.goto("/");
-		await expect(page.locator("#living-background")).toBeVisible();
-		expect(await getWaveCoverage(page)).toBeLessThan(0.01);
-	});
-
-	test("waves are procedural and the hidden tab pauses the loop", async ({
+	test("canvas renders procedurally and the hidden tab pauses the loop", async ({
 		page,
 	}) => {
-		// living-background specs "Waves are procedural" + "Hidden tab pauses
-		// waves": the wave rendering fetches no image/media assets (favicons
-		// are page chrome; the audio probe is a HEAD request), and the
-		// visibilitychange lifecycle freezes the canvas until the tab returns.
+		// living-background specs "Procedural rendering" + "Hidden tab pauses
+		// the loop": the canvas animation fetches no image/media assets
+		// (favicons are page chrome; the audio probe is a HEAD request), and
+		// the visibilitychange lifecycle freezes the canvas until the tab
+		// returns.
 		const loaded: string[] = [];
 		page.on("request", (request) => {
 			const type = request.resourceType();
@@ -197,109 +196,24 @@ test.describe("reduced motion", () => {
 	});
 });
 
-test.describe("figure layer", () => {
-	// Decorative figure/artifact layer (living-background spec scenarios
-	// "Original abstract figures render over atmosphere" / "Figures are
-	// decoration only" / "Figures static under reduced motion"; design AD3):
-	// One original inline-SVG composition per view route, fixed between the
-	// canvas and content, aria-hidden, pointer-events-none, zero JS, and fully
-	// static under prefers-reduced-motion. The main shell intentionally has no
-	// figure layer; placements below cover projects, skills, about, resume,
-	// and 404's shell variant.
-	const figureLayer = (page: Page) => page.locator(".figure-layer");
+test.describe("removed decorative figure layer", () => {
+	// The decorative figure/artifact layer (FigureLayer.astro) is removed:
+	// no route — shell, views, or 404 — renders a .figure-layer element or
+	// its data hook. The background contract is now CSS gradient/scanlines +
+	// canvas (caustic, bubbles, particles) only.
+	const routes = ["/", "/about", "/resume", "/projects", "/skills", "/404"];
 
-	const layerStyle = (page: Page) =>
-		figureLayer(page).evaluate((el) => {
-			const style = getComputedStyle(el);
-			return {
-				pointerEvents: style.pointerEvents,
-				zIndex: style.zIndex,
-				animation: style.animationName,
-				transition: style.transitionDuration,
-				opacity: style.opacity,
-				transform: style.transform,
-			};
-		});
-
-	const ROUTE_PLACEMENTS: [
-		string,
-		{ left: number; top: number; width: number; height: number },
-	][] = [
-		["/projects", { left: 0, top: 0, width: 1280, height: 288 }],
-		["/skills", { left: 665.6, top: 0, width: 614.4, height: 720 }],
-		["/about", { left: 0, top: 273.6, width: 704, height: 446.4 }],
-		["/resume", { left: 0, top: 86.4, width: 537.6, height: 547.2 }],
-		["/404", { left: 640, top: 0, width: 640, height: 720 }],
-	];
-
-	test("decorative figure renders above the atmosphere and below content", async ({
-		page,
-	}) => {
-		await page.goto("/projects");
-		const layer = figureLayer(page);
-		await expect(layer).toBeVisible();
-		await expect(layer).toHaveAttribute("aria-hidden", "true");
-		await expect(layer.locator("svg")).toHaveCount(1);
-		const style = await layerStyle(page);
-		expect(style.pointerEvents).toBe("none");
-		expect(style.zIndex).toBe("-1");
-		// Same negative z-index layer as the canvas, painted after it in DOM
-		// order, so the figure sits above the animated atmosphere and below
-		// content (stacking: glow -> scanlines -> canvas -> figure -> content).
-		// compareDocumentPosition returns PRECEDING when the canvas (other)
-		// precedes the figure (this node).
-		const paintsAboveCanvas = await page.evaluate(() => {
-			const canvas = document.getElementById("living-background");
-			const figure = document.querySelector(".figure-layer");
-			if (!canvas || !figure) return false;
-			return (
-				(figure.compareDocumentPosition(canvas) &
-					Node.DOCUMENT_POSITION_PRECEDING) !==
-				0
-			);
-		});
-		expect(paintsAboveCanvas).toBe(true);
-	});
-
-	test("main route omits the decorative figure layer", async ({ page }) => {
-		await page.goto("/");
-		await expect(figureLayer(page)).toHaveCount(0);
-	});
-
-	test("figures render static under reduced motion", async ({ page }) => {
-		await page.emulateMedia({ reducedMotion: "reduce" });
-		for (const path of ["/projects"]) {
+	test("no route renders the removed figure layer", async ({ page }) => {
+		for (const path of routes) {
 			await page.goto(path);
-			await expect(figureLayer(page)).toBeVisible();
-			const style = await layerStyle(page);
-			expect(style.animation, `${path} no animation`).toBe("none");
-			expect(style.transition, `${path} no transition`).toBe("0s");
-			expect(style.opacity, `${path} fully opaque`).toBe("1");
-			expect(style.transform, `${path} no transform`).toBe("none");
-		}
-	});
-
-	test("every figure route places its own variant", async ({ page }) => {
-		for (const [path, expected] of ROUTE_PLACEMENTS) {
-			await page.goto(path);
-			const layer = figureLayer(page);
-			await expect(layer, `${path} figure visible`).toBeVisible();
-			await expect(layer).toHaveAttribute("aria-hidden", "true");
-			const actual = await layer.evaluate((el) => {
-				const style = getComputedStyle(el);
-				return {
-					left: parseFloat(style.left),
-					top: parseFloat(style.top),
-					width: parseFloat(style.width),
-					height: parseFloat(style.height),
-				};
-			});
-			for (const key of ["left", "top", "width", "height"] as const) {
-				expect(
-					Math.abs(actual[key] - expected[key]),
-					`${path} ${key} placement (got ${actual[key]})`,
-				).toBeLessThanOrEqual(2);
-			}
+			await expect(
+				page.locator(".figure-layer"),
+				`${path} must not render a figure layer`,
+			).toHaveCount(0);
+			await expect(
+				page.locator("[data-figure-layer]"),
+				`${path} must not render the figure-layer hook`,
+			).toHaveCount(0);
 		}
 	});
 });

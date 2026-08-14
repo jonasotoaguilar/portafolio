@@ -12,23 +12,15 @@ import {
 	renderParticles,
 	stepParticles,
 } from "../lib/canvas/particles";
-import type { WaveField } from "../lib/canvas/waves";
-import { createWaveField, renderWaves, stepWaves } from "../lib/canvas/waves";
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
-/** Fixed geometry seed: the same deterministic ocean on every load and swap. */
+/** Fixed geometry seed: the same deterministic field on every load and swap. */
 const OCEAN_SEED = 42;
-
-/** Ocean sub-layers stashed on the persisted canvas across swaps. */
-interface OceanState {
-	waves: WaveField;
-	bubbles: BubbleField;
-}
 
 /** The persisted canvas carries the fields across view-transition swaps. */
 type CanvasWithField = HTMLCanvasElement & {
 	livingBackgroundField?: ParticleField;
-	livingBackgroundOcean?: OceanState;
+	livingBackgroundBubbles?: BubbleField;
 };
 
 // `let`: on a view-transition swap the incoming page's script runs before the
@@ -40,7 +32,7 @@ const canvas = document.getElementById(
 let ctx: CanvasRenderingContext2D | null = null;
 let media: MediaQueryList | null = null;
 let field: ParticleField | null = null;
-let ocean: OceanState | null = null;
+let bubbles: BubbleField | null = null;
 let rafId = 0;
 let running = false;
 let destroyed = false;
@@ -55,10 +47,6 @@ function paintCaustic(g: CanvasRenderingContext2D): void {
 	g.fillRect(0, 0, g.canvas.width, g.canvas.height);
 }
 
-function isShellRoute(): boolean {
-	return document.documentElement.dataset.route === "shell";
-}
-
 function resizeCanvas(): void {
 	if (!ctx || !canvas) return;
 	const dpr = cappedDpr(window.devicePixelRatio || 1);
@@ -69,28 +57,21 @@ function resizeCanvas(): void {
 	canvas.height = Math.round(height * dpr);
 	ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 	field = createParticleField(PARTICLE_CAP, width, height);
-	ocean = {
-		waves: createWaveField(OCEAN_SEED, width, height),
-		bubbles: createBubbles(OCEAN_SEED, width, height),
-	};
+	bubbles = createBubbles(OCEAN_SEED, width, height);
 }
 function paintFrame(): void {
-	if (!ctx || !field || !ocean) return;
+	if (!ctx || !field || !bubbles) return;
 
 	ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 	paintCaustic(ctx);
-	if (!isShellRoute()) renderWaves(ocean.waves, ctx);
-	renderBubbles(ocean.bubbles, ctx);
+	renderBubbles(bubbles, ctx);
 	renderParticles(field, ctx);
 }
 function loopFrame(): void {
 	paintFrame();
-	if (!field || !ocean) return;
+	if (!field || !bubbles) return;
 	field = stepParticles(field);
-	ocean = {
-		waves: stepWaves(ocean.waves),
-		bubbles: stepBubbles(ocean.bubbles),
-	};
+	bubbles = stepBubbles(bubbles);
 	rafId = requestAnimationFrame(loopFrame);
 }
 function startLoop(): void {
@@ -128,7 +109,7 @@ function destroy(): void {
 	// transition:persist moves this element into the next page; stash the
 	// fields so the re-initialized script continues the same animation.
 	if (canvas && field) canvas.livingBackgroundField = field;
-	if (canvas && ocean) canvas.livingBackgroundOcean = ocean;
+	if (canvas && bubbles) canvas.livingBackgroundBubbles = bubbles;
 	media?.removeEventListener("change", syncReducedMotion);
 	document.removeEventListener("visibilitychange", onVisibilityChange);
 	window.removeEventListener("resize", onResize);
@@ -145,8 +126,8 @@ function init(): void {
 	// animation continues instead of restarting.
 	const stashed = canvas.livingBackgroundField;
 	if (stashed) field = stashed;
-	const stashedOcean = canvas.livingBackgroundOcean;
-	if (stashedOcean) ocean = stashedOcean;
+	const stashedBubbles = canvas.livingBackgroundBubbles;
+	if (stashedBubbles) bubbles = stashedBubbles;
 
 	media.addEventListener("change", syncReducedMotion);
 	document.addEventListener("visibilitychange", onVisibilityChange);
