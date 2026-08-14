@@ -54,6 +54,19 @@ function goToMenu(): void {
 	document.querySelector<HTMLAnchorElement>('a[href="/"]')?.click();
 }
 
+// SKILLS owns its ArrowUp/Down inside the fixed seven-card window: the
+// skills-scroll coordinator implements the edge-stuck carousel (one-row
+// scrolls at the window edges), which the generic move cannot produce. This
+// narrowly scoped check delegates only the arrow keys whose target sits
+// inside the skills viewport; Escape/Enter/other keys and every other view
+// (Projects, Resume) keep the generic behavior unchanged.
+function skillsOwnsArrows(target: EventTarget | null): boolean {
+	if (!(target instanceof Node)) return false;
+	return (
+		root?.querySelector("[data-skills-viewport]")?.contains(target) ?? false
+	);
+}
+
 function onKeydown(event: KeyboardEvent): void {
 	if (event.key === "Escape") {
 		event.preventDefault();
@@ -67,6 +80,14 @@ function onKeydown(event: KeyboardEvent): void {
 			// effect wiring plays menu_close for a[href="/"].
 			goToMenu();
 		}
+		return;
+	}
+	if (
+		(event.key === "ArrowUp" || event.key === "ArrowDown") &&
+		skillsOwnsArrows(event.target)
+	) {
+		// The skills carousel handles the move (attributes, focus, one-row
+		// scroll, select sound); the generic handler must not also move.
 		return;
 	}
 	const result = reduceListKey({ activeIndex }, event.key, items.length);

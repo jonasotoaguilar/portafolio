@@ -11,6 +11,7 @@
 	--color-accent-500: #4666ff;
 	--color-accent-600: #2f46b8;
 	--color-accent-cyan: #38e1ff;
+	--color-accent-red: #e4002b;
 	--color-text-primary: #ffffff;
 	--color-text-secondary: #a7a7ab;
 	--color-scanline: #000000;
@@ -640,6 +641,240 @@ html[data-route="shell"] [data-menu-item]:focus-visible::after {
 
 .view-link:hover {
 	color: var(--color-bg-base);
+}
+
+/* Skills rank-card list (skills contract): one flattened parallelogram card
+   per skill — name + category on the left, RANK + numeric value on the
+   right. Cards lean opposite to the menu's italic (skewX(+8deg), content
+   counter-skewed so glyphs stay upright) and stagger along a diagonal via
+   the per-card --skill-index custom property (0.75rem x / 1px y per step;
+   tablet halves both; <768px and coarse pointers collapse the stagger to
+   full-width ≥44px targets). The offset is a REPEATED SLOT
+   (index % --skill-slot-count): every eighth card reuses slot 0 geometry,
+   so the diagonal never accumulates across the 22 cards and the enhanced
+   UI shows a fixed seven-slot window instead of a list that grows
+   diagonally across the page. The diagonal fits its window because the row
+   gap is at least six y-steps (slots 0..6 cover at most 6 * --skill-dy of
+   vertical drift), which also leaves a clean gap where slot 6 wraps back
+   to slot 0. The list takes a definite fluid width so every card is
+   uniform; the bottom padding only keeps the last card's red active shadow
+   visible at the bottom stop (the last card, slot 0, has no y-drift, so no
+   drift budget is needed). */
+.skills-scroll-region {
+	--skill-card-height: 3.5rem;
+	--skill-row-gap: 0.875rem;
+	--skill-slot-count: 7;
+	--skill-dx: 0.75rem;
+	--skill-dy: 0.0625rem;
+	/* The fixed window: exactly --skill-slot-count row pitches. The eighth
+	   card starts one pitch below the window edge, and the last visible
+	   card's 0.5rem red shadow lands exactly on the edge (the wrap invariant
+	   6 * --skill-dy <= --skill-row-gap guarantees it). The cap lives here —
+	   on the region, not the scroll container — so the overlay scrollbar
+	   anchored to the region's bottom hugs the window exactly. The window
+	   sizing is JS-gated: without the enhancement the region is plain
+	   document flow and all 22 fallback cards stay visible. */
+	--skills-window-height: calc(
+		var(--skill-slot-count) *
+		(var(--skill-card-height) + var(--skill-row-gap))
+	);
+	position: relative;
+}
+
+.skills-scroll-region[data-skills-enhanced] {
+	flex: 1;
+	min-height: 0;
+	max-height: var(--skills-window-height);
+}
+
+.skills-viewport [data-list] {
+	width: min(100%, 34rem);
+	gap: var(--skill-row-gap);
+	padding-bottom: 0.5rem;
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+	.skills-scroll-region {
+		--skill-dx: 0.375rem;
+		--skill-dy: 0.03125rem;
+	}
+}
+
+@media (max-width: 767px), (pointer: coarse) {
+	.skills-scroll-region {
+		--skill-dx: 0;
+		--skill-dy: 0;
+	}
+}
+
+.skill-list-item {
+	position: relative;
+	height: var(--skill-card-height);
+	transform: translate(
+		calc(var(--skill-index) * var(--skill-dx)),
+		calc(var(--skill-index) * var(--skill-dy))
+	);
+}
+
+.skill-card {
+	width: 100%;
+	height: 100%;
+	transform: skewX(8deg);
+}
+
+.skill-card-body,
+.skill-card-rank {
+	transform: skewX(-8deg);
+}
+
+.skill-card-category {
+	/* Block, not inline: an inline label inside the 24px Anton body would
+	   inherit the body's line box strut (~25px) and inflate the card past
+	   its fixed --skill-card-height. */
+	display: block;
+	color: var(--color-text-on-light-secondary);
+	font-family: var(--font-label);
+	font-size: 0.875rem;
+	letter-spacing: 0.08em;
+	line-height: 1.1;
+	text-transform: uppercase;
+}
+
+.skill-card-rank {
+	display: flex;
+	flex: none;
+	flex-direction: column;
+	align-items: flex-end;
+}
+
+.skill-card-rank-label {
+	color: var(--color-text-on-light-secondary);
+	font-family: var(--font-label);
+	font-size: 0.875rem;
+	letter-spacing: 0.08em;
+	line-height: 1.1;
+}
+
+.skill-card-rank-value {
+	color: var(--color-accent-on-light);
+	font-size: 1.75rem;
+	line-height: 1;
+}
+
+/* Active-card focus layer: a separate red parallelogram offset behind the
+   card (translate + same skew, geometry — never a box-shadow). It paints
+   only for the active card, keyed through the button's [data-active]
+   PRESENCE state (:has) because the skills controller toggles the attribute
+   to an empty value on the active slot after hydration (the no-JS fallback
+   renders it statically on the first card); the button sits above the
+   layer and its focus-visible outline is untouched. */
+.skill-list-item::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: var(--color-accent-red);
+	opacity: 0;
+	pointer-events: none;
+	transform: translate(0.5rem, 0.5rem) skewX(8deg);
+}
+
+.skill-list-item:has([data-active])::before {
+	opacity: 1;
+}
+
+@media (max-width: 767px), (pointer: coarse) {
+	.skill-list-item {
+		transform: none;
+	}
+}
+
+/* Skills list (skills contract): the ENHANCED viewport is a fixed,
+   NON-scrolling seven-slot stage — overflow hidden, no scrollTop, no
+   native scrollbar — and the region is capped at exactly seven row pitches
+   (JS-gated on [data-skills-enhanced]) so the fixed seven-slot window
+   never grows on tall screens. Without the enhancement gate (no-JS or
+   failed init) the viewport stays a plain block in normal document flow
+   and the page scrolls over all 22 fallback cards. */
+html[data-game-ready][data-route="skills"] [data-view] {
+	height: 100dvh;
+}
+
+.skills-scroll-region[data-skills-enhanced] .skills-viewport {
+	height: 100%;
+	overflow: hidden;
+	/* Never a native scrollbar in the enhanced stage. */
+	scrollbar-width: none;
+}
+
+.skills-scroll-region[data-skills-enhanced]
+	.skills-viewport::-webkit-scrollbar {
+	display: none;
+	width: 0;
+}
+
+/* Skills diagonal scrollbar (skills contract): a small scrollbar near the
+   LOWER-LEFT of the list — not the page edge — a 6–8px track with a
+   parallelogram thumb clipped to lean with the card geometry (same shape
+   language as the card skew). It is now a purely FIXED VISUAL AFFORDANCE:
+   the thumb fills the track and never moves (there is no scrollTop to
+   mirror), it is not a drag control, and neither track nor thumb ever
+   intercepts pointers. It renders only in the enhanced mode (JS-gated) and
+   appears when the list is hovered or focused; coarse pointers never see
+   it. Wheel changes focus, not the scrollbar. */
+.skills-scroll-region[data-skills-enhanced] .skills-scrollbar {
+	position: absolute;
+	left: 0.5rem;
+	bottom: 0.75rem;
+	display: block;
+	width: 7px;
+	height: clamp(4.5rem, 32%, 9rem);
+	background: color-mix(in srgb, var(--color-accent-cyan) 20%, transparent);
+	pointer-events: none;
+	z-index: 1;
+	visibility: hidden;
+	opacity: 0;
+	transition:
+		opacity 150ms ease-out,
+		visibility 0s linear 150ms;
+}
+
+.skills-scroll-region[data-skills-enhanced]:has(.skills-viewport:hover)
+	.skills-scrollbar,
+.skills-scroll-region[data-skills-enhanced]:has(.skills-viewport:focus-within)
+	.skills-scrollbar {
+	visibility: visible;
+	opacity: 1;
+	transition: opacity 150ms ease-out;
+}
+
+.skills-scroll-region[data-skills-enhanced] .skills-scrollbar-thumb {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: color-mix(
+		in srgb,
+		var(--color-accent-cyan) 70%,
+		var(--color-bg-base)
+	);
+	clip-path: polygon(0 0, calc(100% - 3px) 0, 100% 100%, 3px 100%);
+	pointer-events: none;
+}
+
+/* Coarse pointers: touch users interact with the slots directly — the
+   decorative scrollbar never renders. Same specificity as the enhanced
+   scrollbar rule so the display:none wins. */
+@media (pointer: coarse) {
+	.skills-scroll-region[data-skills-enhanced] .skills-scrollbar {
+		display: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.skills-scrollbar {
+		transition: none;
+	}
 }
 
 /* Sprite pattern utility (design route-asset-matrix): owner-created sprite

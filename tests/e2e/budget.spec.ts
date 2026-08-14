@@ -168,4 +168,59 @@ test.describe("first-load budget", () => {
 			await expect(page.getByText(probe, { exact: true })).toBeVisible();
 		}
 	});
+
+	test("SKILLS ships the fixed seven-slot recycled list: seven persistent slots, listbox semantics, red active layer", async ({
+		page,
+	}) => {
+		await page.goto("/skills");
+		// 7 persistent slot options (role=option), no detail panels, no
+		// fallback cards left in the enhanced DOM.
+		await expect(page.locator("main").getByRole("option")).toHaveCount(7);
+		await expect(page.locator("[data-detail-panel]")).toHaveCount(0);
+		await expect(page.locator("[data-skill-card]")).toHaveCount(0);
+		// Initial window: skills 1..7; the list is a listbox and slot 1
+		// carries posinset 1.
+		await expect(page.locator("[data-list]")).toHaveAttribute(
+			"role",
+			"listbox",
+		);
+		const first = page.locator("[data-skill-slot]").first();
+		await expect(first.getByText("Go", { exact: true })).toBeVisible();
+		await expect(first.getByText("Backend", { exact: true })).toBeVisible();
+		await expect(first.locator(".skill-card-rank-value")).toHaveText("4");
+		await expect(first).toHaveAttribute("aria-posinset", "1");
+		// Exactly one active slot; its red geometric layer paints behind it
+		// (the ::before lives on the slot's <li>, the button's parent).
+		await expect(page.locator("[data-skill-slot][data-active]")).toHaveCount(1);
+		const red = await page
+			.locator("[data-skill-slot][data-active]")
+			.first()
+			.locator("xpath=..")
+			.evaluate((el) => getComputedStyle(el, "::before").backgroundColor);
+		expect(red).toBe("rgb(228, 0, 43)");
+		// The data blob carries all 22 records (9 backend + 5 frontend + 8
+		// tooling) with ranks on the 1..4 scale.
+		const data = await page.evaluate(() =>
+			JSON.parse(document.getElementById("skills-data")?.textContent ?? "[]"),
+		);
+		expect(data).toHaveLength(22);
+		expect(
+			data.filter(
+				(entry: { category: string }) => entry.category === "Backend",
+			),
+		).toHaveLength(9);
+		expect(
+			data.filter(
+				(entry: { category: string }) => entry.category === "Frontend",
+			),
+		).toHaveLength(5);
+		expect(
+			data.filter(
+				(entry: { category: string }) => entry.category === "Tooling",
+			),
+		).toHaveLength(8);
+		for (const entry of data as { rank: number }[]) {
+			expect([1, 2, 3, 4]).toContain(entry.rank);
+		}
+	});
 });

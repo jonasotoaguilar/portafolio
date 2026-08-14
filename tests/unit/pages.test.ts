@@ -75,9 +75,21 @@ const { MOCK_PROJECTS, MOCK_SITE, MOCK_SKILLS } = vi.hoisted(() => {
 		pageTitle: "Jonathan Soto · Backend & Full-Stack Engineer",
 	};
 	const skills: Skills = {
-		backend: ["Go", "Python", "TypeScript"],
-		frontend: ["Astro", "React 19", "Next.js 16"],
-		tooling: ["Docker", "Git", "Biome"],
+		backend: [
+			{ name: "Go", rank: 4 },
+			{ name: "Python", rank: 3 },
+			{ name: "TypeScript", rank: 3 },
+		],
+		frontend: [
+			{ name: "Astro", rank: 3 },
+			{ name: "React 19", rank: 3 },
+			{ name: "Next.js 16", rank: 2 },
+		],
+		tooling: [
+			{ name: "Docker", rank: 3 },
+			{ name: "Git", rank: 4 },
+			{ name: "Biome", rank: 2 },
+		],
 	};
 	return {
 		MOCK_PROJECTS: projects,

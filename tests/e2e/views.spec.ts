@@ -199,20 +199,330 @@ test.describe("game shell and view routes", () => {
 		}
 	});
 
-	test("SKILLS groups render plain names with no numeric levels or metrics", async ({
+	test("SKILLS renders a fixed seven-slot recycled list with listbox semantics and no page growth", async ({
 		page,
 	}) => {
 		await page.goto("/skills");
-		// Content-region scope: the dev-only Astro toolbar injects its own
-		// buttons outside <main>, so page-wide button counts are unstable in
-		// dev (the toolbar is absent from production builds).
-		await expect(page.locator("main").getByRole("button")).toHaveCount(3);
-		await expect(page.getByRole("button", { name: "backend" })).toBeVisible();
-		const panel = page.locator("[data-detail-panel][data-active]");
-		await expect(panel.getByText("FastAPI")).toBeVisible();
-		const text = await page.locator("main").innerText();
-		expect(text).not.toContain("%");
-		expect(text).not.toMatch(/\d+\s*\/\s*\d+/);
+		// Exactly seven persistent slot options; the 22 fallback cards and
+		// any data-list-item hooks are gone from the enhanced DOM (view.ts
+		// no-ops on Skills).
+		await expect(page.locator("[data-skill-slot]")).toHaveCount(7);
+		await expect(page.locator("[data-skill-card]")).toHaveCount(0);
+		await expect(page.locator("[data-list-item]")).toHaveCount(0);
+		await expect(page.locator("[data-detail-panel]")).toHaveCount(0);
+		// Listbox contract: role=listbox list, option slots with setsize.
+		await expect(page.locator("[data-list]")).toHaveAttribute(
+			"role",
+			"listbox",
+		);
+		await expect(page.locator("[data-skill-slot]").first()).toHaveAttribute(
+			"role",
+			"option",
+		);
+		await expect(page.locator("[data-skill-slot]").first()).toHaveAttribute(
+			"aria-setsize",
+			"22",
+		);
+		// The enhanced stage is fixed and non-scrolling; the page never
+		// grows horizontally or vertically.
+		const stage = await page.evaluate(() => {
+			const region = document.querySelector(".skills-scroll-region");
+			const vp = document.querySelector("[data-skills-viewport]");
+			if (!region || !vp) return null;
+			return {
+				regionHeight: region.getBoundingClientRect().height,
+				vpHeight: vp.getBoundingClientRect().height,
+				scrollTop: vp.scrollTop,
+				overflow: getComputedStyle(vp).overflow,
+				docScrollWidth: document.documentElement.scrollWidth,
+				innerWidth: window.innerWidth,
+				docScrollHeight: document.documentElement.scrollHeight,
+				innerHeight: window.innerHeight,
+			};
+		});
+		expect(stage).not.toBeNull();
+		expect(stage!.regionHeight).toBeCloseTo(stage!.vpHeight, 0);
+		expect(stage!.overflow).toBe("hidden");
+		expect(stage!.scrollTop).toBe(0);
+		expect(stage!.docScrollWidth).toBeLessThanOrEqual(stage!.innerWidth);
+		expect(stage!.docScrollHeight).toBeLessThanOrEqual(stage!.innerHeight);
+		// Initial window: skills 1..7 — slot 1 shows Go/Backend/RANK 4 and
+		// carries the active + focus state.
+		const first = page.locator("[data-skill-slot]").first();
+		await expect(first.getByText("Go", { exact: true })).toBeVisible();
+		await expect(first.getByText("Backend", { exact: true })).toBeVisible();
+		await expect(first.getByText("RANK", { exact: true })).toBeVisible();
+		await expect(first.locator(".skill-card-rank-value")).toHaveText("4");
+		await expect(first).toBeFocused();
+		await expect(first).toHaveAttribute("aria-selected", "true");
+		// The window is scoped, not the whole list: all seven visible slots
+		// are the backend group's first entries (9 exist in the data).
+		await expect(page.getByText("Backend", { exact: true })).toHaveCount(7);
+	});
+
+	test("SKILLS ships the 22 skill records once in the inline data blob", async ({
+		page,
+	}) => {
+		await page.goto("/skills");
+		const data = await page.evaluate(() => {
+			const el = document.getElementById("skills-data");
+			if (!el) return null;
+			return JSON.parse(el.textContent ?? "");
+		});
+		expect(data).not.toBeNull();
+		expect(data).toHaveLength(22);
+		expect(data[0]).toEqual({ name: "Go", category: "Backend", rank: 4 });
+		expect(data[21]).toEqual({ name: "Vitest", category: "Tooling", rank: 2 });
+		const ranks = (data as { rank: number }[]).map((entry) => entry.rank);
+		for (const rank of ranks) {
+			expect([1, 2, 3, 4]).toContain(rank);
+		}
+	});
+
+	test("SKILLS slot geometry is fixed: card boxes never move as the window advances", async ({
+		page,
+	}) => {
+		await page.goto("/skills");
+		const boxes = () =>
+			page.locator("[data-skill-slot]").evaluateAll((els) =>
+				els.map((el) => {
+					const rect = el.getBoundingClientRect();
+					return { x: rect.x, y: rect.y, w: rect.width, h: rect.height };
+				}),
+			);
+		const before = await boxes();
+		// Moving focus through the slots never moves their boxes.
+		for (let i = 0; i < 6; i += 1) {
+			await page.keyboard.press("ArrowDown");
+		}
+		expect(await boxes()).toEqual(before);
+		// Advancing the data window (2..8) updates content, not geometry.
+		await page.keyboard.press("ArrowDown");
+		expect(await boxes()).toEqual(before);
+		// Uniform card sizes on the diagonal stage.
+		expect(before[6]!.w).toBeCloseTo(before[0]!.w, 0);
+		expect(before[6]!.h).toBeCloseTo(before[0]!.h, 0);
+		// The diagonal stagger still leans within the window.
+		expect(before[1]!.x).toBeGreaterThan(before[0]!.x);
+		expect(before[1]!.y).toBeGreaterThan(before[0]!.y);
+		// The stage is exactly seven row pitches tall.
+		const stage = await page.evaluate(() => {
+			const region = document.querySelector(".skills-scroll-region");
+			const vp = document.querySelector("[data-skills-viewport]");
+			if (!region || !vp) return null;
+			const style = getComputedStyle(region);
+			const fontSize = parseFloat(
+				getComputedStyle(document.documentElement).fontSize,
+			);
+			const rem = (value: string) => parseFloat(value) * fontSize;
+			return {
+				vpHeight: vp.getBoundingClientRect().height,
+				regionHeight: region.getBoundingClientRect().height,
+				pitch:
+					rem(style.getPropertyValue("--skill-card-height")) +
+					rem(style.getPropertyValue("--skill-row-gap")),
+			};
+		});
+		expect(stage).not.toBeNull();
+		expect(stage!.regionHeight).toBeCloseTo(stage!.vpHeight, 0);
+		expect(stage!.vpHeight).toBeCloseTo(7 * stage!.pitch, 0);
+		// Coarse/mobile layouts collapse the stagger into a straight column.
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto("/skills");
+		const mobile = await boxes();
+		expect(Math.abs(mobile[1]!.x - mobile[0]!.x)).toBeLessThanOrEqual(1);
+	});
+
+	test("SKILLS active slot shows the red geometric parallelogram behind it", async ({
+		page,
+	}) => {
+		await page.goto("/skills");
+		// After hydration exactly one slot carries the active presence; the
+		// CSS keys on it (the ::before lives on the slot's <li>, the
+		// button's parent).
+		await expect(page.locator("[data-skill-slot][data-active]")).toHaveCount(1);
+		const active = page
+			.locator("[data-skill-slot][data-active]")
+			.first()
+			.locator("xpath=..");
+		const shadow = await active.evaluate((el) => {
+			const style = getComputedStyle(el, "::before");
+			return {
+				background: style.backgroundColor,
+				boxShadow: style.boxShadow,
+				opacity: style.opacity,
+				pointerEvents: style.pointerEvents,
+				transform: style.transform,
+			};
+		});
+		// Geometry, not a CSS box-shadow: a red layer offset behind the card.
+		expect(shadow.opacity).toBe("1");
+		expect(shadow.background).toBe("rgb(228, 0, 43)");
+		expect(shadow.boxShadow).toBe("none");
+		expect(shadow.transform).not.toBe("none");
+		// The decorative layer never intercepts pointers.
+		expect(shadow.pointerEvents).toBe("none");
+		const inactive = page
+			.locator("[data-skill-slot]:not([data-active])")
+			.first()
+			.locator("xpath=..");
+		const inactiveOpacity = await inactive.evaluate(
+			(el) => getComputedStyle(el, "::before").opacity,
+		);
+		expect(inactiveOpacity).toBe("0");
+	});
+
+	test("SKILLS arrows: six moves traverse the slots, the seventh advances the window, and it wraps; Escape returns to the menu", async ({
+		page,
+	}) => {
+		await page.goto("/skills");
+		const slots = page.locator("[data-skill-slot]");
+		const names = () =>
+			page.locator("[data-skill-slot] .block").allTextContents();
+		const initial = [
+			"Go",
+			"Python",
+			"TypeScript",
+			"Node.js",
+			"FastAPI",
+			"SQLAlchemy 2",
+			"Alembic",
+		];
+		await expect(slots.first()).toBeFocused();
+		expect(await names()).toEqual(initial);
+		// Slots 2..7: six ArrowDowns move focus with NO content/window change.
+		for (let i = 1; i <= 6; i += 1) {
+			await page.keyboard.press("ArrowDown");
+			await expect(slots.nth(i)).toBeFocused();
+			expect(await names()).toEqual(initial);
+		}
+		// The 7th ArrowDown advances the window to skills 2..8; focus stays
+		// visually on slot 7, whose content becomes skill 8 (Appwrite).
+		await page.keyboard.press("ArrowDown");
+		await expect(slots.nth(6)).toBeFocused();
+		expect(await names()).toEqual([
+			"Python",
+			"TypeScript",
+			"Node.js",
+			"FastAPI",
+			"SQLAlchemy 2",
+			"Alembic",
+			"Appwrite",
+		]);
+		await expect(slots.nth(6)).toHaveAttribute("aria-posinset", "8");
+		// Repeated moves reach the last skill (22) and wrap last -> first.
+		for (let i = 0; i < 14; i += 1) {
+			await page.keyboard.press("ArrowDown");
+		}
+		expect(await names()).toEqual([
+			"Docker Compose",
+			"Git",
+			"GitHub Actions",
+			"pnpm",
+			"Biome",
+			"Playwright",
+			"Vitest",
+		]);
+		await expect(slots.nth(6)).toHaveAttribute("aria-posinset", "22");
+		await page.keyboard.press("ArrowDown");
+		expect(await names()).toEqual(initial);
+		await expect(slots.first()).toBeFocused();
+		// Enter keeps the list primary: no detail panel opens.
+		await page.keyboard.press("Enter");
+		await expect(page.locator("[data-detail-panel]")).toHaveCount(0);
+		// With no panel to close, Escape leaves the view for the shell.
+		await page.keyboard.press("Escape");
+		await expect(page).toHaveURL(/\/$/);
+	});
+
+	test("SKILLS ArrowUp mirrors at slot 1 and wraps first -> last", async ({
+		page,
+	}) => {
+		await page.goto("/skills");
+		const slots = page.locator("[data-skill-slot]");
+		const names = () =>
+			page.locator("[data-skill-slot] .block").allTextContents();
+		// From the initial window, ArrowUp wraps first -> last: window
+		// 16..22 with focus on slot 7.
+		await page.keyboard.press("ArrowUp");
+		await expect(slots.nth(6)).toBeFocused();
+		expect(await names()).toEqual([
+			"Docker Compose",
+			"Git",
+			"GitHub Actions",
+			"pnpm",
+			"Biome",
+			"Playwright",
+			"Vitest",
+		]);
+		// Six ArrowUps walk focus up inside the window with no content change.
+		for (let i = 5; i >= 0; i -= 1) {
+			await page.keyboard.press("ArrowUp");
+			await expect(slots.nth(i)).toBeFocused();
+			expect(await names()).toEqual([
+				"Docker Compose",
+				"Git",
+				"GitHub Actions",
+				"pnpm",
+				"Biome",
+				"Playwright",
+				"Vitest",
+			]);
+		}
+		// Further ArrowUps shift the window back one skill per press, focus
+		// stuck to slot 1, until the initial window is restored.
+		await page.keyboard.press("ArrowUp"); // window 15..21
+		expect(await names()).toEqual([
+			"Docker",
+			"Docker Compose",
+			"Git",
+			"GitHub Actions",
+			"pnpm",
+			"Biome",
+			"Playwright",
+		]);
+		await expect(slots.first()).toBeFocused();
+		for (let i = 0; i < 14; i += 1) {
+			await page.keyboard.press("ArrowUp");
+		}
+		expect(await names()).toEqual([
+			"Go",
+			"Python",
+			"TypeScript",
+			"Node.js",
+			"FastAPI",
+			"SQLAlchemy 2",
+			"Alembic",
+		]);
+		await expect(slots.first()).toBeFocused();
+	});
+
+	test("SKILLS click selects the slot in place without stealing unrelated focus", async ({
+		page,
+	}) => {
+		await page.goto("/skills");
+		// Focus the back-to-menu link (outside the window).
+		await page.locator('a[href="/"]').focus();
+		await expect(page.locator('a[href="/"]')).toBeFocused();
+		// Clicking a slot moves active + focus to it; the window never moves.
+		const third = page.locator("[data-skill-slot]").nth(2);
+		await third.click();
+		await expect(third).toHaveAttribute("data-active", /.*/);
+		await expect(third).toBeFocused();
+		await expect(third).toHaveAttribute("aria-selected", "true");
+		await expect(third).toHaveAttribute("aria-posinset", "3");
+		// Window unchanged by clicks: content stays skills 1..7.
+		expect(
+			await page.locator("[data-skill-slot] .block").allTextContents(),
+		).toEqual([
+			"Go",
+			"Python",
+			"TypeScript",
+			"Node.js",
+			"FastAPI",
+			"SQLAlchemy 2",
+			"Alembic",
+		]);
 	});
 
 	test("CONTACT is no longer a generated page: /contact resolves through the normal 404 behavior", async ({
@@ -263,8 +573,8 @@ test.describe("game shell and view routes", () => {
 	test("Escape closes an open panel first, then returns to the menu", async ({
 		page,
 	}) => {
-		await page.goto("/skills");
-		await page.getByRole("button", { name: "backend" }).focus();
+		await page.goto("/projects");
+		await page.getByRole("button", { name: "ServiceFlow" }).focus();
 		await page.keyboard.press("Enter");
 		await expect(page.locator("[data-detail-panel][data-active]")).toHaveCount(
 			1,
@@ -276,7 +586,9 @@ test.describe("game shell and view routes", () => {
 		await expect(page.locator("[data-detail-panel][data-active]")).toHaveCount(
 			0,
 		);
-		await expect(page.getByRole("button", { name: "backend" })).toBeFocused();
+		await expect(
+			page.getByRole("button", { name: "ServiceFlow" }),
+		).toBeFocused();
 		await page.keyboard.press("Escape");
 		await expect(page).toHaveURL(/\/$/);
 	});
@@ -298,6 +610,369 @@ test.describe("game shell and view routes", () => {
 		await expect(
 			page.getByRole("link", { name: "Back to home" }),
 		).toHaveAttribute("href", "/");
+	});
+});
+
+// SKILLS overlay scrollbar (skills contract): the list owns its scroll
+// viewport — .skills-viewport scrolls while the view header stays fixed —
+// with native scrollbar visuals hidden and a small diagonal custom thumb
+// near the list's lower-left. The thumb is decorative (aria-hidden, never a
+// tab stop), appears only on hover/focus when the list overflows, mirrors
+// scrollTop, and can be dragged. Browser overlay scrollbars make paint
+// assertions unreliable, so these tests assert DOM geometry, computed CSS,
+// and scroll metrics instead of screenshots.
+test.describe("SKILLS diagonal scrollbar (fixed affordance)", () => {
+	const viewport = (page: Page) => page.locator("[data-skills-viewport]");
+	const track = (page: Page) => page.locator("[data-skills-scrollbar]");
+	const thumb = (page: Page) => page.locator("[data-skills-thumb]");
+
+	test("the enhanced list never scrolls: scrollTop stays 0 and the page does not scroll", async ({
+		page,
+	}) => {
+		await page.goto("/skills");
+		const vp = viewport(page);
+		// Fixed stage: overflow hidden, no native scrolling.
+		const metrics = await vp.evaluate((el) => ({
+			overflow: getComputedStyle(el).overflow,
+			scrollTop: el.scrollTop,
+		}));
+		expect(metrics.overflow).toBe("hidden");
+		expect(metrics.scrollTop).toBe(0);
+		// Wheel over the list emits transitions but never scrolls anything.
+		await vp.hover();
+		await page.mouse.wheel(0, 300);
+		await page.mouse.wheel(0, -300);
+		await expect.poll(() => vp.evaluate((el) => el.scrollTop)).toBe(0);
+		expect(await page.evaluate(() => window.scrollY)).toBe(0);
+		// main and the page have no scroll container of their own.
+		const main = await page.locator("main").evaluate((el) => ({
+			overflowY: getComputedStyle(el).overflowY,
+			scrollHeight: el.scrollHeight,
+			clientHeight: el.clientHeight,
+		}));
+		expect(main.overflowY).not.toBe("auto");
+		expect(main.scrollHeight).toBeLessThanOrEqual(main.clientHeight);
+	});
+
+	test("the scrollbar is a fixed decorative affordance: static thumb, no drag, no pointer targets", async ({
+		page,
+	}) => {
+		await page.goto("/skills");
+		const vp = viewport(page);
+		// Revealed on hover or focus within the list.
+		await vp.hover();
+		await expect(track(page)).toBeVisible();
+		await expect(thumb(page)).toBeVisible();
+		const vpBox = await vp.boundingBox();
+		const trackBox = await track(page).boundingBox();
+		const thumbBox = await thumb(page).boundingBox();
+		if (!vpBox || !trackBox || !thumbBox) {
+			throw new Error("expected visible viewport, track, and thumb boxes");
+		}
+		// Near the list's lower-left — not the page edge.
+		expect(trackBox.x - vpBox.x).toBeGreaterThanOrEqual(0);
+		expect(trackBox.x - vpBox.x).toBeLessThan(24);
+		expect(
+			vpBox.y + vpBox.height - (trackBox.y + trackBox.height),
+		).toBeLessThan(24);
+		// Narrow track: 6–8px.
+		expect(trackBox.width).toBeGreaterThanOrEqual(6);
+		expect(trackBox.width).toBeLessThanOrEqual(8);
+		// FIXED: the thumb fills the track and never moves (no scrollTop to
+		// mirror, no drag).
+		expect(thumbBox.height).toBe(trackBox.height);
+		expect(thumbBox.x).toBe(trackBox.x);
+		// Diagonal geometry: the thumb is clipped to a parallelogram.
+		const clipPath = await thumb(page).evaluate(
+			(el) => getComputedStyle(el).clipPath,
+		);
+		expect(clipPath).toMatch(/polygon/);
+		// Decorative: aria-hidden, never a tab stop, never a pointer target.
+		await expect(track(page)).toHaveAttribute("aria-hidden", "true");
+		expect(
+			await thumb(page).evaluate((el) => el.getAttribute("tabindex")),
+		).toBeNull();
+		expect(
+			await track(page).evaluate((el) => getComputedStyle(el).pointerEvents),
+		).toBe("none");
+		expect(
+			await thumb(page).evaluate((el) => getComputedStyle(el).pointerEvents),
+		).toBe("none");
+		// Wheel steps change focus, never the thumb.
+		await page.mouse.wheel(0, 106);
+		const after = await thumb(page).boundingBox();
+		expect(after?.x).toBe(thumbBox.x);
+		expect(after?.y).toBe(thumbBox.y);
+		expect(after?.height).toBe(thumbBox.height);
+		expect(await vp.evaluate((el) => el.scrollTop)).toBe(0);
+	});
+
+	test("the fixed seven-slot window never grows on tall screens", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 2400 });
+		await page.goto("/skills");
+		const tall = await viewport(page).evaluate(
+			(el) => el.getBoundingClientRect().height,
+		);
+		await page.setViewportSize({ width: 1280, height: 720 });
+		await page.goto("/skills");
+		const defaultHeight = await viewport(page).evaluate(
+			(el) => el.getBoundingClientRect().height,
+		);
+		expect(tall).toBe(defaultHeight);
+		// The stage fits exactly seven row pitches (card + gap).
+		const pitch = await viewport(page).evaluate((el) => {
+			const style = getComputedStyle(el.closest(".skills-scroll-region")!);
+			const fontSize = parseFloat(
+				getComputedStyle(document.documentElement).fontSize,
+			);
+			const rem = (value: string) => parseFloat(value) * fontSize;
+			return (
+				rem(style.getPropertyValue("--skill-card-height")) +
+				rem(style.getPropertyValue("--skill-row-gap"))
+			);
+		});
+		expect(defaultHeight).toBeCloseTo(7 * pitch, 0);
+	});
+
+	test("no horizontal overflow exists on the list or the page", async ({
+		page,
+	}) => {
+		await page.goto("/skills");
+		const metrics = await viewport(page).evaluate((el) => ({
+			scrollWidth: el.scrollWidth,
+			clientWidth: el.clientWidth,
+		}));
+		expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
+		const doc = await page.evaluate(() => ({
+			scrollWidth: document.documentElement.scrollWidth,
+			innerWidth: window.innerWidth,
+		}));
+		expect(doc.scrollWidth).toBeLessThanOrEqual(doc.innerWidth);
+	});
+
+	test.describe("coarse pointer", () => {
+		test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+		test("custom scrollbar never renders; the seven slots still work", async ({
+			page,
+		}) => {
+			await page.goto("/skills");
+			expect(
+				await track(page).evaluate((el) => getComputedStyle(el).display),
+			).toBe("none");
+			await expect(page.locator("[data-skill-slot]")).toHaveCount(7);
+			// Keyboard navigation still works on coarse pointers.
+			await page.locator("[data-skill-slot]").first().focus();
+			await page.keyboard.press("ArrowDown");
+			await expect(page.locator("[data-skill-slot]").nth(1)).toBeFocused();
+		});
+	});
+});
+
+// SKILLS recycled seven-slot list (skills contract): the enhanced UI is a
+// fixed-slot recycled list — seven persistent slot buttons whose
+// text/category/rank content is updated as the data window advances. Wheel
+// and keyboard drive the same discrete one-step transitions; there is no
+// scrollTop and no native scrollbar. The no-JS fallback keeps all 22 cards
+// in normal document flow.
+test.describe("SKILLS recycled seven-slot list", () => {
+	const viewport = (page: Page) => page.locator("[data-skills-viewport]");
+	const slots = (page: Page) => page.locator("[data-skill-slot]");
+	const names = (page: Page) =>
+		page.locator("[data-skill-slot] .block").allTextContents();
+	const initialWindow = [
+		"Go",
+		"Python",
+		"TypeScript",
+		"Node.js",
+		"FastAPI",
+		"SQLAlchemy 2",
+		"Alembic",
+	];
+
+	test("wheel emits one discrete transition per threshold; scrollTop and page scroll stay 0; ctrl+wheel is untouched", async ({
+		page,
+	}) => {
+		await page.goto("/skills");
+		await expect(slots(page).first()).toBeFocused();
+		await viewport(page).hover();
+		const scrollState = () =>
+			page.evaluate(() => ({
+				vp: document.querySelector("[data-skills-viewport]")?.scrollTop ?? -1,
+				page: window.scrollY,
+			}));
+		// One threshold step (53px) moves focus to slot 2; nothing scrolls.
+		await page.mouse.wheel(0, 53);
+		await expect(slots(page).nth(1)).toBeFocused();
+		expect(await scrollState()).toEqual({ vp: 0, page: 0 });
+		// Sub-threshold deltas accumulate across events (40 + 40 + 40 emits
+		// two steps, carrying the remainder).
+		await page.mouse.wheel(0, 40);
+		await expect(slots(page).nth(1)).toBeFocused();
+		await page.mouse.wheel(0, 40);
+		await expect(slots(page).nth(2)).toBeFocused();
+		await page.mouse.wheel(0, 40);
+		await expect(slots(page).nth(3)).toBeFocused();
+		// One large delta emits several steps (53 * 3 + 10).
+		await page.mouse.wheel(0, 169);
+		await expect(slots(page).nth(6)).toBeFocused();
+		// Wheel down at the bottom slot advances the data window.
+		await page.mouse.wheel(0, 53);
+		expect(await names(page)).toEqual([
+			"Python",
+			"TypeScript",
+			"Node.js",
+			"FastAPI",
+			"SQLAlchemy 2",
+			"Alembic",
+			"Appwrite",
+		]);
+		// Wheel up mirrors: from a slot stuck to the bottom edge, up-steps
+		// first walk focus up inside the window (carrying the accumulated
+		// remainder); only when focus reaches slot 1 does the window shift
+		// back one skill per press.
+		await page.mouse.wheel(0, -53); // absorbed: no step yet (remainder)
+		expect(await names(page)).toEqual([
+			"Python",
+			"TypeScript",
+			"Node.js",
+			"FastAPI",
+			"SQLAlchemy 2",
+			"Alembic",
+			"Appwrite",
+		]);
+		await page.mouse.wheel(0, -53); // focus slot 5 (sixth visible)
+		await expect(slots(page).nth(5)).toBeFocused();
+		expect(await names(page)).toEqual([
+			"Python",
+			"TypeScript",
+			"Node.js",
+			"FastAPI",
+			"SQLAlchemy 2",
+			"Alembic",
+			"Appwrite",
+		]);
+		// Walk focus up to slot 1...
+		for (let i = 0; i < 4; i += 1) {
+			await page.mouse.wheel(0, -53);
+		}
+		await expect(slots(page).nth(1)).toBeFocused();
+		expect(await names(page)).toEqual([
+			"Python",
+			"TypeScript",
+			"Node.js",
+			"FastAPI",
+			"SQLAlchemy 2",
+			"Alembic",
+			"Appwrite",
+		]);
+		// ...then the window shifts back to skills 1..7.
+		await page.mouse.wheel(0, -53); // within-window move to the top slot
+		await expect(slots(page).first()).toBeFocused();
+		expect(await names(page)).toEqual([
+			"Python",
+			"TypeScript",
+			"Node.js",
+			"FastAPI",
+			"SQLAlchemy 2",
+			"Alembic",
+			"Appwrite",
+		]);
+		await page.mouse.wheel(0, -53); // window shifts to skills 1..7
+		expect(await names(page)).toEqual(initialWindow);
+		await expect(slots(page).first()).toBeFocused();
+		// scrollTop and page scroll never move.
+		expect(await scrollState()).toEqual({ vp: 0, page: 0 });
+		// Ctrl+wheel is never hijacked: content and focus stay put.
+		await page.keyboard.down("Control");
+		await page.mouse.wheel(0, 400);
+		await page.keyboard.up("Control");
+		expect(await names(page)).toEqual(initialWindow);
+		expect(await scrollState()).toEqual({ vp: 0, page: 0 });
+	});
+
+	test("click and hover effects fire once per slot, never duplicated", async ({
+		page,
+	}) => {
+		// In-page hook counting every effect play() attempt (see
+		// navigation-sounds.spec.ts): response counting can only see the
+		// first fetch of a buffered effect.
+		await page.addInitScript(() => {
+			const seen: string[] = [];
+			(globalThis as { __effectPlays?: string[] }).__effectPlays = seen;
+			const original = HTMLMediaElement.prototype.play;
+			HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+				const src = this.src;
+				if (src.includes("button_select")) seen.push("select");
+				else if (src.includes("button_click")) seen.push("click");
+				else if (src.includes("menu_close")) seen.push("close");
+				return original.call(this);
+			};
+		});
+		const plays = (name: string) =>
+			page.evaluate((effect) => {
+				const seen = (globalThis as { __effectPlays?: string[] }).__effectPlays;
+				return (seen ?? []).filter((entry) => entry === effect).length;
+			}, name);
+		await page.goto("/skills");
+		await expect(slots(page).first()).toBeFocused();
+		// Clicking a slot plays the click effect exactly once (delegated
+		// wiring; the controller itself never plays it). The pre-click
+		// hover plays one select.
+		await slots(page).nth(2).click();
+		await expect.poll(() => plays("click")).toBe(1);
+		await expect.poll(() => plays("select")).toBe(1);
+		// Hover select: once per slot on fine pointers.
+		await slots(page).nth(3).hover();
+		await expect.poll(() => plays("select")).toBe(2);
+		await slots(page).nth(4).hover();
+		await expect.poll(() => plays("select")).toBe(3);
+		// Moving between the descendants of one slot stays silent. The probe
+		// points sit well inside the slot's bounding box: the cards are
+		// skewed (skewX +8°), so the AABB corners lie OUTSIDE the painted
+		// parallelogram and a point near them would leave the slot.
+		const box = await slots(page).nth(4).boundingBox();
+		if (!box) throw new Error("expected a slot bounding box");
+		await page.mouse.move(box.x + box.width * 0.35, box.y + box.height * 0.65);
+		await page.mouse.move(box.x + box.width * 0.65, box.y + box.height * 0.35);
+		await page.waitForTimeout(300);
+		expect(await plays("select")).toBe(3);
+		// Keyboard arrow moves play exactly one select per transition.
+		await page.keyboard.press("ArrowDown");
+		await expect.poll(() => plays("select")).toBe(4);
+		// The red layer always paints behind the active slot.
+		const red = await page
+			.locator("[data-skill-slot][data-active]")
+			.first()
+			.locator("xpath=..")
+			.evaluate((el) => getComputedStyle(el, "::before").opacity);
+		expect(red).toBe("1");
+	});
+
+	test("no-JS: the fallback keeps all 22 skills in normal document flow", async ({
+		browser,
+	}) => {
+		const context = await browser.newContext({ javaScriptEnabled: false });
+		const page = await context.newPage();
+		await page.setViewportSize({ width: 1280, height: 720 });
+		await page.goto("/skills");
+		// All 22 cards render; the enhanced UI and its gate are absent.
+		await expect(page.locator("[data-skill-card]")).toHaveCount(22);
+		await expect(page.locator("[data-skill-slot]")).toHaveCount(0);
+		await expect(page.locator("[data-skills-enhanced]")).toHaveCount(0);
+		await expect(page.locator('[data-list][role="listbox"]')).toHaveCount(0);
+		// Content stays in flow: the page scrolls to the last card.
+		const scrollable = await page.evaluate(
+			() => document.documentElement.scrollHeight > window.innerHeight,
+		);
+		expect(scrollable).toBe(true);
+		await page.evaluate(() =>
+			window.scrollTo(0, document.documentElement.scrollHeight),
+		);
+		await expect(page.getByText("Vitest", { exact: true })).toBeVisible();
+		await context.close();
 	});
 });
 

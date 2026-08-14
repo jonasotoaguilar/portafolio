@@ -1,26 +1,51 @@
+# Explicit, editable skill ranks on the 1..4 scale:
+# 1 = basic, 2 = intermediate, 3 = advanced, 4 = expert.
+# Adjust the values here to change what the /skills cards show.
 skills:
   backend:
-    - Go
-    - Python
-    - TypeScript
-    - Node.js
-    - FastAPI
-    - SQLAlchemy 2
-    - Alembic
-    - Appwrite
-    - AMQP
+    - name: Go
+      rank: 4
+    - name: Python
+      rank: 3
+    - name: TypeScript
+      rank: 3
+    - name: Node.js
+      rank: 3
+    - name: FastAPI
+      rank: 3
+    - name: SQLAlchemy 2
+      rank: 2
+    - name: Alembic
+      rank: 2
+    - name: Appwrite
+      rank: 1
+    - name: AMQP
+      rank: 1
   frontend:
-    - Astro
-    - React 19
-    - Next.js 16
-    - Tailwind CSS 4
-    - JavaScript
+    - name: Astro
+      rank: 3
+    - name: React 19
+      rank: 3
+    - name: Next.js 16
+      rank: 2
+    - name: Tailwind CSS 4
+      rank: 2
+    - name: JavaScript
+      rank: 3
   tooling:
-    - Docker
-    - Docker Compose
-    - Git
-    - GitHub Actions
-    - pnpm
-    - Biome
-    - Playwright
-    - Vitest
+    - name: Docker
+      rank: 3
+    - name: Docker Compose
+      rank: 3
+    - name: Git
+      rank: 4
+    - name: GitHub Actions
+      rank: 3
+    - name: pnpm
+      rank: 2
+    - name: Biome
+      rank: 2
+    - name: Playwright
+      rank: 2
+    - name: Vitest
+      rank: 2

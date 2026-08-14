@@ -119,28 +119,50 @@ describe("sortByOrder", () => {
 });
 
 describe("skillsSchema", () => {
-	it("parses grouped skills with plain names", () => {
+	it("parses grouped skills with explicit name/rank entries", () => {
 		const skills = skillsSchema.parse({
-			backend: ["Go", "TypeScript", "Python"],
-			frontend: ["Astro", "Tailwind CSS"],
+			backend: [
+				{ name: "Go", rank: 4 },
+				{ name: "Python", rank: 3 },
+			],
+			frontend: [{ name: "Astro", rank: 3 }],
 		});
 
-		expect(skills.backend).toEqual(["Go", "TypeScript", "Python"]);
-		expect(skills.frontend).toContain("Astro");
+		expect(skills.backend).toEqual([
+			{ name: "Go", rank: 4 },
+			{ name: "Python", rank: 3 },
+		]);
+		expect(skills.frontend).toContainEqual({ name: "Astro", rank: 3 });
 	});
 
 	it("rejects a group with an empty skill list", () => {
 		expect(() => skillsSchema.parse({ backend: [] })).toThrow();
 	});
 
-	it("rejects non-string values (no level numbers or metrics)", () => {
-		expect(() => skillsSchema.parse({ backend: ["Go", 5] })).toThrow();
+	it("rejects rank values outside the 1..4 scale", () => {
+		expect(() =>
+			skillsSchema.parse({ backend: [{ name: "Go", rank: 0 }] }),
+		).toThrow();
+		expect(() =>
+			skillsSchema.parse({ backend: [{ name: "Go", rank: 5 }] }),
+		).toThrow();
 	});
 
-	it("rejects object-valued skills (fake metric objects)", () => {
+	it("rejects non-integer rank values", () => {
 		expect(() =>
-			skillsSchema.parse({ backend: [{ name: "Go", level: 5 }] }),
+			skillsSchema.parse({ backend: [{ name: "Go", rank: 2.5 }] }),
 		).toThrow();
+	});
+
+	it("rejects entries without a name and unknown extra keys", () => {
+		expect(() => skillsSchema.parse({ backend: [{ rank: 3 }] })).toThrow();
+		expect(() =>
+			skillsSchema.parse({ backend: [{ name: "Go", rank: 3, level: 5 }] }),
+		).toThrow();
+	});
+
+	it("rejects the old plain-string skill shape", () => {
+		expect(() => skillsSchema.parse({ backend: ["Go", "Python"] })).toThrow();
 	});
 });
 

@@ -11,8 +11,23 @@ export const projectSchema = z.object({
 	order: z.number().int(),
 });
 
-/** Grouped skills: group name -> plain skill names, no levels or metrics. */
-export const skillsSchema = z.record(z.string(), z.array(z.string()).min(1));
+/**
+ * One skill entry: explicit editable name + rank on the 1..4 scale
+ * (1 basic, 2 intermediate, 3 advanced, 4 expert). Strict so unknown keys
+ * (levels, metrics, ...) fail the build instead of being silently stripped.
+ */
+const skillEntrySchema = z
+	.object({
+		name: z.string().min(1),
+		rank: z.number().int().min(1).max(4),
+	})
+	.strict();
+
+/** Grouped skills: category (group key) -> ranked skill entries. */
+export const skillsSchema = z.record(
+	z.string(),
+	z.array(skillEntrySchema).min(1),
+);
 
 /** Non-empty collection of `shape` entries (generic keeps zod inference). */
 const item = <T extends z.ZodTypeAny>(shape: T) => z.array(shape).min(1);

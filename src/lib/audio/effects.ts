@@ -29,10 +29,14 @@ const SOURCES: Record<EffectName, string> = {
 };
 
 // Interactive surfaces that count as "menu actions" for the click sound.
-const CLICK_TARGETS = "[data-menu-item], [data-list-item], [data-mute-control]";
-// Hover feedback covers menu/list items and the mute control; anything else
-// stays silent on hover.
-const HOVER_TARGETS = "[data-menu-item], [data-list-item], [data-mute-control]";
+// [data-skill-slot] covers the enhanced Skills persistent slots (they drop
+// data-list-item so the generic view.ts list logic no-ops on Skills).
+const CLICK_TARGETS =
+	"[data-menu-item], [data-list-item], [data-skill-slot], [data-mute-control]";
+// Hover feedback covers menu/list items, the skills slots, and the mute
+// control; anything else stays silent on hover.
+const HOVER_TARGETS =
+	"[data-menu-item], [data-list-item], [data-skill-slot], [data-mute-control]";
 // Hover sounds only make sense for a real pointer; coarse/touch-only
 // surfaces skip them.
 const FINE_POINTER_QUERY = "(hover: hover) and (pointer: fine)";
