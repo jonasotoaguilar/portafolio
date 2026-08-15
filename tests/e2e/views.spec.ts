@@ -1182,6 +1182,31 @@ test.describe("SKILLS decorative DEVELOPER watermark", () => {
 		expect(await word(page).count()).toBe(0);
 	});
 
+	test("400×800 viewport: font size follows the band diagonal magnitude, not the width alone", async ({
+		page,
+	}) => {
+		// A width-only size underfills long diagonals on narrow/tall
+		// windows: at 400×800 the 14vw term resolves to just 56px, below
+		// even the 4rem floor. The size must track the same 65vw/100vh
+		// edge vector as the atan2 rotation — hypot(65vw, 100vh) * 0.163,
+		// clamped between the 4rem floor and the 18.75rem watermark cap.
+		await page.setViewportSize({ width: 400, height: 800 });
+		await page.goto("/skills");
+		const fontSize = await word(page).evaluate((el) =>
+			parseFloat(getComputedStyle(el).fontSize),
+		);
+		const viewport = page.viewportSize()!;
+		const cap = 18.75 * 16; // 300px — the documented watermark maximum.
+		const expected = Math.min(
+			Math.hypot(viewport.width * 0.65, viewport.height) * 0.163,
+			cap,
+		);
+		// Materially above the 4rem (64px) width-only fallback...
+		expect(fontSize).toBeGreaterThan(4 * 16 * 1.5);
+		// ...and close to the viewport-derived diagonal magnitude.
+		expect(Math.abs(fontSize - expected)).toBeLessThanOrEqual(1);
+	});
+
 	test("DEVELOPER renders on /skills only, absent from every other route", async ({
 		page,
 	}) => {

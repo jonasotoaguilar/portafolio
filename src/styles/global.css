@@ -183,7 +183,13 @@ html[data-route="skills"] .glow-layer::before {
    of a fixed degree value, so it stays parallel to the band at every
    aspect ratio (~-41° on 16:9, ~-49° on 4:3) — the 65vw term deliberately
    matches the shared polygon's 65% edge coordinate (the same source of
-   truth the mask consumes). Structure: the OUTER .skills-watermark is a
+   truth the mask consumes). The word's SIZE follows the same edge vector:
+   font-size resolves the diagonal magnitude hypot(65vw, 100vh) * 0.163
+   (the 0.163 scale preserves the reference 16:9 size the width-only 14vw
+   term produced at 1280×720), so narrow/tall windows scale along the
+   band's length instead of underfilling it; the width-only clamp() is
+   kept as a fallback for engines without CSS hypot(). Structure: the
+   OUTER .skills-watermark is a
    full-viewport fixed
    mask (inset 0, no scrollable overflow contribution) clipped with the
    shared --skills-band-polygon, so whatever the inner word does it can
@@ -221,11 +227,21 @@ html[data-route="skills"] .skills-watermark-text {
 	transform-origin: 0 100%;
 	white-space: nowrap;
 	font-family: var(--font-display);
+	/* Width-only fallback for engines without CSS hypot(); the override
+	   below wins wherever it parses. */
 	font-size: clamp(4rem, 14vw, 18.75rem);
 	line-height: 0.9;
 	letter-spacing: 0;
 	text-transform: uppercase;
 	color: color-mix(in srgb, var(--color-text-on-light) 18%, transparent);
+}
+
+@supports (font-size: hypot(1px, 1px)) {
+	html[data-route="skills"] .skills-watermark-text {
+		/* Diagonal magnitude: same 65vw/100vh edge vector as the atan2
+		   rotation, capped at the documented watermark maximum. */
+		font-size: clamp(4rem, calc(hypot(65vw, 100vh) * 0.163), 18.75rem);
+	}
 }
 
 :is(
