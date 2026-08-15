@@ -31,7 +31,17 @@ const cards = Object.entries(skillsEntry.data).flatMap(([group, entries]) =>
 ---
 
 <BaseLayout title={VIEW_TITLES.skills} site={site}>
-	<GameViewShell title="Skills">
+	<GameViewShell title="Skills" class="skills-view">
+		{/* Decorative field watermark (skills contract): giant DEVELOPER word
+		    in the display face, rotated along the white parallelogram's
+		    diagonal, painted behind the cards (styles in global.css). The
+		    outer span is a full-viewport mask clipped with the SAME polygon
+		    as the white field (shared --skills-band-polygon), so the inner
+		    word can sit closer to the sea-blue boundary without ever
+		    painting over it. Outer aria-hidden, zero JS, never interactive. */}
+		<span class="skills-watermark" aria-hidden="true">
+			<span class="skills-watermark-text">DEVELOPER</span>
+		</span>
 		{/* Fixed seven-slot recycled list (skills contract): the fallback
 		    below renders all 22 cards in normal document flow (no-JS). On
 		    successful init, skills-scroll.ts adopts the first seven as

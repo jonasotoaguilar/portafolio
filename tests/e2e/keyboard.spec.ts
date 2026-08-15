@@ -649,35 +649,129 @@ test.describe("diagonal staggered menu — coarse collapse", () => {
 
 // Browser-level proof for the global light contrast-cut field (field
 // contract): every non-404 route — the shell AND the four views — shares the
-// STATIC white-to-light-blue diagonal gradient, while the 404 error route
-// keeps the dark radial glow untouched.
+// static white-to-light-blue-to-sea-blue diagonal gradient family at 112deg,
+// while the 404 error route keeps the dark radial glow untouched. The shell
+// and the other views keep the left-biased white cut (white through ~20%,
+// sea blue from ~30%); only /skills replaces the gradient transition with a
+// solid sea-blue base plus a single wide white parallelogram painted by a
+// ::before child, clipped corner-to-corner (upper-right and lower-left) so
+// the upper-left and lower-right corners stay blue.
 test.describe("global light field composition", () => {
-	test("shell and views share the static diagonal gradient; the 404 keeps the dark glow", async ({
+	// Computed backgroundImage serializes as
+	// "linear-gradient(112deg, rgb(...) 0%, rgb(...) 20%, ...)"; two-position
+	// stops ("rgb(...) 0% 40%") may serialize either expanded (one stop per
+	// position) or compact (both positions after one color), so parse every
+	// (color, position) pair from either shape. Assertions then survive
+	// serialization differences in spacing, position shape, and color syntax.
+	const parseStops = (image: string) =>
+		[
+			...image.matchAll(
+				/((?:rgb|rgba)\([^)]*\))\s+(-?[\d.]+)%(?:\s+(-?[\d.]+)%)?/g,
+			),
+		].flatMap((m) => {
+			const first = { color: m[1], pos: Number.parseFloat(m[2]) };
+			return m[3] !== undefined
+				? [first, { color: m[1], pos: Number.parseFloat(m[3]) }]
+				: [first];
+		});
+	const lastWhite = (stops: { color: string; pos: number }[]) =>
+		stops.filter((s) => s.color === "rgb(255, 255, 255)").at(-1)?.pos;
+	const firstSeaBlue = (stops: { color: string; pos: number }[]) =>
+		stops.find((s) => s.color === "rgb(22, 119, 200)")?.pos;
+	const near = (actual: number | undefined, expected: number) =>
+		actual !== undefined && Math.abs(actual - expected) <= 3;
+
+	test("shell and views share the left-biased diagonal gradient; skills overlays a corner-to-corner white parallelogram; the 404 keeps the dark glow", async ({
 		page,
 	}) => {
 		await page.setViewportSize({ width: 1280, height: 720 });
-		await page.goto("/");
-		const shellGlow = await page.locator(".glow-layer").evaluate((el) => {
-			const style = getComputedStyle(el);
-			return { image: style.backgroundImage, animation: style.animationName };
-		});
-		expect(shellGlow.image).toContain("linear-gradient");
-		expect(shellGlow.image).toContain("112deg");
-		expect(shellGlow.animation).toBe("none");
-		// The gradient starts white and ends sea blue (field tokens).
-		expect(shellGlow.image).toContain("rgb(255, 255, 255)");
-		expect(shellGlow.image).toContain("rgb(188, 212, 255)");
-		expect(shellGlow.image).toContain("rgb(22, 119, 200)");
 
-		// A view route shares the same static light field.
-		await page.goto("/about");
-		const viewGlow = await page
+		// The shell and another view keep the original left-biased field:
+		// white through ~20%, sea blue from ~30%, at 112deg.
+		for (const path of ["/", "/about"]) {
+			await page.goto(path);
+			const image = await page
+				.locator(".glow-layer")
+				.evaluate((el) => getComputedStyle(el).backgroundImage);
+			expect(image, `${path} is the static light field`).toContain(
+				"linear-gradient",
+			);
+			expect(image).toContain("112deg");
+			expect(image).toContain("rgb(255, 255, 255)");
+			expect(image).toContain("rgb(188, 212, 255)");
+			expect(image).toContain("rgb(22, 119, 200)");
+			const stops = parseStops(image);
+			expect(
+				near(lastWhite(stops), 20),
+				`${path} keeps the left-biased white cut`,
+			).toBe(true);
+			expect(
+				near(firstSeaBlue(stops), 30),
+				`${path} keeps the left-biased sea-blue start`,
+			).toBe(true);
+		}
+
+		// The shell glow is static: no breathing animation.
+		await page.goto("/");
+		const shellAnimation = await page
 			.locator(".glow-layer")
-			.evaluate((el) => getComputedStyle(el).backgroundImage);
-		expect(viewGlow).toContain("linear-gradient");
-		expect(viewGlow).toContain("112deg");
-		expect(viewGlow).toContain("rgb(255, 255, 255)");
-		expect(viewGlow).toContain("rgb(22, 119, 200)");
+			.evaluate((el) => getComputedStyle(el).animationName);
+		expect(shellAnimation).toBe("none");
+
+		// /skills replaces the gradient transition with a solid sea-blue base
+		// plus a single wide white parallelogram painted by a ::before child,
+		// clipped corner-to-corner (upper-right and lower-left) so the
+		// upper-left and lower-right corners stay blue.
+		await page.goto("/skills");
+		const skillsBase = await page.locator(".glow-layer").evaluate((el) => {
+			const style = getComputedStyle(el);
+			return { color: style.backgroundColor, image: style.backgroundImage };
+		});
+		expect(
+			skillsBase.image,
+			"skills base is a solid color, not a gradient band",
+		).toBe("none");
+		expect(skillsBase.color, "skills base is sea blue").toBe(
+			"rgb(22, 119, 200)",
+		);
+		const skillsCutout = await page.locator(".glow-layer").evaluate((el) => {
+			const style = getComputedStyle(el, "::before");
+			return {
+				color: style.backgroundColor,
+				position: style.position,
+				clipPath: style.clipPath,
+			};
+		});
+		expect(
+			skillsCutout.position,
+			"skills ::before is absolutely positioned",
+		).toBe("absolute");
+		expect(skillsCutout.color, "skills ::before is white").toBe(
+			"rgb(255, 255, 255)",
+		);
+		expect(skillsCutout.clipPath, "skills ::before is a polygon").toContain(
+			"polygon",
+		);
+		// Serialization-safe polygon check: browsers may normalize spacing,
+		// "%" suffixes, or unitless zeros to "0px", so parse the coordinate
+		// pairs and match the approved corner-to-corner points within the
+		// same tolerance as the stops.
+		const polygonPoints = [
+			...skillsCutout.clipPath.matchAll(
+				/(-?[\d.]+)(?:%|px)?\s+(-?[\d.]+)(?:%|px)?/g,
+			),
+		].map((m) => [Number.parseFloat(m[1]), Number.parseFloat(m[2])]);
+		for (const [x, y] of [
+			[65, 0],
+			[130, 0],
+			[65, 100],
+			[0, 100],
+		]) {
+			expect(
+				polygonPoints.some(([px, py]) => near(px, x) && near(py, y)),
+				`skills parallelogram touches (${x}%, ${y}%)`,
+			).toBe(true);
+		}
 
 		// The 404 error route keeps the dark radial glow untouched — both the
 		// literal /404 route and unknown paths (e.g. /contact), which render

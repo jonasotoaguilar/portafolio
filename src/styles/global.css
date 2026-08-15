@@ -139,6 +139,95 @@ html[data-game-ready] [data-view] [data-detail-panel]:not([data-active]) {
 	animation: none;
 }
 
+/* Skills field variant (field contract): the same 112deg diagonal
+   orientation and field tokens, but the transition is replaced by a single
+   wide white parallelogram crossing from the lower-left corner toward the
+   upper-right corner. The .glow-layer keeps a solid sea-blue base; a ::before
+   child paints the white quadrilateral clipped so the upper-left and
+   lower-right corners stay blue. The pseudo-element lives inside the
+   .glow-layer stacking context (z-index -3), so the scanlines layer (-2) and
+   the persisted canvas (-1) keep painting above it. Equal specificity to the
+   general rule and later in source order, so only the skills route is
+   affected. The lower-left point stays exactly on the viewport corner; the
+   upper-right point intentionally overshoots the viewport so the white field
+   covers that corner instead of terminating on it. The one approved polygon
+   lives as a route-scoped custom property on the <html> element and is
+   consumed verbatim by BOTH the white cutout below and the watermark mask
+   (skills contract), so the two shapes share a single source of truth and
+   can never drift apart. */
+html[data-route="skills"] {
+	--skills-band-polygon: polygon(65% 0, 130% 0, 65% 100%, 0 100%);
+}
+
+html[data-route="skills"] .glow-layer {
+	background: var(--color-shell-sea-blue);
+	animation: none;
+}
+
+html[data-route="skills"] .glow-layer::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background: var(--color-surface-light);
+	clip-path: var(--skills-band-polygon);
+}
+
+/* Skills field watermark (skills contract): a giant DEVELOPER word in the
+   display face (Anton — the same typography as the shell's PORTFOLIO
+   watermark, no new fonts), rotated along the white parallelogram's rising
+   diagonal and anchored in the lower white field near the lower-left
+   corner. The band edge runs from the lower-left viewport corner up to
+   65% of the width at the top, so its slope is -100vh over 65vw: the word
+   uses the responsive CSS trig angle rotate(atan2(-100vh, 65vw)) instead
+   of a fixed degree value, so it stays parallel to the band at every
+   aspect ratio (~-41° on 16:9, ~-49° on 4:3) — the 65vw term deliberately
+   matches the shared polygon's 65% edge coordinate (the same source of
+   truth the mask consumes). Structure: the OUTER .skills-watermark is a
+   full-viewport fixed
+   mask (inset 0, no scrollable overflow contribution) clipped with the
+   shared --skills-band-polygon, so whatever the inner word does it can
+   never paint over the sea-blue boundary — the mask guarantees it. The
+   INNER .skills-watermark-text keeps the approved alignment (left 57%,
+   bottom 0) and adds only the small visually tested perpendicular
+   translation (translate 2vw/2vh, applied before the rotation) that
+   pulls the word toward the band's lower-right edge. Purely decorative:
+   aria-hidden in the markup, pointer-events none, user-select none, and a
+   translucent near-black ink (color-mix over the light-field text token) so
+   it reads as a subtle shadow, never content. The .skills-view isolates its
+   own stacking context, so the z-index -1 watermark paints behind the skill
+   cards but above the fixed glow field; the clip-path also makes the mask
+   its own stacking context, keeping the word's paint contained. */
+html[data-route="skills"] .skills-view {
+	isolation: isolate;
+}
+
+html[data-route="skills"] .skills-watermark {
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	clip-path: var(--skills-band-polygon);
+	user-select: none;
+	pointer-events: none;
+}
+
+html[data-route="skills"] .skills-watermark-text {
+	position: absolute;
+	left: 57%;
+	right: auto;
+	top: auto;
+	bottom: 0;
+	transform: translate(2vw, 2vh) rotate(atan2(-100vh, 65vw));
+	transform-origin: 0 100%;
+	white-space: nowrap;
+	font-family: var(--font-display);
+	font-size: clamp(4rem, 14vw, 18.75rem);
+	line-height: 0.9;
+	letter-spacing: 0;
+	text-transform: uppercase;
+	color: color-mix(in srgb, var(--color-text-on-light) 18%, transparent);
+}
+
 :is(
 		html[data-route="shell"],
 		html[data-route="about"],

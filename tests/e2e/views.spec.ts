@@ -976,6 +976,226 @@ test.describe("SKILLS recycled seven-slot list", () => {
 	});
 });
 
+// SKILLS field watermark (skills contract): one giant DEVELOPER word in the
+// display face (Anton, same typography as the shell's PORTFOLIO watermark)
+// rotated along the white parallelogram's diagonal, anchored in the lower
+// white field. Structure: an outer full-viewport mask (.skills-watermark)
+// clipped with the SAME polygon as the white field's ::before cutout — both
+// consume the shared --skills-band-polygon — and an inner word span
+// (.skills-watermark-text) that carries the typography, alignment, and
+// rotation. Purely decorative: aria-hidden in the markup, pointer-events
+// none, user-select none, painted behind the cards inside an isolated
+// stacking context. It renders on /skills alone — every other route keeps
+// its own surface (the shell's PORTFOLIO watermark is asserted in
+// keyboard.spec.ts; this word must never leak onto other views).
+test.describe("SKILLS decorative DEVELOPER watermark", () => {
+	const watermark = (page: Page) => page.locator(".skills-watermark");
+	const word = (page: Page) => page.locator(".skills-watermark-text");
+	// Serialization-safe polygon check: browsers may normalize spacing, "%"
+	// suffixes, or unitless zeros to "0px", so parse coordinate pairs.
+	const polygonPoints = (clipPath: string) =>
+		[...clipPath.matchAll(/(-?[\d.]+)(?:%|px)?\s+(-?[\d.]+)(?:%|px)?/g)].map(
+			(m) => [Number.parseFloat(m[1]), Number.parseFloat(m[2])],
+		);
+	const near = (actual: number, expected: number) =>
+		Math.abs(actual - expected) <= 3;
+
+	test("one masked outer plus one DEVELOPER inner, hidden and non-interactive", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 720 });
+		await page.goto("/skills");
+		// Exactly one outer mask and one inner word.
+		await expect(watermark(page)).toHaveCount(1);
+		await expect(word(page)).toHaveCount(1);
+		await expect(word(page)).toHaveText("DEVELOPER");
+		// Hidden from the accessibility tree and never interactive: no
+		// tabindex, pointer-events none (clicks fall through), user-select
+		// none (never selected as text).
+		await expect(watermark(page)).toHaveAttribute("aria-hidden", "true");
+		expect(
+			await watermark(page).evaluate((el) => el.getAttribute("tabindex")),
+		).toBeNull();
+		expect(
+			await watermark(page).evaluate(
+				(el) => getComputedStyle(el).pointerEvents,
+			),
+		).toBe("none");
+		expect(
+			await watermark(page).evaluate((el) => getComputedStyle(el).userSelect),
+		).toBe("none");
+		// The outer is a full-viewport fixed mask: bounding box equals the
+		// viewport, clipped by the approved parallelogram.
+		const outer = await watermark(page).evaluate((el) => {
+			const s = getComputedStyle(el);
+			const rect = el.getBoundingClientRect();
+			return {
+				position: s.position,
+				zIndex: s.zIndex,
+				clipPath: s.clipPath,
+				x: rect.x,
+				y: rect.y,
+				width: rect.width,
+				height: rect.height,
+			};
+		});
+		expect(outer.position).toBe("fixed");
+		expect(outer.x).toBe(0);
+		expect(outer.y).toBe(0);
+		expect(outer.width).toBe(1280);
+		expect(outer.height).toBe(720);
+		const maskPoints = polygonPoints(outer.clipPath);
+		expect(outer.clipPath).toContain("polygon");
+		for (const [x, y] of [
+			[65, 0],
+			[130, 0],
+			[65, 100],
+			[0, 100],
+		]) {
+			expect(
+				maskPoints.some(([px, py]) => near(px, x) && near(py, y)),
+				`watermark mask touches (${x}%, ${y}%)`,
+			).toBe(true);
+		}
+		// The white field cutout and the watermark mask share ONE polygon:
+		// both consume --skills-band-polygon, so their computed clip paths
+		// are identical and can never drift.
+		const glowClip = await page
+			.locator(".glow-layer")
+			.evaluate((el) => getComputedStyle(el, "::before").clipPath);
+		expect(glowClip).toBe(outer.clipPath);
+		// The inner word keeps the display face (Anton), a large clamp()
+		// size, the diagonal rotation, and a translucent near-black ink
+		// (subtle shadow, not content). color-mix serializes as rgba(...)
+		// or color(srgb ... / alpha) depending on the engine; either way the
+		// trailing alpha must be below 0.5.
+		const inner = await word(page).evaluate((el) => {
+			const s = getComputedStyle(el);
+			return {
+				position: s.position,
+				left: s.left,
+				bottom: s.bottom,
+				fontFamily: s.fontFamily,
+				fontSize: parseFloat(s.fontSize),
+				transform: s.transform,
+				color: s.color,
+			};
+		});
+		expect(inner.position).toBe("absolute");
+		// left: 57% and bottom: 0 resolve against the full-viewport mask:
+		// 57% of 1280px is 729.6px.
+		expect(Math.abs(parseFloat(inner.left) - 1280 * 0.57)).toBeLessThanOrEqual(
+			1,
+		);
+		expect(inner.bottom).toBe("0px");
+		expect(inner.fontFamily).toContain("Anton");
+		expect(inner.fontSize).toBeGreaterThanOrEqual(80);
+		// translate(2vw, 2vh) rotate(atan2(-100vh, 65vw)) serializes as one
+		// matrix: at 1280×720 the responsive angle resolves to
+		// atan2(-720, 832) ≈ -40.9° and the translation to (25.6, 14.4)px.
+		// Parsing the matrix proves both the retained diagonal rotation and
+		// the small shift toward the boundary.
+		expect(inner.transform).toContain("matrix");
+		const m = inner.transform.match(
+			/matrix\(([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+)\)/,
+		);
+		if (!m) throw new Error("expected a 2D matrix transform");
+		const [, a, b] = m.map(Number);
+		const angle = (Math.atan2(b, a) * 180) / Math.PI;
+		expect(Math.abs(angle + 41)).toBeLessThanOrEqual(2);
+		expect(Math.abs(Number(m[5]) - 25.6)).toBeLessThanOrEqual(1);
+		expect(Math.abs(Number(m[6]) - 14.4)).toBeLessThanOrEqual(1);
+		const alpha = Number(inner.color.match(/[\d.]+(?=\)$)/)?.[0]);
+		expect(Number.isNaN(alpha)).toBe(false);
+		expect(alpha).toBeGreaterThan(0);
+		expect(alpha).toBeLessThan(0.5);
+		// Explicit stacking context: the view isolates, the mask paints
+		// behind it (z-index -1), and it never blocks pointers at its own
+		// center — hits fall through to the field below.
+		expect(outer.zIndex).toBe("-1");
+		const view = page.locator("main");
+		expect(await view.evaluate((el) => getComputedStyle(el).isolation)).toBe(
+			"isolate",
+		);
+		const blocked = await watermark(page).evaluate((el) => {
+			const rect = el.getBoundingClientRect();
+			const hit = document.elementFromPoint(
+				rect.x + rect.width / 2,
+				rect.y + rect.height / 2,
+			);
+			return hit === el || el.contains(hit);
+		});
+		expect(blocked).toBe(false);
+	});
+
+	test("4:3 viewport: rotation follows atan2(-100vh, 65vw), mask and route scope intact", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1024, height: 768 });
+		await page.goto("/skills");
+		// The band edge spans -100vh vertically over 65vw horizontally, so
+		// the expected angle is computed from the LIVE viewport: on 4:3 that
+		// is atan2(-768, 665.6) ≈ -49.1°, not the 16:9-only -41°.
+		const probe = await word(page).evaluate((el) => {
+			const s = getComputedStyle(el);
+			const outer = getComputedStyle(el.parentElement!);
+			return { transform: s.transform, clipPath: outer.clipPath };
+		});
+		expect(probe.transform).toContain("matrix");
+		const m = probe.transform.match(
+			/matrix\(([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+)\)/,
+		);
+		if (!m) throw new Error("expected a 2D matrix transform");
+		const [, a, b, , , e, f] = m.map(Number);
+		const angle = (Math.atan2(b, a) * 180) / Math.PI;
+		const viewport = page.viewportSize()!;
+		const expected =
+			(Math.atan2(-viewport.height, viewport.width * 0.65) * 180) / Math.PI;
+		expect(Math.abs(angle - expected)).toBeLessThanOrEqual(1);
+		// 2vw/2vh translation at 1024×768 resolves to (20.48, 15.36)px.
+		expect(Math.abs(e - 20.48)).toBeLessThanOrEqual(1);
+		expect(Math.abs(f - 15.36)).toBeLessThanOrEqual(1);
+		// The word stays clipped at this aspect ratio: the outer mask still
+		// consumes the shared band polygon, identical to the white field
+		// cutout's, so the two shapes cannot drift apart.
+		expect(probe.clipPath).toContain("polygon");
+		const maskPoints = polygonPoints(probe.clipPath);
+		for (const [x, y] of [
+			[65, 0],
+			[130, 0],
+			[65, 100],
+			[0, 100],
+		]) {
+			expect(
+				maskPoints.some(([px, py]) => near(px, x) && near(py, y)),
+				`watermark mask touches (${x}%, ${y}%) at 4:3`,
+			).toBe(true);
+		}
+		const glowClip = await page
+			.locator(".glow-layer")
+			.evaluate((el) => getComputedStyle(el, "::before").clipPath);
+		expect(glowClip).toBe(probe.clipPath);
+		// Route isolation stays intact at 4:3: the word is a /skills-only
+		// decoration and never leaks onto other routes.
+		await page.goto("/");
+		expect(await watermark(page).count()).toBe(0);
+		expect(await word(page).count()).toBe(0);
+	});
+
+	test("DEVELOPER renders on /skills only, absent from every other route", async ({
+		page,
+	}) => {
+		for (const path of ["/", "/about", "/resume", "/projects", "/404"]) {
+			await page.goto(path);
+			expect(await watermark(page).count(), `${path} has no watermark`).toBe(0);
+			expect(await word(page).count(), `${path} has no watermark word`).toBe(0);
+		}
+		await page.goto("/skills");
+		await expect(watermark(page)).toHaveCount(1);
+		await expect(word(page)).toHaveCount(1);
+	});
+});
+
 test.describe("RESUME view", () => {
 	test("renders the verified CV facts across every section", async ({
 		page,
