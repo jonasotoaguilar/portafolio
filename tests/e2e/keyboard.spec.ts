@@ -661,14 +661,12 @@ test.describe("diagonal staggered menu — coarse collapse", () => {
 });
 
 // Browser-level proof for the global light contrast-cut field (field
-// contract): every non-404 route — the shell AND the four views — shares the
-// static white-to-light-blue-to-sea-blue diagonal gradient family at 112deg,
-// while the 404 error route keeps the dark radial glow untouched. The shell
-// and the other views keep the left-biased white cut (white through ~20%,
-// sea blue from ~30%); only /skills replaces the gradient transition with a
-// solid sea-blue base plus a single wide white parallelogram painted by a
-// ::before child, clipped corner-to-corner (upper-right and lower-left) so
-// the upper-left and lower-right corners stay blue.
+// contract): the shell shares the static white-to-light-blue-to-sea-blue
+// diagonal gradient family at 112deg, while the 404 keeps the dark radial
+// glow untouched. /skills (skills contract) swaps the gradient for a solid
+// sea-blue base plus a corner-to-corner white parallelogram; /about
+// (about-view contract) swaps it for the sea-blue band variant (solid
+// sea-blue field with a white polygon-cut band).
 test.describe("global light field composition", () => {
 	// Computed backgroundImage serializes as
 	// "linear-gradient(112deg, rgb(...) 0%, rgb(...) 20%, ...)"; two-position
@@ -694,14 +692,14 @@ test.describe("global light field composition", () => {
 	const near = (actual: number | undefined, expected: number) =>
 		actual !== undefined && Math.abs(actual - expected) <= 3;
 
-	test("shell and views share the left-biased diagonal gradient; skills overlays a corner-to-corner white parallelogram; the 404 keeps the dark glow", async ({
+	test("shell shares the left-biased diagonal gradient; skills and about overlay their band variants; the 404 keeps the dark glow", async ({
 		page,
 	}) => {
 		await page.setViewportSize({ width: 1280, height: 720 });
 
-		// The shell and another view keep the original left-biased field:
+		// The shell keeps the original left-biased field:
 		// white through ~20%, sea blue from ~30%, at 112deg.
-		for (const path of ["/", "/about"]) {
+		for (const path of ["/"]) {
 			await page.goto(path);
 			const image = await page
 				.locator(".glow-layer")
@@ -730,6 +728,24 @@ test.describe("global light field composition", () => {
 			.locator(".glow-layer")
 			.evaluate((el) => getComputedStyle(el).animationName);
 		expect(shellAnimation).toBe("none");
+
+		// About (about-view contract) swaps the shared gradient for the
+		// sea-blue band variant: a solid sea-blue field with a white
+		// polygon-cut band.
+		await page.goto("/about");
+		const aboutGlow = await page.locator(".glow-layer").evaluate((el) => {
+			const style = getComputedStyle(el);
+			return {
+				image: style.backgroundImage,
+				color: style.backgroundColor,
+				cutout: getComputedStyle(el, "::before").backgroundColor,
+				cutoutClip: getComputedStyle(el, "::before").clipPath,
+			};
+		});
+		expect(aboutGlow.image).toBe("none");
+		expect(aboutGlow.color).toBe("rgb(22, 119, 200)");
+		expect(aboutGlow.cutout).toBe("rgb(255, 255, 255)");
+		expect(aboutGlow.cutoutClip).not.toBe("none");
 
 		// /skills replaces the gradient transition with a solid sea-blue base
 		// plus a single wide white parallelogram painted by a ::before child,

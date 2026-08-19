@@ -140,7 +140,10 @@ test.describe("navigation effect sounds", () => {
 
 	test("clicking the Back to menu link plays close", async ({ page }) => {
 		const counts = effectCounts(page);
-		await page.goto("/about");
+		// The Back to menu link stays visible on every view except About
+		// (which uses Escape as its documented return path), so the link
+		// contract is exercised on a view that still renders it.
+		await page.goto("/resume");
 		await page.getByRole("link", { name: "Back to menu" }).click();
 		await expect(page).toHaveURL("/");
 		await expect.poll(() => counts.close).toBe(1);

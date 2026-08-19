@@ -161,12 +161,21 @@ test.describe("return-direction transitions and canvas persistence", () => {
 		await expect(
 			page.getByRole("heading", { level: 1, name: "About" }),
 		).toBeVisible();
+		// Let the inbound view transition settle before pressing Escape: a
+		// close issued mid-transition races the router's swap and can be
+		// swallowed (same pattern as the navigation-sounds spec).
+		await page.waitForFunction(
+			() => !document.documentElement.hasAttribute("data-astro-transition"),
+		);
 		const afterView = await canvasState(page);
 		expect(afterView.found).toBe(true);
 		expect(afterView.marker).toBe("persisted-canvas");
 		expect(afterView.canvasCount).toBe(1);
 
-		await page.getByRole("link", { name: "Back to menu" }).click();
+		// About (about-view contract) hides the Back to menu link; Escape is
+		// its documented return path.
+		await page.keyboard.press("Escape");
+		await expect(page).toHaveURL("/");
 		await expect(
 			page.getByRole("navigation", { name: "Game menu" }),
 		).toBeVisible();

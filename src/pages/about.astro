@@ -1,6 +1,11 @@
 ---
 import { getCollection } from "astro:content";
 
+// Optimized persona portrait for the About glass panel (repo asset pattern:
+// the registered source lives in assets/persona/persono_about.png; the page
+// consumes this re-encoded derivative from src/assets so dist ships a
+// derivative, never the original bytes — provenance gate contract).
+import personaAbout from "../assets/persono_about.webp";
 import GameViewShell from "../components/game/GameViewShell.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { VIEW_TITLES } from "../lib/seo/titles";
@@ -14,23 +19,59 @@ const site = siteEntry.data;
 
 <BaseLayout title={VIEW_TITLES.about} site={site}>
 	<GameViewShell title="About">
-		<section class="flex flex-col items-start gap-8">
-			<h2 class="sr-only">Role</h2>
-			<p class="font-display text-[clamp(1.75rem,4.5vw,3.5rem)] uppercase leading-[1.05] text-text-on-light">
-				{site.role}
-			</p>
-			<div class="flex flex-col gap-3">
-				<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-on-light">
-					Focus areas
-				</h3>
-				<ul class="flex flex-wrap gap-2">
-					{
-						site.focusAreas.map((area) => (
-							<li class="view-chip px-4 py-2">{area}</li>
-						))
-					}
-				</ul>
+		<!-- About profile band (about-view contract): one synchronized diagonal
+		     composition on a solid sea-blue field. The white band is painted
+		     by the glow-layer's ::before and clipped with the route's single
+		     --about-band-polygon; the .about-stage clips the profile with the
+		     SAME polygon, so the profile can never detach from the band.
+		     Inside the stage, .about-band is the ONLY transformed element
+		     (one parent geometry owner) — every block, divider, and text
+		     below is an ordinary flow child, so the whole profile shares the
+		     band's diagonal. The giant 18 is a decorative aria-hidden
+		     numeral; the content column hugs it and consumes the full row
+		     width (no artificial max-width), so the black strips reach the
+		     right-side layout edge behind the right-side layers. -->
+		<section class="about-stage">
+			<div class="about-band">
+				<p class="about-numeral" aria-hidden="true">18</p>
+				<div class="about-content">
+					<div class="about-block about-block--solid">
+						<p class="about-name">{site.name}</p>
+						<p class="about-role">{site.role}</p>
+					</div>
+					<div class="about-block">
+						<p class="about-tagline">{site.tagline}</p>
+					</div>
+					<div class="about-divider" aria-hidden="true"></div>
+					<div class="about-block">
+						<p class="about-focus-label">Focus areas</p>
+						<ul class="about-focus-list">
+							{
+								site.focusAreas.map((area) => (
+									<li class="view-chip px-4 py-2">{area}</li>
+								))
+							}
+						</ul>
+					</div>
+				</div>
 			</div>
 		</section>
+		<!-- Large gray diagonal band behind the white band (decorative,
+		     aria-hidden, pointer-events none). -->
+		<div class="about-band-gray" aria-hidden="true"></div>
+		<!-- Translucent crystalline glass band above the white band with the
+		     optimized persona portrait (decorative, aria-hidden, pointer-events
+		     none; the image fills the element via object-fit: cover and is
+		     clipped by the band, never overflowing). -->
+		<div class="about-glass" aria-hidden="true">
+			<img
+				src={personaAbout.src}
+				alt=""
+				width="800"
+				height="1200"
+				loading="eager"
+				decoding="async"
+			/>
+		</div>
 	</GameViewShell>
 </BaseLayout>
