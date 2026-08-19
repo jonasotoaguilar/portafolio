@@ -36,7 +36,7 @@ A personal portfolio that presents Jonathan Soto (jonasotoaguilar), Backend & Fu
 
 ### User Journey
 
-A visitor lands on `/` and sees a full-screen game menu: five diagonally staggered items centered/center-right with a persistent colorful active indicator that follows keyboard navigation. Selecting ABOUT, RESUME, PROJECTS, SKILLS, or CONTACT replaces the whole screen with that view; Escape (or Browser Back) returns to the menu. Keyboard/control hints and the ambient-audio mute toggle sit in a fixed bottom-right cluster. Optional ambient audio plays only from a user-provided licensed track and only after the visitor's first interaction; the muted preference persists. Each view is a self-contained screen: PROJECTS and RESUME use an in-view LIST with a detail panel (deep-linkable, e.g. `/projects#serviceflow`), SKILLS groups the stack, CONTACT offers the email and social links, ABOUT states identity and focus areas. On a phone the panels stack and scroll; without JavaScript the same content renders in normal document flow.
+A visitor lands on `/` and sees a full-screen game menu: five diagonally staggered items centered/center-right with a persistent colorful active indicator that follows keyboard navigation. Selecting ABOUT, RESUME, PROJECTS, SKILLS, or CONTACT replaces the whole screen with that view; Escape (or Browser Back) returns to the menu. Keyboard/control hints and the ambient-audio mute toggle sit in a fixed bottom-right cluster. Optional ambient audio plays only from a user-provided licensed track and only after the visitor's first interaction; the muted preference persists. Each view is a self-contained screen: PROJECTS uses an in-view LIST with a detail panel (deep-linkable, e.g. `/projects#serviceflow`), RESUME shows the degree, a compact experience list whose selectable descriptions update a reserved region, and a professional summary panel, SKILLS groups the stack, CONTACT offers the email and social links, ABOUT states identity and focus areas. On a phone the panels stack and scroll; without JavaScript the same content renders in normal document flow.
 
 ### User Personas
 
@@ -65,7 +65,7 @@ A visitor lands on `/` and sees a full-screen game menu: five diagonally stagger
 - [ ] The ABOUT view renders the role "Backend & Full-Stack Engineer" and the focus areas from site config.
 - [ ] The PROJECTS view lists exactly the four verified projects (ServiceFlow, WealthQuest, EventCommerce, Fintual Sensor) with an in-view detail panel; `/projects#serviceflow` deep links to a selected project.
 - [ ] The WealthQuest PROJECTS entry links to https://jonasotoaguilar.itch.io/wealthquest; all other external links resolve (checked by E2E).
-- [ ] The RESUME view renders only verified CV data: USACH Ingeniería de Ejecución en Computación e Informática (Mar 2020–Apr 2025); technical telecommunications education (Mar 2017–Nov 2019); Productos Barber Chile sales/customer service (2020–2026); Policomp IT support internship (Jan–Mar 2020); ServiceFlow and WealthQuest projects; WealthQuest academic publication (May 2025); languages Spanish (native) and English (basic technical reading). No ranks, metrics, or phone number.
+- [ ] The RESUME view renders only verified CV data, English-only: the USACH degree "Computer Science and Informatics Engineer" (Mar 2020–Apr 2025); Productos Barber Chile (2020–2026) and the Policomp IT support internship (Jan–Mar 2020) as a compact experience list whose selection updates a reserved description region; and the professional summary. Projects and skills do not appear (they have dedicated views). No ranks, metrics, or phone number.
 - [ ] The CONTACT view surfaces jonathansoto.dev@gmail.com, GitHub, and the WealthQuest link.
 - [ ] Pressing Escape on any view returns to `/`; the Browser Back button follows native history.
 - [ ] A 404 page renders for unknown paths and matches the visual identity.
@@ -120,7 +120,7 @@ Not applicable — this is a static site with no AI components.
 - **Browser support**: View Transitions and Canvas 2D need modern browsers; fallbacks are built-in (full-page navigation when transitions are unsupported; glow and scanlines render without the canvas).
 - **Keyboard hijack**: the reference's global key listeners are a verified bug and must not be copied; key handling is scoped to the active view, covered by the existing "no hijack" test pattern.
 - **Motion contract**: per-view transition overlays must land at <= 400ms (the reference's 450–600ms violates the contract) and degrade to opacity-only <= 200ms under reduced motion.
-- **Mobile detail**: the reference breaks resume detail on small screens; our detail panel gets an internal scroll region when stacked below the list.
+- **Mobile detail**: the reference breaks list/detail on small screens; our detail panel gets an internal scroll region when stacked below the list, and the RESUME view flows as a single column with no horizontal overflow.
 - **Canvas performance**: an unconstrained particle loop can hurt INP; mitigated by a capped particle count, devicePixelRatio-aware sizing, and pausing when the tab is hidden.
 - **Content drift**: external links (itch.io, GitHub) can rot; a link-check test in the E2E suite guards against it.
 

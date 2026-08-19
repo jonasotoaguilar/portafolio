@@ -1,9 +1,6 @@
 ---
 import { getCollection } from "astro:content";
 
-import GameList from "../components/game/GameList.astro";
-import GameListItem from "../components/game/GameListItem.astro";
-import GameViewShell from "../components/game/GameViewShell.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { VIEW_TITLES } from "../lib/seo/titles";
 
@@ -13,134 +10,696 @@ if (!siteEntry || !resumeEntry) {
 	throw new Error("Expected siteConfig and resume content");
 }
 const site = siteEntry.data;
-const resume = resumeEntry.data;
-const sections = [
-	["education", "Education"],
-	["experience", "Experience"],
-	["projects", "Projects"],
-	["skills", "Skills"],
-	["languages", "Languages"],
-] as const;
+const { degree, experience, summary } = resumeEntry.data;
+const first = experience[0];
 ---
 
 <BaseLayout title={VIEW_TITLES.resume} site={site}>
-	<GameViewShell title="Resume">
-		<section class="flex flex-col gap-6 md:flex-row md:items-start md:gap-10">
-			<GameList label="Resume sections">
-				{sections.map(([id, label], index) => (
-					<GameListItem id={id} title={label} active={index === 0} />
+	<main data-view aria-labelledby="resume-title" class="resume-scene game-view">
+		{/* Full-bleed Persona-3 scene (reference anatomy): decorative layers sit
+		    behind the content, never intercept input, and stay aria-hidden. The
+		    central portrait figure is the dominant visual mass; it is composited
+		    with mix-blend-mode: screen so its dark backing never hides the
+		    shared light-field gradient, the scanlines, or the living-background
+		    bubbles. It is the registered owner-created artwork
+		    assets/persona/persona_resume.png (served as /resume/persona_resume.png).
+		    No decorative right-side icons. */}
+		<img
+			class="resume-scene-figure"
+			src="/resume/persona_resume.png"
+			alt=""
+			aria-hidden="true"
+			decoding="async"
+		/>
+
+		<a
+			href="/"
+			class="resume-back-link font-label text-xl uppercase tracking-[0.08em] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-cyan"
+		>
+			Back to menu
+		</a>
+
+		{/* Upper-left primary polygon (reference anatomy): black upper mass with
+		    the RESUME title, white lower mass with the degree. The strong
+		    diagonal right edge and the left edge born outside the viewport are
+		    drawn with clip-path. */}
+		<div class="resume-title-panel" data-resume-title-panel>
+			<div class="resume-title-black">
+				<h1 id="resume-title" class="resume-title-word">Resume</h1>
+			</div>
+			<div class="resume-title-white">
+				<p class="resume-degree-title">{degree.title}</p>
+				<p class="resume-degree-meta">
+					{degree.institution} · {degree.period}
+				</p>
+			</div>
+		</div>
+
+		{/* Experience: the reserved description region sits on the blue field
+		    (no card); the compact list below it carries the keyboard cursor.
+		    Without JS the fallback renders every entry in document flow. */}
+		<section class="resume-experience" aria-labelledby="experience-label">
+			<div class="resume-experience-enhanced">
+				<div
+					id="resume-description"
+					data-resume-description
+					aria-live="polite"
+					class="resume-description"
+				>
+					<h3
+						data-resume-description-title
+						class="resume-description-company"
+					>
+						{first.company}
+					</h3>
+					<p data-resume-description-role class="resume-description-role">
+						{first.role} · {first.period}
+					</p>
+					<p data-resume-description-body class="resume-description-body">
+						{first.description}
+					</p>
+				</div>
+
+				<h2 id="experience-label" class="resume-list-label">Experience</h2>
+				<ol data-resume-list aria-label="Experience entries" class="resume-list">
+					{experience.map((entry, index) => (
+						<li>
+							<button
+								type="button"
+								data-list-item
+								data-resume-item
+								data-active={index === 0 ? "true" : undefined}
+								aria-pressed={index === 0 ? "true" : "false"}
+								aria-controls="resume-description"
+								tabindex={index === 0 ? 0 : -1}
+								data-company={entry.company}
+								data-role={entry.role}
+								data-period={entry.period}
+								data-description={entry.description}
+								class="resume-list-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-cyan"
+							>
+								<span class="resume-list-item-company">
+									{entry.company}
+								</span>
+								<span class="resume-list-item-role">{entry.role}</span>
+							</button>
+						</li>
+					))}
+				</ol>
+			</div>
+
+			{/* No-JS fallback (resume contract): every entry with its description
+			    stays in normal document flow. */}
+			<ul data-resume-fallback class="resume-experience-fallback">
+				{experience.map((entry) => (
+					<li class="resume-fallback-entry">
+						<h3 class="resume-fallback-company">{entry.company}</h3>
+						<p class="resume-fallback-role">
+							{entry.role} · {entry.period}
+						</p>
+						<p class="resume-fallback-body">{entry.description}</p>
+					</li>
 				))}
-			</GameList>
-			<aside
-				data-detail-panel
-				data-active="true"
-				tabindex="-1"
-				aria-label="Education"
-				class="view-panel max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 p-6"
-			>
-				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-on-light">
-					Education
-				</h2>
-				<ul class="mt-4 flex flex-col gap-4">
-					{resume.education.map((entry) => (
-						<li>
-							<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-on-light">
-								{entry.institution}
-							</h3>
-							<p class="mt-1 text-text-on-light-secondary">{entry.title}</p>
-							<p class="text-text-on-light-secondary">{entry.period}</p>
-						</li>
-					))}
-				</ul>
-			</aside>
-			<aside
-				data-detail-panel
-				tabindex="-1"
-				aria-label="Experience"
-				class="view-panel max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 p-6"
-			>
-				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-on-light">
-					Experience
-				</h2>
-				<ul class="mt-4 flex flex-col gap-4">
-					{resume.experience.map((entry) => (
-						<li>
-							<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-on-light">
-								{entry.company}
-							</h3>
-							<p class="mt-1 text-text-on-light-secondary">{entry.role}</p>
-							<p class="text-text-on-light-secondary">{entry.period}</p>
-							{entry.details.length > 0 && (
-								<ul class="mt-2 list-disc pl-5 text-text-on-light-secondary">
-									{entry.details.map((detail) => (
-										<li>{detail}</li>
-									))}
-								</ul>
-							)}
-						</li>
-					))}
-				</ul>
-			</aside>
-			<aside
-				data-detail-panel
-				tabindex="-1"
-				aria-label="Projects"
-				class="view-panel max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 p-6"
-			>
-				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-on-light">
-					Projects
-				</h2>
-				<ul class="mt-4 flex flex-col gap-4">
-					{resume.projects.map((entry) => (
-						<li>
-							<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-on-light">
-								{entry.name}
-							</h3>
-							{entry.published && (
-								<p class="mt-1 text-accent-on-light">Academic publication · {entry.published}</p>
-							)}
-							<p class="mt-1 text-text-on-light-secondary">{entry.description}</p>
-						</li>
-					))}
-				</ul>
-			</aside>
-			<aside
-				data-detail-panel
-				tabindex="-1"
-				aria-label="Skills"
-				class="view-panel max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 p-6"
-			>
-				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-on-light">
-					Skills
-				</h2>
-				<ul class="mt-4 flex flex-wrap gap-2">
-					{resume.skills.map((name) => (
-						<li class="view-chip px-3 py-1">
-							{name}
-						</li>
-					))}
-				</ul>
-			</aside>
-			<aside
-				data-detail-panel
-				tabindex="-1"
-				aria-label="Languages"
-				class="view-panel max-md:max-h-[50dvh] max-md:overflow-y-auto md:flex-1 p-6"
-			>
-				<h2 class="font-display text-3xl uppercase leading-[1.05] text-text-on-light">
-					Languages
-				</h2>
-				<ul class="mt-4 flex flex-col gap-4">
-					{resume.languages.map((entry) => (
-						<li>
-							<h3 class="font-label text-xl uppercase tracking-[0.08em] text-accent-on-light">
-								{entry.name}
-							</h3>
-							<p class="mt-1 text-text-on-light-secondary">{entry.proficiency}</p>
-						</li>
-					))}
-				</ul>
-			</aside>
+			</ul>
 		</section>
-	</GameViewShell>
+
+		{/* Lower-right summary plate (reference anatomy): a wide horizontal navy
+		    trapezoid whose PROFESSIONAL title escapes the top edge, supported by
+		    a lighter cyan triangle, with SUMMARY immediately to its right. */}
+		<aside class="resume-summary" data-resume-summary aria-labelledby="summary-label">
+			<div class="resume-summary-triangle" aria-hidden="true"></div>
+			<h2 id="summary-label" class="resume-summary-word">
+				<span class="resume-summary-word-main">Professional</span>
+				<span class="resume-summary-word-sub">Summary</span>
+			</h2>
+			<p class="resume-summary-body">{summary}</p>
+		</aside>
+	</main>
+
+	<script>
+		import "../scripts/resume";
+	</script>
 </BaseLayout>
+
+<style>
+	/* RESUME view (reference anatomy): a scene composed over the shared
+	   light-field gradient (white band → light blue → sea blue), scanlines,
+	   and the living-background bubbles, with a dominant bottom-anchored
+	   central figure (mix-blend-mode: screen), an upper-left title polygon,
+	   a compact experience list, and a lower-right translucent navy summary
+	   parallelogram. Polygon clip-paths carry the angular shape language; no
+	   soft radii. Desktop overlays the layers absolutely; mobile stacks them
+	   in a single coherent column. */
+
+	/* --- Scene base (always) --- */
+	/* No route-local background: the shared light-field gradient (.glow-layer),
+	   the scanlines, and the living-background canvas paint behind this scene
+	   on the resume route (field contract), so the white band/light-blue/sea-
+	   blue gradient and the bubbles stay visible instead of being covered by
+	   an opaque scene fill. Text on the field uses the light-field palette. */
+	.resume-scene {
+		position: relative;
+		min-height: 100dvh;
+		overflow-x: hidden;
+		color: var(--color-text-on-light);
+		background: transparent;
+	}
+
+	/* --- Content: shared type/color (light-field palette on the resume
+	   route; self-contained panels keep their own ink surfaces) --- */
+	.resume-back-link {
+		color: var(--color-accent-on-light);
+	}
+
+	.resume-back-link:hover {
+		color: var(--color-bg-base);
+	}
+
+	.resume-title-black {
+		background: var(--color-bg-base);
+		color: var(--color-text-primary);
+	}
+
+	.resume-title-word {
+		font-family: var(--font-display);
+		line-height: 0.9;
+		text-transform: uppercase;
+		font-size: clamp(2.5rem, 6.5vw, 5.5rem);
+	}
+
+	.resume-title-white {
+		background: var(--color-surface-light);
+		color: var(--color-text-on-light);
+	}
+
+	.resume-degree-title {
+		font-family: var(--font-display);
+		text-transform: uppercase;
+		line-height: 1.05;
+		font-size: clamp(0.95rem, 1.5vw, 1.4rem);
+		color: var(--color-text-on-light);
+	}
+
+	.resume-degree-meta {
+		font-family: var(--font-label);
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		font-size: clamp(0.8rem, 1.1vw, 1rem);
+		color: var(--color-accent-on-light);
+	}
+
+	.resume-description-company {
+		font-family: var(--font-display);
+		text-transform: uppercase;
+		line-height: 1.05;
+		color: var(--color-text-on-light);
+	}
+
+	.resume-description-role {
+		font-family: var(--font-label);
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--color-accent-on-light);
+	}
+
+	.resume-description-body {
+		color: var(--color-text-on-light);
+	}
+
+	.resume-list-label {
+		font-family: var(--font-label);
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--color-accent-on-light);
+		font-size: clamp(1.05rem, 1.5vw, 1.4rem);
+	}
+
+	.resume-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	/* Experience rows (resume contract, list treatment): every row is a
+	   button with a visible border and color. Unfocused rows are blue-tinted
+	   surfaces with blue-filtered/cyan text and a thin cyan border. The
+	   focused/selected row inverts to a white surface with dark text and a
+	   small red offset edge/shadow (the shared red geometric active language,
+	   as on the skill cards), plus a 2px cyan bottom bar so the selected
+	   state is never color-only; the :focus-visible outline stays visible. */
+	.resume-list-item {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		width: 100%;
+		text-align: left;
+		min-height: 44px;
+		padding: 0.35rem 0.6rem;
+		background: color-mix(in srgb, var(--color-accent-600) 55%, transparent);
+		color: var(--color-accent-cyan);
+		border: 1px solid
+			color-mix(in srgb, var(--color-accent-cyan) 40%, transparent);
+		border-radius: 0;
+		transition:
+			background-color 150ms ease-out,
+			color 150ms ease-out;
+	}
+
+	.resume-list-item-company {
+		font-family: var(--font-display);
+		text-transform: uppercase;
+		line-height: 1.05;
+		font-size: clamp(1.05rem, 1.4vw, 1.3rem);
+		color: inherit;
+	}
+
+	.resume-list-item-role {
+		font-family: var(--font-label);
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		font-size: 0.82rem;
+		color: color-mix(in srgb, var(--color-accent-cyan) 72%, var(--color-accent-300));
+	}
+
+	.resume-list-item[data-active] {
+		background: var(--color-surface-light);
+		color: var(--color-text-on-light);
+		border-color: transparent;
+		box-shadow: 0.3rem 0.3rem 0 var(--color-accent-red);
+	}
+
+	.resume-list-item[data-active] .resume-list-item-company {
+		color: var(--color-text-on-light);
+	}
+
+	.resume-list-item[data-active] .resume-list-item-role {
+		color: var(--color-accent-on-light);
+	}
+
+	.resume-list-item[data-active]::after {
+		content: "";
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 2px;
+		background: var(--color-accent-cyan);
+		pointer-events: none;
+	}
+
+	/* --- Summary plate --- */
+	.resume-summary {
+		position: relative;
+		color: var(--color-text-primary);
+	}
+
+	/* The navy parallelogram silhouette lives on a pseudo-element so the
+	   escaped PROFESSIONAL title and the body are never clipped by the
+	   plate's clip-path (the plate box itself stays unclipped). It is
+	   translucent so the light field / bubbles stay visible through it, and
+	   the lower-left diagonal descends toward the left: the top-left vertex
+	   is inset to the right and the bottom-left vertex reaches x=0. */
+	.resume-summary::before {
+		content: "";
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			175deg,
+			color-mix(in srgb, var(--color-accent-600) 84%, transparent) 0%,
+			color-mix(in srgb, var(--color-bg-base) 76%, transparent) 100%
+		);
+		clip-path: polygon(
+			1.5rem 0,
+			100% 0,
+			calc(100% - 1.5rem) 100%,
+			0 100%
+		);
+		z-index: 0;
+		pointer-events: none;
+	}
+
+	.resume-summary-triangle {
+		position: absolute;
+		top: 0;
+		left: 0;
+		background: var(--color-accent-cyan);
+		clip-path: polygon(0 0, 100% 0, 0 100%);
+		z-index: 1;
+		pointer-events: none;
+	}
+
+	.resume-summary-word {
+		display: flex;
+		align-items: baseline;
+		gap: 0.55em;
+		position: relative;
+		z-index: 2;
+	}
+
+	.resume-summary-word-main {
+		font-family: var(--font-display);
+		text-transform: uppercase;
+		line-height: 0.9;
+		color: var(--color-text-primary);
+	}
+
+	.resume-summary-word-sub {
+		font-family: var(--font-display);
+		text-transform: uppercase;
+		line-height: 1;
+		color: var(--color-text-primary);
+	}
+
+	.resume-summary-body {
+		color: var(--color-text-primary);
+		position: relative;
+		z-index: 1;
+	}
+
+	.resume-experience-enhanced {
+		display: none;
+	}
+
+	.resume-experience-fallback {
+		display: block;
+	}
+
+	html[data-game-ready] .resume-experience-enhanced {
+		display: block;
+	}
+
+	html[data-game-ready] .resume-experience-fallback {
+		display: none;
+	}
+
+	/* --- Desktop reference composition (JS-enhanced, >=768px) --- */
+	@media (min-width: 768px) {
+		html[data-game-ready] .resume-scene {
+			height: 100dvh;
+			overflow-y: hidden;
+		}
+
+		/* Dominant central visual mass: the portrait figure is bottom-anchored
+		   and fills the full viewport height, crossing the middle third behind
+		   the left rail and the summary plate. mix-blend-mode: screen keeps its
+		   dark backing transparent so the light-field stripe and the bubbles
+		   stay visible through the figure's dark regions. */
+		html[data-game-ready] .resume-scene-figure {
+			position: absolute;
+			left: 28vw;
+			bottom: 0;
+			width: 44vw;
+			height: 100dvh;
+			object-fit: contain;
+			object-position: center bottom;
+			mix-blend-mode: screen;
+			z-index: 1;
+		}
+
+		html[data-game-ready] .resume-back-link {
+			position: absolute;
+			top: 1.5rem;
+			right: 5.5rem;
+			z-index: 4;
+		}
+
+		/* Upper-left primary polygon: black upper mass + white lower mass,
+		   strong diagonal right edge, born outside the left viewport edge. */
+		html[data-game-ready] .resume-title-panel {
+			position: absolute;
+			top: 11vh;
+			left: 0;
+			width: 44vw;
+			height: 25vh;
+			z-index: 3;
+			display: flex;
+			flex-direction: column;
+			clip-path: polygon(
+				0 0,
+				100% 0,
+				calc(100% - 2.5rem) 100%,
+				-2rem 100%
+			);
+		}
+
+		html[data-game-ready] .resume-title-black {
+			flex: 0 0 56%;
+			display: flex;
+			align-items: center;
+			padding-left: clamp(1.5rem, 3vw, 3rem);
+		}
+
+		html[data-game-ready] .resume-title-word {
+			font-size: clamp(3rem, 6.2vw, 5.5rem);
+		}
+
+		html[data-game-ready] .resume-title-white {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			gap: 0.2rem;
+			padding-left: clamp(1.5rem, 3vw, 3rem);
+		}
+
+		html[data-game-ready] .resume-degree-title {
+			max-width: 42ch;
+		}
+
+		/* Description: 3-5 lines directly on the blue field, no card. */
+		html[data-game-ready] .resume-description {
+			position: absolute;
+			left: 4vw;
+			top: 41vh;
+			width: 30vw;
+			z-index: 3;
+		}
+
+		html[data-game-ready] .resume-description-company {
+			font-size: clamp(1.4rem, 2.3vw, 2.1rem);
+		}
+
+		html[data-game-ready] .resume-description-role {
+			margin-top: 0.25rem;
+			font-size: clamp(0.95rem, 1.3vw, 1.2rem);
+		}
+
+		html[data-game-ready] .resume-description-body {
+			margin-top: 0.6rem;
+			font-size: clamp(0.95rem, 1.15vw, 1.08rem);
+			line-height: 1.5;
+		}
+
+		/* Compact list: label above, rows 32-44px, below the description. */
+		html[data-game-ready] .resume-list-label {
+			position: absolute;
+			left: 4vw;
+			top: 59vh;
+			z-index: 3;
+		}
+
+		html[data-game-ready] .resume-list {
+			position: absolute;
+			left: 4vw;
+			top: 63vh;
+			width: 19vw;
+			z-index: 3;
+		}
+
+		/* Lower-right summary plate: a wide horizontal navy parallelogram
+		   (silhouette drawn by .resume-summary::before) sized to its content —
+		   no fixed height, so no large empty space. The escaped title is
+		   absolutely positioned above the plate; the body flows below it with
+		   reserved top padding so the title and body never overlap. */
+		html[data-game-ready] .resume-summary {
+			position: absolute;
+			left: 55vw;
+			top: 72vh;
+			width: 37vw;
+			z-index: 3;
+			padding: 2.6rem 1.4rem 1rem;
+		}
+
+		html[data-game-ready] .resume-summary-triangle {
+			width: clamp(5rem, 26%, 9rem);
+			aspect-ratio: 1;
+			opacity: 0.9;
+		}
+
+		/* The title escapes the top edge and stays fully readable. */
+		html[data-game-ready] .resume-summary-word {
+			position: absolute;
+			top: -0.9em;
+			left: 1.4rem;
+		}
+
+		html[data-game-ready] .resume-summary-word-main {
+			font-size: clamp(2rem, 3.6vw, 3.1rem);
+			margin-left: -0.06em;
+		}
+
+		html[data-game-ready] .resume-summary-word-sub {
+			font-size: clamp(1rem, 1.5vw, 1.5rem);
+		}
+
+		/* Body flows inside the plate below the escaped title: a readable
+		   measure and line-height sized to the actual summary content, with
+		   no overflow container and no reserved dead space. */
+		html[data-game-ready] .resume-summary-body {
+			font-size: clamp(0.85rem, 0.95vw, 0.98rem);
+			line-height: 1.45;
+			max-width: 52ch;
+		}
+	}
+
+	/* --- Mobile & no-JS: single-column scene (no horizontal overflow) --- */
+	@media (max-width: 767px) {
+		.resume-scene {
+			/* Bottom clearance keeps the summary readable above the fixed
+			   bottom-right control cluster when the view scrolls. */
+			padding: 1.25rem 1.25rem 8rem;
+		}
+
+		/* Content always sits above the decorative figure layer. */
+		.resume-back-link,
+		.resume-title-panel,
+		.resume-experience,
+		.resume-summary {
+			position: relative;
+			z-index: 1;
+		}
+
+		.resume-back-link {
+			display: inline-block;
+			margin-bottom: 1.25rem;
+		}
+
+		.resume-title-panel {
+			display: flex;
+			flex-direction: column;
+			margin-bottom: 1.5rem;
+			clip-path: polygon(0 0, 100% 0, calc(100% - 1rem) 100%, -0.75rem 100%);
+		}
+
+		.resume-title-black {
+			padding: 0.5rem 1rem;
+		}
+
+		.resume-title-word {
+			font-size: clamp(2.5rem, 12vw, 3.5rem);
+		}
+
+		.resume-title-white {
+			padding: 0.75rem 1rem 0.9rem;
+		}
+
+		.resume-degree-meta {
+			margin-top: 0.2rem;
+		}
+
+		.resume-experience {
+			display: flex;
+			flex-direction: column;
+			gap: 1.25rem;
+			margin-bottom: 1.5rem;
+		}
+
+		.resume-experience-fallback {
+			display: flex;
+			flex-direction: column;
+			gap: 1.5rem;
+		}
+
+		.resume-fallback-company {
+			font-family: var(--font-display);
+			text-transform: uppercase;
+			font-size: 1.5rem;
+			line-height: 1.05;
+			color: var(--color-text-primary);
+		}
+
+		.resume-fallback-role {
+			font-family: var(--font-label);
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			color: var(--color-accent-cyan);
+			margin-top: 0.15rem;
+		}
+
+		.resume-fallback-body {
+			color: var(--color-text-primary);
+			margin-top: 0.4rem;
+		}
+
+		.resume-description-company {
+			font-size: 1.5rem;
+		}
+
+		.resume-description-role {
+			margin-top: 0.15rem;
+		}
+
+		.resume-description-body {
+			margin-top: 0.5rem;
+		}
+
+		.resume-list-label {
+			margin-bottom: -0.5rem;
+		}
+
+		/* Natural-height summary in flow: the escaped title and the body stay
+		   on the translucent navy parallelogram (::before) without clipping. */
+		.resume-summary {
+			padding: 2.75rem 1.25rem 1.5rem;
+		}
+
+		.resume-summary::before {
+			clip-path: polygon(
+				1rem 0,
+				100% 0,
+				calc(100% - 1rem) 100%,
+				0 100%
+			);
+		}
+
+		.resume-summary-triangle {
+			width: 6rem;
+			aspect-ratio: 1;
+		}
+
+		.resume-summary-word {
+			position: relative;
+			top: auto;
+			left: auto;
+			margin-top: -3.1rem;
+			margin-bottom: 0.5rem;
+		}
+
+		.resume-summary-word-main {
+			font-size: clamp(1.9rem, 8vw, 2.6rem);
+		}
+
+		.resume-summary-word-sub {
+			font-size: 1.1rem;
+		}
+
+		.resume-summary-body {
+			font-size: 0.95rem;
+			line-height: 1.45;
+		}
+
+		/* The central figure becomes a controlled, subdued bottom-anchored
+		   accent behind the content (cropped to the right edge); it stays
+		   decorative and never blocks the summary. */
+		.resume-scene-figure {
+			position: absolute;
+			bottom: 0;
+			right: -16vw;
+			width: 62vw;
+			height: auto;
+			opacity: 0.4;
+			z-index: 0;
+		}
+	}
+</style>

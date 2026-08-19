@@ -146,7 +146,7 @@ test.describe("first-load budget", () => {
 		const probes: [string, string | RegExp][] = [
 			["/", "About"],
 			["/about", "Backend & Full-Stack Engineer"],
-			["/resume", "Ingeniería de Ejecución en Computación e Informática"],
+			["/resume", "Computer Science and Informatics Engineer"],
 			["/projects", /Service-order and ticket management platform/],
 			["/skills", "FastAPI"],
 		];

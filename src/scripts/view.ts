@@ -151,6 +151,12 @@ function preselectFromHash(): void {
 function setupView(): void {
 	const found = document.querySelector<HTMLElement>("[data-view]");
 	if (!found) return;
+	// Resume owns its list/selection keys (src/scripts/resume.ts). After a
+	// client-side navigation from a view that loaded this module, the
+	// astro:page-load handler re-runs setupView on the shared document;
+	// binding here would make every keyboard action on /resume fire twice
+	// (two playSelect/playClick per key, doubled Escape).
+	if (document.documentElement.dataset.route === "resume") return;
 	root = found;
 	items = [...found.querySelectorAll<HTMLElement>("[data-list-item]")];
 	// No-scroll gate (design D5): JS-only, so zero-JS content stays in flow.

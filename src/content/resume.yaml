@@ -1,38 +1,32 @@
-# Resume content typed from the verified CV facts (August 2026 CV).
-# No ranks, metrics, levels, or contact numbers; skills are plain names.
+# Resume content typed from the verified CV facts (August 2026 CV),
+# English-only per the RESUME view contract. The view renders the degree,
+# selectable professional experience descriptions, and the professional
+# summary; projects and skills have their own views and never appear here.
+# No ranks, metrics, levels, or contact numbers.
 resume:
-  education:
-    - institution: USACH
-      title: Ingeniería de Ejecución en Computación e Informática
-      period: Mar 2020–Apr 2025
-    - institution: Technical education
-      title: Telecommunications
-      period: Mar 2017–Nov 2019
+  degree:
+    institution: USACH
+    title: Computer Science and Informatics Engineer
+    period: Mar 2020–Apr 2025
   experience:
     - company: Productos Barber Chile
       role: Sales and customer service
       period: 2020–2026
-      details:
-        - Sales and customer service.
+      description: >-
+        Provided sales and customer service, attending to customers and
+        supporting the business's day-to-day commercial operations.
     - company: Policomp
       role: IT Support Intern
       period: Jan–Mar 2020
-      details:
-        - IT support internship.
-  projects:
-    - name: ServiceFlow
-      description: Service order and ticket management.
-    - name: WealthQuest
-      published: May 2025
-      description: Thesis game built with Unity.
-  skills:
-    - Python
-    - Java
-    - Spring Boot
-    - TypeScript/JavaScript
-    - SQL and related tooling
-  languages:
-    - name: Spanish
-      proficiency: native
-    - name: English
-      proficiency: basic technical reading
+      description: >-
+        Provided IT support during a professional internship, assisting with
+        day-to-day technical requests.
+  summary: >-
+    Junior Backend Developer and Computer Science and Informatics Engineer
+    (USACH), with a foundation in Python, Java, and Spring Boot. I built
+    ServiceFlow, a web-based technical service management system currently
+    used in production by a small business, independently developed with
+    Next.js, Node.js/TypeScript, PostgreSQL, and REST APIs. I am the lead
+    author of an academic publication derived from my undergraduate thesis.
+    I am seeking a Backend Developer role in Chile, where I can contribute
+    to SQL databases, testing, TDD, and CI/CD.
