@@ -7,4 +7,6 @@ stack:
 link: https://jonasotoaguilar.itch.io/wealthquest
 external: true
 order: 2
+pullRequests: null
+commits: null
 ---

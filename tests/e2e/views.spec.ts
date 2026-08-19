@@ -535,26 +535,104 @@ test.describe("game shell and view routes", () => {
 		).toBeVisible();
 	});
 
-	test("PROJECTS renders the four projects once in declared order", async ({
+	test("PROJECTS renders the nine projects in declared order as five recycled slots", async ({
 		page,
 	}) => {
 		await page.goto("/projects");
-		const items = page.locator("[data-list-item]");
-		await expect(items).toHaveCount(4);
-		expect(await items.allTextContents()).toEqual([
+		// Enhanced DOM: the controller adopts the first min(count, 5) rows
+		// as persistent slots; the remaining four records live in the
+		// controller's data blob (no-JS fallback keeps all nine in flow).
+		const rows = page.locator("[data-project-slot]");
+		await expect(rows).toHaveCount(5);
+		// Titles live in their own span: the row's text also carries the
+		// right-edge metrics, so the order assertion targets the title.
+		expect(await rows.locator(".project-row-title").allTextContents()).toEqual([
 			"ServiceFlow",
 			"WealthQuest",
 			"EventCommerce",
 			"Fintual Sensor",
+			"opencode-tokenmeter",
 		]);
 		for (const name of [
 			"ServiceFlow",
 			"WealthQuest",
 			"EventCommerce",
 			"Fintual Sensor",
+			"opencode-tokenmeter",
 		]) {
-			await expect(page.getByRole("button", { name })).toHaveCount(1);
+			await expect(page.getByRole("link", { name })).toHaveCount(1);
 		}
+	});
+
+	test("PROJECTS rows show GitHub metrics (em dash for non-GitHub projects)", async ({
+		page,
+	}) => {
+		await page.goto("/projects");
+		// ServiceFlow: 12 PRs / 205 commits.
+		const serviceflow = page.locator(
+			'[data-project-slot][href="https://github.com/jonasotoaguilar/ServiceFlow"]',
+		);
+		await expect(serviceflow.locator("[data-metric-pr-value]")).toHaveText(
+			"12",
+		);
+		await expect(serviceflow.locator("[data-metric-commits-value]")).toHaveText(
+			"205",
+		);
+		// WealthQuest (itch.io): both metrics render the em dash.
+		const wealthquest = page.locator(
+			'[data-project-slot][href="https://jonasotoaguilar.itch.io/wealthquest"]',
+		);
+		await expect(wealthquest.locator("[data-metric-pr-value]")).toHaveText("—");
+		await expect(wealthquest.locator("[data-metric-commits-value]")).toHaveText(
+			"—",
+		);
+		// The sr-only nouns explain the icon-only metrics.
+		await expect(serviceflow.locator("[data-metric-pr-aria]")).toHaveText(
+			"12 pull requests",
+		);
+		await expect(wealthquest.locator("[data-metric-commits-aria]")).toHaveText(
+			"no commits",
+		);
+	});
+
+	test("PROJECTS shows the metrics legend with the PR and commit icons", async ({
+		page,
+	}) => {
+		await page.goto("/projects");
+		const legend = page.getByRole("group", {
+			name: "Project metrics legend",
+		});
+		await expect(legend).toBeVisible();
+		await expect(legend.getByText("PR")).toBeVisible();
+		await expect(legend.getByText("COMMITS")).toBeVisible();
+	});
+
+	test("PROJECTS zero-JS fallback keeps every project in document flow", async ({
+		browser,
+	}) => {
+		const context = await browser.newContext({ javaScriptEnabled: false });
+		const page = await context.newPage();
+		await page.goto("/projects");
+		const rows = page.locator("[data-project-row]");
+		await expect(rows).toHaveCount(9);
+		// Fallback rows are real links that open their URL in a new tab.
+		await expect(
+			page.getByRole("link", { name: "WealthQuest" }),
+		).toHaveAttribute("target", "_blank");
+		for (const href of [
+			"https://github.com/jonasotoaguilar/ServiceFlow",
+			"https://jonasotoaguilar.itch.io/wealthquest",
+			"https://github.com/jonasotoaguilar/eventcommerce",
+			"https://github.com/BlendedGames-bGames/bGames-FintualSensor",
+			"https://github.com/jonasotoaguilar/opencode-tokenmeter",
+			"https://github.com/jonasotoaguilar/minuto",
+			"https://github.com/jonasotoaguilar/llmux",
+			"https://github.com/jonasotoaguilar/sentinel",
+			"https://github.com/jonasotoaguilar/raguard",
+		]) {
+			await expect(page.locator(`a[href="${href}"]`)).toHaveCount(1);
+		}
+		await context.close();
 	});
 
 	test("/projects#slug preselects the matching project detail", async ({
@@ -563,32 +641,33 @@ test.describe("game shell and view routes", () => {
 		await page.goto("/projects#serviceflow");
 		await expect(
 			page.locator("[data-detail-panel][data-active]"),
-		).toContainText("ServiceFlow");
+		).toHaveAttribute("aria-label", "ServiceFlow project");
+		await expect(
+			page.locator(
+				'[data-project-slot][href="https://github.com/jonasotoaguilar/ServiceFlow"]',
+			),
+		).toHaveAttribute("data-active", /.*/);
 		await page.goto("/projects#wealthquest");
 		await expect(
 			page.locator("[data-detail-panel][data-active]"),
-		).toContainText("WealthQuest");
+		).toHaveAttribute("aria-label", "WealthQuest project");
+		// With nine records the preselected item's window can shift from its
+		// natural slot, so the active-row assertion keys on the href, not a
+		// slot index.
+		await expect(
+			page.locator(
+				'[data-project-slot][href="https://jonasotoaguilar.itch.io/wealthquest"]',
+			),
+		).toHaveAttribute("data-active", /.*/);
 	});
 
-	test("Escape closes an open panel first, then returns to the menu", async ({
+	test("Escape on PROJECTS returns straight to the menu: the detail stage is always synchronized", async ({
 		page,
 	}) => {
 		await page.goto("/projects");
-		await page.getByRole("button", { name: "ServiceFlow" }).focus();
-		await page.keyboard.press("Enter");
 		await expect(page.locator("[data-detail-panel][data-active]")).toHaveCount(
 			1,
 		);
-		await expect(
-			page.locator("[data-detail-panel][data-active]"),
-		).toBeFocused();
-		await page.keyboard.press("Escape");
-		await expect(page.locator("[data-detail-panel][data-active]")).toHaveCount(
-			0,
-		);
-		await expect(
-			page.getByRole("button", { name: "ServiceFlow" }),
-		).toBeFocused();
 		await page.keyboard.press("Escape");
 		await expect(page).toHaveURL(/\/$/);
 	});
@@ -610,6 +689,280 @@ test.describe("game shell and view routes", () => {
 		await expect(
 			page.getByRole("link", { name: "Back to home" }),
 		).toHaveAttribute("href", "/");
+	});
+});
+
+// PROJECTS recycled list (projects contract): the rows are semantic links
+// whose right-edge icon follows the URL (GitHub mark vs globe), activation
+// is native (new tab), and the enhanced controller keeps a fixed
+// min(count, 5)-slot window. The collection ships four entries, so the
+// 5+ window mechanics are exercised by seeding a 6-project surface the way
+// the SSR fallback would have rendered it, then re-triggering the
+// page-load setup.
+test.describe("PROJECTS recycled five-slot list", () => {
+	const EXTRA_PROJECTS = [
+		{ id: "project-6", title: "Project 6", link: "https://example.com/p6" },
+		{ id: "project-7", title: "Project 7", link: "https://example.com/p7" },
+	];
+
+	// Rebuilds the zero-JS fallback surface a 6-project SSR page would ship
+	// (rows, top stages, detail panels, data blob) inside the live DOM, then
+	// re-runs the enhancement setup so the controller re-initializes from
+	// the seeded surface.
+	async function seedSixProjects(page: Page): Promise<void> {
+		await page.evaluate((extra) => {
+			const titles = Object.fromEntries(
+				extra.map((entry) => [entry.id, entry.title]),
+			);
+			const links = Object.fromEntries(
+				extra.map((entry) => [entry.id, entry.link]),
+			);
+			const list = document.querySelector(
+				"[data-projects-viewport] [data-list]",
+			);
+			const stageZone = document.querySelector(".projects-top");
+			const panelZone = document.querySelector(".projects-screen");
+			// Reset the adopted rows back to fallback rows so adoption re-runs.
+			document.querySelectorAll("[data-project-slot]").forEach((row) => {
+				row.removeAttribute("data-project-slot");
+				row.setAttribute("data-project-row", "");
+			});
+			for (const { id } of extra) {
+				const li = document.createElement("li");
+				li.className = "project-list-item";
+				const row = document.createElement("a");
+				row.href = links[id];
+				row.target = "_blank";
+				row.rel = "noopener noreferrer";
+				row.id = id;
+				row.className = "project-row";
+				row.setAttribute("data-project-row", "");
+				const title = document.createElement("span");
+				title.className = "project-row-title";
+				title.textContent = titles[id];
+				// Metrics group matching the SSR row shape (numbers render as
+				// the record's values; the seeded records have none, so the
+				// controller writes the em dash on adoption).
+				const metrics = document.createElement("span");
+				metrics.className = "project-row-metrics";
+				for (const metric of ["pr", "commits"]) {
+					const m = document.createElement("span");
+					m.className = "project-metric";
+					m.setAttribute(`data-metric-${metric}`, "");
+					const value = document.createElement("span");
+					value.className = "project-metric-value";
+					value.setAttribute(`data-metric-${metric}-value`, "");
+					const aria = document.createElement("span");
+					aria.className = "sr-only";
+					aria.setAttribute(`data-metric-${metric}-aria`, "");
+					m.append(value, aria);
+					metrics.appendChild(m);
+				}
+				const svg = document.createElementNS(
+					"http://www.w3.org/2000/svg",
+					"svg",
+				);
+				svg.setAttribute("viewBox", "0 0 24 24");
+				svg.setAttribute("class", "project-row-icon");
+				const path = document.createElementNS(
+					"http://www.w3.org/2000/svg",
+					"path",
+				);
+				path.setAttribute("d", "M3 5h18v14H3z");
+				svg.appendChild(path);
+				row.append(title, metrics, svg);
+				li.appendChild(row);
+				list?.appendChild(li);
+				const stage = document.createElement("div");
+				stage.className = "projects-stage";
+				stage.setAttribute("data-project-top", "");
+				stage.setAttribute("data-project-top-for", id);
+				stageZone?.appendChild(stage);
+				const panel = document.createElement("aside");
+				panel.className = "projects-detail-panel";
+				panel.setAttribute("data-detail-panel", "");
+				panel.setAttribute("aria-label", `${titles[id]} project`);
+				const label = document.createElement("p");
+				label.className = "projects-detail-label";
+				label.textContent = "Description";
+				const desc = document.createElement("p");
+				desc.className = "projects-detail-description";
+				desc.textContent = `${titles[id]} description`;
+				panel.append(label, desc);
+				panelZone?.appendChild(panel);
+			}
+			const blob = document.getElementById("projects-data");
+			if (blob) {
+				const records = JSON.parse(blob.textContent ?? "[]");
+				records.push(...extra);
+				blob.textContent = JSON.stringify(records);
+			}
+			document.dispatchEvent(new Event("astro:page-load"));
+		}, EXTRA_PROJECTS);
+	}
+
+	test("link icons follow the URL: GitHub mark for GitHub links, globe for sites", async ({
+		page,
+	}) => {
+		await page.goto("/projects");
+		const githubPath = page
+			.locator(
+				'[data-project-slot][href="https://github.com/jonasotoaguilar/ServiceFlow"] .project-row-icon path',
+			)
+			.first();
+		const globePath = page
+			.locator(
+				'[data-project-slot][href="https://jonasotoaguilar.itch.io/wealthquest"] .project-row-icon path',
+			)
+			.first();
+		await expect(githubPath).toHaveAttribute(
+			"d",
+			/^M11\.99 2C6\.47 2 2 6\.48 2 12/,
+		);
+		await expect(globePath).toHaveAttribute("d", /^M12 2a10 10 0 1 0 0 20/);
+	});
+
+	test("clicking a row opens its project URL in a new tab and selects the row", async ({
+		page,
+		context,
+	}) => {
+		await page.goto("/projects");
+		const row = page.getByRole("link", { name: "EventCommerce" });
+		const popupPromise = context.waitForEvent("page");
+		await row.click();
+		const popup = await popupPromise;
+		await popup.waitForURL("https://github.com/jonasotoaguilar/eventcommerce", {
+			waitUntil: "commit",
+		});
+		// Clicking also selects the row without moving the window.
+		await expect(row).toHaveAttribute("data-active", /.*/);
+	});
+
+	test("a long description grows downward inside the detail region; the list never moves", async ({
+		page,
+	}) => {
+		await page.goto("/projects");
+		const listZone = page.locator(".projects-list-zone");
+		const before = await listZone.boundingBox();
+		expect(before).not.toBeNull();
+		await page.evaluate(() => {
+			const desc = document.querySelector(
+				"[data-detail-panel][data-active] .projects-detail-description",
+			);
+			if (desc) desc.textContent = "Long description. ".repeat(240);
+		});
+		const panel = page.locator("[data-detail-panel][data-active]");
+		// The description overflows the region and scrolls INSIDE it.
+		await expect
+			.poll(() =>
+				panel.evaluate(
+					(el) =>
+						el.scrollHeight > el.clientHeight &&
+						getComputedStyle(el).overflowY === "auto",
+				),
+			)
+			.toBe(true);
+		// Neither the page nor the list moves.
+		expect(await page.evaluate(() => window.scrollY)).toBe(0);
+		const after = await listZone.boundingBox();
+		expect(after?.y).toBe(before?.y);
+	});
+
+	test("an overflowing collection shows exactly five slots, advances the window at the edges, and syncs stage + panel", async ({
+		page,
+	}) => {
+		await page.goto("/projects");
+		// The real collection has nine records; the seed adds two more, so
+		// the window mechanics run against an 11-record surface.
+		await seedSixProjects(page);
+		const rows = page.locator("[data-project-slot]");
+		// Exactly five persistent slots; the 6th+ fallback rows are gone.
+		await expect(rows).toHaveCount(5);
+		await expect(page.locator("[data-project-row]")).toHaveCount(0);
+		await expect(page.locator(".project-list-item")).toHaveCount(5);
+		// The overflow scrollbar appears only for a 5+ collection.
+		await expect(page.locator("[data-projects-scrollbar]")).toBeVisible();
+		const title = (nth: number) => rows.nth(nth).locator(".project-row-title");
+		// Walk the cursor to the bottom slot (window 1..5, active = the 5th
+		// record), then one more ArrowDown advances the window to 2..6:
+		// only the newly exposed slot's content changes; the geometry stays
+		// stable.
+		for (let step = 0; step < 4; step += 1) {
+			await page.keyboard.press("ArrowDown");
+		}
+		await expect(title(4)).toHaveText("opencode-tokenmeter");
+		await page.keyboard.press("ArrowDown");
+		await expect(title(4)).toHaveText("minuto");
+		await expect(title(0)).toHaveText("WealthQuest");
+		const zoneBox = await page.locator(".projects-list-zone").boundingBox();
+		expect(zoneBox?.height).toBeGreaterThan(0);
+		// The top stage and the detail panel follow the cursor by id.
+		await expect(
+			page.locator("[data-project-top][data-active]"),
+		).toHaveAttribute("data-project-top-for", "minuto");
+		await expect(
+			page.locator("[data-detail-panel][data-active]"),
+		).toHaveAttribute("aria-label", "minuto project");
+		// Walk the cursor to the LAST record so the window reaches its final
+		// position (windowStart = count - visible) before checking the thumb.
+		for (let step = 0; step < 5; step += 1) {
+			await page.keyboard.press("ArrowDown");
+		}
+		await expect(title(4)).toHaveText("Project 7");
+		// The thumb mirrors the window start: at the last window the thumb
+		// rides the full travel.
+		const thumbState = await page
+			.locator("[data-projects-thumb]")
+			.evaluate((el) => {
+				const thumb = el as HTMLElement;
+				const track = thumb.parentElement;
+				return {
+					transform: thumb.style.transform,
+					styleHeight: thumb.style.height,
+					trackHeight: track?.offsetHeight ?? 0,
+				};
+			});
+		const travel = thumbState.trackHeight - parseFloat(thumbState.styleHeight);
+		const transformY = parseFloat(
+			thumbState.transform.replace(/^translateY\(|px\)$/g, ""),
+		);
+		expect(thumbState.trackHeight).toBeGreaterThan(0);
+		expect(parseFloat(thumbState.styleHeight)).toBeLessThan(
+			thumbState.trackHeight,
+		);
+		// The browser serializes the inline transform with rounded digits;
+		// assert the geometric value within a sub-pixel tolerance.
+		expect(Math.abs(transformY - travel)).toBeLessThan(0.01);
+		// The next press wraps to the initial window and slot 1 (the
+		// collection's last record was active at the window edge); the
+		// initial window's last slot holds the 5th record.
+		await page.keyboard.press("ArrowDown");
+		await expect(title(0)).toHaveText("ServiceFlow");
+		await expect(rows.nth(0)).toHaveAttribute("data-active", /.*/);
+		await expect(title(4)).toHaveText("opencode-tokenmeter");
+		await expect(
+			page.locator("[data-detail-panel][data-active]"),
+		).toHaveAttribute("aria-label", "ServiceFlow project");
+	});
+
+	test("wheel over the list advances the window discretely and never scrolls the page", async ({
+		page,
+	}) => {
+		await page.goto("/projects");
+		await seedSixProjects(page);
+		await page.locator("[data-projects-viewport]").hover();
+		await page.mouse.wheel(0, 300);
+		// 300px / 53px threshold = 5 discrete steps: window 1..5 (active is
+		// the 6th record, "minuto").
+		await expect(
+			page.locator("[data-project-slot]").nth(4).locator(".project-row-title"),
+		).toHaveText("minuto");
+		expect(await page.evaluate(() => window.scrollY)).toBe(0);
+		await page.mouse.wheel(0, -300);
+		await expect(
+			page.locator("[data-project-slot]").nth(0).locator(".project-row-title"),
+		).toHaveText("ServiceFlow");
+		expect(await page.evaluate(() => window.scrollY)).toBe(0);
 	});
 });
 
@@ -973,6 +1326,251 @@ test.describe("SKILLS recycled seven-slot list", () => {
 		);
 		await expect(page.getByText("Vitest", { exact: true })).toBeVisible();
 		await context.close();
+	});
+});
+
+// SKILLS field watermark (skills contract): one giant DEVELOPER word in the
+// display face (Anton, same typography as the shell's PORTFOLIO watermark)
+// rotated along the white parallelogram's diagonal, anchored in the lower
+// white field. Structure: an outer full-viewport mask (.skills-watermark)
+// clipped with the SAME polygon as the white field's ::before cutout — both
+// consume the shared --skills-band-polygon — and an inner word span
+// (.skills-watermark-text) that carries the typography, alignment, and
+// rotation. Purely decorative: aria-hidden in the markup, pointer-events
+// none, user-select none, painted behind the cards inside an isolated
+// stacking context. It renders on /skills alone — every other route keeps
+// its own surface (the shell's PORTFOLIO watermark is asserted in
+// keyboard.spec.ts; this word must never leak onto other views).
+test.describe("SKILLS decorative DEVELOPER watermark", () => {
+	const watermark = (page: Page) => page.locator(".skills-watermark");
+	const word = (page: Page) => page.locator(".skills-watermark-text");
+	// Serialization-safe polygon check: browsers may normalize spacing, "%"
+	// suffixes, or unitless zeros to "0px", so parse coordinate pairs.
+	const polygonPoints = (clipPath: string) =>
+		[...clipPath.matchAll(/(-?[\d.]+)(?:%|px)?\s+(-?[\d.]+)(?:%|px)?/g)].map(
+			(m) => [Number.parseFloat(m[1]), Number.parseFloat(m[2])],
+		);
+	const near = (actual: number, expected: number) =>
+		Math.abs(actual - expected) <= 3;
+
+	test("one masked outer plus one DEVELOPER inner, hidden and non-interactive", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 720 });
+		await page.goto("/skills");
+		// Exactly one outer mask and one inner word.
+		await expect(watermark(page)).toHaveCount(1);
+		await expect(word(page)).toHaveCount(1);
+		await expect(word(page)).toHaveText("DEVELOPER");
+		// Hidden from the accessibility tree and never interactive: no
+		// tabindex, pointer-events none (clicks fall through), user-select
+		// none (never selected as text).
+		await expect(watermark(page)).toHaveAttribute("aria-hidden", "true");
+		expect(
+			await watermark(page).evaluate((el) => el.getAttribute("tabindex")),
+		).toBeNull();
+		expect(
+			await watermark(page).evaluate(
+				(el) => getComputedStyle(el).pointerEvents,
+			),
+		).toBe("none");
+		expect(
+			await watermark(page).evaluate((el) => getComputedStyle(el).userSelect),
+		).toBe("none");
+		// The outer is a full-viewport fixed mask: bounding box equals the
+		// viewport, clipped by the approved parallelogram.
+		const outer = await watermark(page).evaluate((el) => {
+			const s = getComputedStyle(el);
+			const rect = el.getBoundingClientRect();
+			return {
+				position: s.position,
+				zIndex: s.zIndex,
+				clipPath: s.clipPath,
+				x: rect.x,
+				y: rect.y,
+				width: rect.width,
+				height: rect.height,
+			};
+		});
+		expect(outer.position).toBe("fixed");
+		expect(outer.x).toBe(0);
+		expect(outer.y).toBe(0);
+		expect(outer.width).toBe(1280);
+		expect(outer.height).toBe(720);
+		const maskPoints = polygonPoints(outer.clipPath);
+		expect(outer.clipPath).toContain("polygon");
+		for (const [x, y] of [
+			[65, 0],
+			[130, 0],
+			[65, 100],
+			[0, 100],
+		]) {
+			expect(
+				maskPoints.some(([px, py]) => near(px, x) && near(py, y)),
+				`watermark mask touches (${x}%, ${y}%)`,
+			).toBe(true);
+		}
+		// The white field cutout and the watermark mask share ONE polygon:
+		// both consume --skills-band-polygon, so their computed clip paths
+		// are identical and can never drift.
+		const glowClip = await page
+			.locator(".glow-layer")
+			.evaluate((el) => getComputedStyle(el, "::before").clipPath);
+		expect(glowClip).toBe(outer.clipPath);
+		// The inner word keeps the display face (Anton), a large clamp()
+		// size, the diagonal rotation, and a translucent near-black ink
+		// (subtle shadow, not content). color-mix serializes as rgba(...)
+		// or color(srgb ... / alpha) depending on the engine; either way the
+		// trailing alpha must be below 0.5.
+		const inner = await word(page).evaluate((el) => {
+			const s = getComputedStyle(el);
+			return {
+				position: s.position,
+				left: s.left,
+				bottom: s.bottom,
+				fontFamily: s.fontFamily,
+				fontSize: parseFloat(s.fontSize),
+				transform: s.transform,
+				color: s.color,
+			};
+		});
+		expect(inner.position).toBe("absolute");
+		// left: 57% and bottom: 0 resolve against the full-viewport mask:
+		// 57% of 1280px is 729.6px.
+		expect(Math.abs(parseFloat(inner.left) - 1280 * 0.57)).toBeLessThanOrEqual(
+			1,
+		);
+		expect(inner.bottom).toBe("0px");
+		expect(inner.fontFamily).toContain("Anton");
+		expect(inner.fontSize).toBeGreaterThanOrEqual(80);
+		// translate(2vw, 2vh) rotate(atan2(-100vh, 65vw)) serializes as one
+		// matrix: at 1280×720 the responsive angle resolves to
+		// atan2(-720, 832) ≈ -40.9° and the translation to (25.6, 14.4)px.
+		// Parsing the matrix proves both the retained diagonal rotation and
+		// the small shift toward the boundary.
+		expect(inner.transform).toContain("matrix");
+		const m = inner.transform.match(
+			/matrix\(([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+)\)/,
+		);
+		if (!m) throw new Error("expected a 2D matrix transform");
+		const [, a, b] = m.map(Number);
+		const angle = (Math.atan2(b, a) * 180) / Math.PI;
+		expect(Math.abs(angle + 41)).toBeLessThanOrEqual(2);
+		expect(Math.abs(Number(m[5]) - 25.6)).toBeLessThanOrEqual(1);
+		expect(Math.abs(Number(m[6]) - 14.4)).toBeLessThanOrEqual(1);
+		const alpha = Number(inner.color.match(/[\d.]+(?=\)$)/)?.[0]);
+		expect(Number.isNaN(alpha)).toBe(false);
+		expect(alpha).toBeGreaterThan(0);
+		expect(alpha).toBeLessThan(0.5);
+		// Explicit stacking context: the view isolates, the mask paints
+		// behind it (z-index -1), and it never blocks pointers at its own
+		// center — hits fall through to the field below.
+		expect(outer.zIndex).toBe("-1");
+		const view = page.locator("main");
+		expect(await view.evaluate((el) => getComputedStyle(el).isolation)).toBe(
+			"isolate",
+		);
+		const blocked = await watermark(page).evaluate((el) => {
+			const rect = el.getBoundingClientRect();
+			const hit = document.elementFromPoint(
+				rect.x + rect.width / 2,
+				rect.y + rect.height / 2,
+			);
+			return hit === el || el.contains(hit);
+		});
+		expect(blocked).toBe(false);
+	});
+
+	test("4:3 viewport: rotation follows atan2(-100vh, 65vw), mask and route scope intact", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1024, height: 768 });
+		await page.goto("/skills");
+		// The band edge spans -100vh vertically over 65vw horizontally, so
+		// the expected angle is computed from the LIVE viewport: on 4:3 that
+		// is atan2(-768, 665.6) ≈ -49.1°, not the 16:9-only -41°.
+		const probe = await word(page).evaluate((el) => {
+			const s = getComputedStyle(el);
+			const outer = getComputedStyle(el.parentElement!);
+			return { transform: s.transform, clipPath: outer.clipPath };
+		});
+		expect(probe.transform).toContain("matrix");
+		const m = probe.transform.match(
+			/matrix\(([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+)\)/,
+		);
+		if (!m) throw new Error("expected a 2D matrix transform");
+		const [, a, b, , , e, f] = m.map(Number);
+		const angle = (Math.atan2(b, a) * 180) / Math.PI;
+		const viewport = page.viewportSize()!;
+		const expected =
+			(Math.atan2(-viewport.height, viewport.width * 0.65) * 180) / Math.PI;
+		expect(Math.abs(angle - expected)).toBeLessThanOrEqual(1);
+		// 2vw/2vh translation at 1024×768 resolves to (20.48, 15.36)px.
+		expect(Math.abs(e - 20.48)).toBeLessThanOrEqual(1);
+		expect(Math.abs(f - 15.36)).toBeLessThanOrEqual(1);
+		// The word stays clipped at this aspect ratio: the outer mask still
+		// consumes the shared band polygon, identical to the white field
+		// cutout's, so the two shapes cannot drift apart.
+		expect(probe.clipPath).toContain("polygon");
+		const maskPoints = polygonPoints(probe.clipPath);
+		for (const [x, y] of [
+			[65, 0],
+			[130, 0],
+			[65, 100],
+			[0, 100],
+		]) {
+			expect(
+				maskPoints.some(([px, py]) => near(px, x) && near(py, y)),
+				`watermark mask touches (${x}%, ${y}%) at 4:3`,
+			).toBe(true);
+		}
+		const glowClip = await page
+			.locator(".glow-layer")
+			.evaluate((el) => getComputedStyle(el, "::before").clipPath);
+		expect(glowClip).toBe(probe.clipPath);
+		// Route isolation stays intact at 4:3: the word is a /skills-only
+		// decoration and never leaks onto other routes.
+		await page.goto("/");
+		expect(await watermark(page).count()).toBe(0);
+		expect(await word(page).count()).toBe(0);
+	});
+
+	test("400×800 viewport: font size follows the band diagonal magnitude, not the width alone", async ({
+		page,
+	}) => {
+		// A width-only size underfills long diagonals on narrow/tall
+		// windows: at 400×800 the 14vw term resolves to just 56px, below
+		// even the 4rem floor. The size must track the same 65vw/100vh
+		// edge vector as the atan2 rotation — hypot(65vw, 100vh) * 0.163,
+		// clamped between the 4rem floor and the 18.75rem watermark cap.
+		await page.setViewportSize({ width: 400, height: 800 });
+		await page.goto("/skills");
+		const fontSize = await word(page).evaluate((el) =>
+			parseFloat(getComputedStyle(el).fontSize),
+		);
+		const viewport = page.viewportSize()!;
+		const cap = 18.75 * 16; // 300px — the documented watermark maximum.
+		const expected = Math.min(
+			Math.hypot(viewport.width * 0.65, viewport.height) * 0.163,
+			cap,
+		);
+		// Materially above the 4rem (64px) width-only fallback...
+		expect(fontSize).toBeGreaterThan(4 * 16 * 1.5);
+		// ...and close to the viewport-derived diagonal magnitude.
+		expect(Math.abs(fontSize - expected)).toBeLessThanOrEqual(1);
+	});
+
+	test("DEVELOPER renders on /skills only, absent from every other route", async ({
+		page,
+	}) => {
+		for (const path of ["/", "/about", "/resume", "/projects", "/404"]) {
+			await page.goto(path);
+			expect(await watermark(page).count(), `${path} has no watermark`).toBe(0);
+			expect(await word(page).count(), `${path} has no watermark word`).toBe(0);
+		}
+		await page.goto("/skills");
+		await expect(watermark(page)).toHaveCount(1);
+		await expect(word(page)).toHaveCount(1);
 	});
 });
 

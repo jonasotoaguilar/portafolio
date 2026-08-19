@@ -1,5 +1,6 @@
 // @ts-check
 
+import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 
 import tailwindcss from "@tailwindcss/vite";
@@ -15,6 +16,10 @@ export default defineConfig({
 		sitemap({
 			filter: isSitemapEligible,
 		}),
+		// Renders the developer-icons technology band on /projects as static
+		// SSR markup (no client directive: zero hydrated islands, zero
+		// client-side React on the route).
+		react(),
 	],
 	vite: {
 		plugins: [tailwindcss()],

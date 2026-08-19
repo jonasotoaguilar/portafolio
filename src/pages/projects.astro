@@ -1,12 +1,18 @@
 ---
 import { getCollection } from "astro:content";
+import { Git } from "developer-icons";
 
-import DetailPanel from "../components/game/DetailPanel.astro";
 import GameList from "../components/game/GameList.astro";
-import GameListItem from "../components/game/GameListItem.astro";
 import GameViewShell from "../components/game/GameViewShell.astro";
+import ProjectDetail from "../components/game/ProjectDetail.astro";
+import ProjectListItem from "../components/game/ProjectListItem.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { assertExactlyFour, sortByOrder } from "../lib/content/projects";
+import { sortByOrder } from "../lib/content/projects";
+import {
+	TECH_ICONS_DARK,
+	visibleTechGlyphs,
+} from "../lib/projects/icons";
+import { PULL_REQUEST_ICON_PATH } from "../lib/projects/metrics";
 import { VIEW_TITLES } from "../lib/seo/titles";
 
 const [siteEntry] = await getCollection("siteConfig");
@@ -14,30 +20,198 @@ if (!siteEntry) {
 	throw new Error("Expected exactly one siteConfig entry");
 }
 const site = siteEntry.data;
+// The collection is NOT capped: the recycled list supports any count and
+// keeps its window at min(count, 5) slots (the old exact-four assertion is
+// gone so 5+ entries work; the four existing entries render unchanged).
 const projects = sortByOrder(
-	assertExactlyFour(await getCollection("projects")).map((entry) => ({
+	(await getCollection("projects")).map((entry) => ({
 		id: entry.id,
 		data: entry.data,
 		order: entry.data.order,
 	})),
 );
+// One flattened record per project for the enhanced controller (the slots
+// recycle title/href/icon/metrics from this blob; the stage and detail
+// panels stay SSR-rendered and are only selected by id).
+const projectRecords = projects.map((entry) => ({
+	id: entry.id,
+	title: entry.data.title,
+	link: entry.data.link,
+	pullRequests: entry.data.pullRequests,
+	commits: entry.data.commits,
+}));
 ---
 
 <BaseLayout title={VIEW_TITLES.projects} site={site}>
-	<GameViewShell title="Projects">
-		<section class="flex flex-col gap-6 md:flex-row md:items-start md:gap-10">
-			<GameList label="Projects">
-				{projects.map((entry, index) => (
-					<GameListItem
-						id={entry.id}
-						title={entry.data.title}
-						active={index === 0}
-					/>
-				))}
-			</GameList>
+	<GameViewShell title="Projects" header={false} class="projects-screen">
+		{/* Top zone (projects contract): ONE continuous black parallelogram,
+		    not separated cards, LEFT-anchored at a partial width on desktop
+		    (~65% of the viewport; full width only on narrow viewports). The
+		    outer clip-path slants the right edge across all three contiguous
+		    internal bands — upper black (PROJECTS label), middle white (the
+		    selected project's title), lower black (technology logos) — so
+		    the white band reads as a nested band inside one shape, never a
+		    separate strip. The PROJECTS label (the view's h1) is left in
+		    the upper black band with a dominant diagonal rotation (clearly
+		    a slanted baseline, never horizontal or vertical); the back link
+		    is visually hidden (sr-only, revealed on focus) but stays the
+		    real a[href="/"]: Escape and the delegated close sound keep
+		    their contract. The selected project's name is large black
+		    Anton, LEFT-aligned inside the white middle band, and every
+		    technology renders as ICONS ONLY on the lower black band —
+		    verified developer-icons brand glyphs as SSR React markup (no
+		    client directive, no hydrated island), with sr-only accessible
+		    names; stack names without a verified glyph render sr-only text
+		    only, never a repeated generic fallback shape. All stages ship
+		    in document flow (the first is the SSR default); the route-scoped
+		    rules in global.css switch which stage displays from its
+		    data-active attribute, set by the projects-scroll controller. */}
+		<section class="projects-top" aria-labelledby="projects-label">
+			<div class="projects-header-row">
+				<h1 id="projects-label" class="projects-label">Projects</h1>
+				<a
+					href="/"
+					class="view-link sr-only focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400"
+				>
+					Back to menu
+				</a>
+			</div>
 			{projects.map((entry, index) => (
-				<DetailPanel project={entry.data} active={index === 0} />
+				<div
+					class="projects-stage"
+					data-project-top
+					data-project-top-for={entry.id}
+					data-active={index === 0 ? "true" : undefined}
+				>
+					<div class="projects-title-band">
+						<h2 class="projects-title">{entry.data.title}</h2>
+					</div>
+					<ul
+						class="projects-tech-row"
+						aria-label={`${entry.data.title} technologies: ${entry.data.stack.join(", ")}`}
+					>
+						{visibleTechGlyphs(entry.data.stack).map((glyph) => {
+							const Icon = glyph.icon;
+							return (
+								<li
+									class:list={[
+										"projects-tech-item",
+										{
+											"projects-tech-item--light":
+												TECH_ICONS_DARK.has(glyph.icon),
+										},
+									]}
+									aria-label={glyph.names.join(", ")}
+								>
+									<Icon
+										className="projects-tech-icon"
+										size={24}
+										aria-hidden="true"
+										focusable="false"
+									/>
+									<span class="sr-only">{glyph.names.join(", ")}</span>
+								</li>
+							);
+						})}
+					</ul>
+				</div>
 			))}
 		</section>
+
+		{/* Center zone (projects contract): every project is listed as a
+		    semantic link row (the row IS the project link: it opens the URL
+		    in a new tab with no JS). Only the focused item carries the white
+		    rectangular highlight with its red offset layer (decorative
+		    geometry, never a box-shadow — the same precedent as the skill
+		    cards' active parallelogram). Each row shows its GitHub PR and
+		    commit metrics at the right edge (em dash for non-GitHub
+		    projects) next to the external-link icon; the compact legend
+		    above the list names the metric icons. The enhanced controller
+		    adopts the first min(count, 5) rows as persistent recycled
+		    slots, removes the rest after initialization, and gates the
+		    fixed-window CSS; the decorative right-edge scrollbar renders
+		    only when the collection overflows five. */}
+		<section class="projects-list-zone" aria-label="Project list">
+			<div class="projects-metrics-legend" role="group" aria-label="Project metrics legend">
+				<span class="projects-metrics-legend-title"></span>
+				<span class="projects-metrics-legend-item">
+					<svg
+						class="projects-metrics-legend-icon"
+						viewBox="0 0 24 24"
+						fill="currentColor"
+						fill-rule="evenodd"
+						aria-hidden="true"
+						focusable="false"
+					>
+						<path d={PULL_REQUEST_ICON_PATH} />
+					</svg>
+					<span class="projects-metrics-legend-label">PR</span>
+				</span>
+				<span class="projects-metrics-legend-item">
+					<Git
+						className="projects-metrics-legend-icon"
+						size={24}
+						aria-hidden="true"
+						focusable="false"
+					/>
+					<span class="projects-metrics-legend-label">COMMITS</span>
+				</span>
+				<span class="projects-metrics-legend-link"></span>
+			</div>
+			<div class="projects-list-region" data-projects-region>
+				<div class="projects-list-viewport" data-projects-viewport>
+					<GameList label="Projects">
+						{projects.map((entry, index) => (
+							<ProjectListItem
+								id={entry.id}
+								title={entry.data.title}
+								link={entry.data.link}
+								pullRequests={entry.data.pullRequests}
+								commits={entry.data.commits}
+								active={index === 0}
+							/>
+						))}
+					</GameList>
+				</div>
+				<span
+					class="projects-scrollbar"
+					data-projects-scrollbar
+					aria-hidden="true"
+				>
+					<span
+						class="projects-scrollbar-thumb"
+						data-projects-thumb
+					></span>
+				</span>
+			</div>
+		</section>
+
+		{/* Bottom zone (projects contract): a transparent detail panel with
+		    the selected project's description — permanently synchronized
+		    with the carousel cursor (no closable panel on this route; Escape
+		    goes straight to the menu). The project link lives on the list
+		    row and the stack in the top zone's black band, so neither is
+		    repeated here. The data-detail-panel hooks keep the generic
+		    Escape flow and the gated mobile scrolling. */}
+		{projects.map((entry, index) => (
+			<ProjectDetail project={entry.data} active={index === 0} />
+		))}
 	</GameViewShell>
 </BaseLayout>
+
+{/* The project records, emitted once for the enhanced controller. The JSON
+    is HTML-escaped (safe serialization: no <, >, or & can break out of the
+    script element) and contains only public text content. */}
+<script
+	is:inline
+	type="application/json"
+	id="projects-data"
+	set:html={JSON.stringify(projectRecords)
+		.replace(/</g, "\\u003c")
+		.replace(/>/g, "\\u003e")
+		.replace(/&/g, "\\u0026")}
+></script>
+
+<script>
+	import "../scripts/projects-scroll";
+</script>

@@ -7,4 +7,6 @@ stack:
 link: https://github.com/BlendedGames-bGames/bGames-FintualSensor
 external: true
 order: 4
+pullRequests: 0
+commits: 7
 ---

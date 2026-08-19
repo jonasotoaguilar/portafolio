@@ -261,13 +261,11 @@ test.describe("keyboard cursor coherence (#6186)", () => {
 
 	test("entering a list view focuses the active item", async ({ page }) => {
 		await page.goto("/projects");
-		await expect(
-			page.getByRole("button", { name: "ServiceFlow" }),
-		).toBeFocused();
+		await expect(page.getByRole("link", { name: "ServiceFlow" })).toBeFocused();
 		// A hash-preselected active item receives focus on entry too.
 		await page.goto("/projects#eventcommerce");
 		await expect(
-			page.getByRole("button", { name: "EventCommerce" }),
+			page.getByRole("link", { name: "EventCommerce" }),
 		).toBeFocused();
 	});
 
@@ -275,94 +273,90 @@ test.describe("keyboard cursor coherence (#6186)", () => {
 		page,
 	}) => {
 		await page.goto("/projects");
-		await expect(
-			page.getByRole("button", { name: "ServiceFlow" }),
-		).toBeFocused();
+		await expect(page.getByRole("link", { name: "ServiceFlow" })).toBeFocused();
 		await page.keyboard.press("ArrowDown");
+		await expect(page.getByRole("link", { name: "WealthQuest" })).toBeFocused();
 		await expect(
-			page.getByRole("button", { name: "WealthQuest" }),
-		).toBeFocused();
-		await expect(
-			page.getByRole("button", { name: "WealthQuest" }),
+			page.getByRole("link", { name: "WealthQuest" }),
 		).toHaveAttribute("data-active", /.*/);
 		await expect(
-			page.getByRole("button", { name: "WealthQuest" }),
-		).toHaveAttribute("aria-pressed", "true");
+			page.getByRole("link", { name: "WealthQuest" }),
+		).toHaveAttribute("aria-current", /.*/);
 		await page.keyboard.press("ArrowDown");
 		await expect(
-			page.getByRole("button", { name: "EventCommerce" }),
+			page.getByRole("link", { name: "EventCommerce" }),
 		).toBeFocused();
 		await expect(
-			page.getByRole("button", { name: "EventCommerce" }),
+			page.getByRole("link", { name: "EventCommerce" }),
 		).toHaveAttribute("data-active", /.*/);
 		await expect(
-			page.getByRole("button", { name: "ServiceFlow" }),
+			page.getByRole("link", { name: "ServiceFlow" }),
 		).not.toHaveAttribute("data-active", /.*/);
-		// Wrapping: two ArrowDowns from the last item return to the first.
+		// Wrapping (nine-record collection): walk to the last record, then
+		// one more ArrowDown wraps back to the first.
+		for (let step = 0; step < 6; step += 1) {
+			await page.keyboard.press("ArrowDown");
+		}
+		await expect(page.getByRole("link", { name: "raguard" })).toBeFocused();
 		await page.keyboard.press("ArrowDown");
-		await page.keyboard.press("ArrowDown");
-		await expect(
-			page.getByRole("button", { name: "ServiceFlow" }),
-		).toBeFocused();
+		await expect(page.getByRole("link", { name: "ServiceFlow" })).toBeFocused();
 	});
 
-	test("Enter and ArrowRight open the focused item's detail panel", async ({
+	test("Enter on a focused project row opens its URL in a new tab; ArrowRight never opens", async ({
 		page,
+		context,
 	}) => {
 		await page.goto("/projects");
 		await page.keyboard.press("ArrowDown");
 		await page.keyboard.press("ArrowDown");
 		await expect(
-			page.getByRole("button", { name: "EventCommerce" }),
+			page.getByRole("link", { name: "EventCommerce" }),
 		).toBeFocused();
-		const panel = page.locator("[data-detail-panel][data-active]");
-		await page.keyboard.press("Enter");
-		await expect(panel).toContainText("EventCommerce");
-		await expect(panel).toBeFocused();
-		// After closing, ArrowRight opens the same focused item again.
-		await page.keyboard.press("Escape");
-		await expect(page.locator("[data-detail-panel][data-active]")).toHaveCount(
-			0,
-		);
+		// ArrowRight is inert on the projects carousel (activation is the
+		// link's own; the generic open must not run).
 		await page.keyboard.press("ArrowRight");
-		await expect(panel).toContainText("EventCommerce");
-		await expect(panel).toBeFocused();
+		await expect(
+			page.getByRole("link", { name: "EventCommerce" }),
+		).toBeFocused();
+		await expect(page.locator("[data-detail-panel]:focus")).toHaveCount(0);
+		// Enter is native link activation: the URL opens in a new tab and
+		// the row keeps the focus.
+		const popupPromise = context.waitForEvent("page");
+		await page.keyboard.press("Enter");
+		const popup = await popupPromise;
+		await popup.waitForURL("https://github.com/jonasotoaguilar/eventcommerce", {
+			waitUntil: "commit",
+		});
+		await expect(
+			page.getByRole("link", { name: "EventCommerce" }),
+		).toBeFocused();
 	});
 
 	test("roving tabindex leaves a single tab stop in the list", async ({
 		page,
 	}) => {
 		await page.goto("/projects");
-		const serviceflow = page.getByRole("button", { name: "ServiceFlow" });
-		const wealthquest = page.getByRole("button", { name: "WealthQuest" });
-		const eventcommerce = page.getByRole("button", { name: "EventCommerce" });
+		const serviceflow = page.getByRole("link", { name: "ServiceFlow" });
+		const wealthquest = page.getByRole("link", { name: "WealthQuest" });
+		const eventcommerce = page.getByRole("link", { name: "EventCommerce" });
 		await expect(serviceflow).toHaveAttribute("tabindex", "0");
 		await expect(wealthquest).toHaveAttribute("tabindex", "-1");
 		await expect(eventcommerce).toHaveAttribute("tabindex", "-1");
 		await page.keyboard.press("ArrowDown");
 		await expect(wealthquest).toHaveAttribute("tabindex", "0");
 		await expect(serviceflow).toHaveAttribute("tabindex", "-1");
-		// Tab leaves the single tab stop into the open panel's link — never
-		// into a sibling list item.
+		// Tab leaves the single tab stop — never into a sibling row or into
+		// the detail panel (the projects panel is not in the tab order).
 		await page.keyboard.press("Tab");
 		await expect(eventcommerce).not.toBeFocused();
-		await expect(page.getByRole("link", { name: "WealthQuest" })).toBeFocused();
+		await expect(page.locator("[data-detail-panel]:focus")).toHaveCount(0);
 	});
 
-	test("Escape closes the panel first, restores focus to the item, then returns to the menu", async ({
+	test("Escape on PROJECTS goes straight to the menu (no closable panel)", async ({
 		page,
 	}) => {
 		await page.goto("/projects");
-		const serviceflow = page.getByRole("button", { name: "ServiceFlow" });
-		await expect(serviceflow).toBeFocused();
-		await page.keyboard.press("Enter");
-		await expect(
-			page.locator("[data-detail-panel][data-active]"),
-		).toBeFocused();
-		await page.keyboard.press("Escape");
-		await expect(page.locator("[data-detail-panel][data-active]")).toHaveCount(
-			0,
-		);
+		const serviceflow = page.getByRole("link", { name: "ServiceFlow" });
 		await expect(serviceflow).toBeFocused();
 		await page.keyboard.press("Escape");
 		await expect(page).toHaveURL(/\/$/);
@@ -389,19 +383,11 @@ test.describe("keyboard cursor coherence (#6186)", () => {
 		await expect(menuItem(page, "Projects")).toBeFocused();
 		await page.keyboard.press("Enter");
 		await expect(page).toHaveURL(/\/projects$/);
-		await expect(
-			page.getByRole("button", { name: "ServiceFlow" }),
-		).toBeFocused();
-		// Move the view cursor, open, close.
+		await expect(page.getByRole("link", { name: "ServiceFlow" })).toBeFocused();
+		// Move the view cursor, then leave with Escape (the projects detail
+		// stage never closes; Escape goes straight to the menu).
 		await page.keyboard.press("ArrowDown");
-		await expect(
-			page.getByRole("button", { name: "WealthQuest" }),
-		).toBeFocused();
-		await page.keyboard.press("Enter");
-		await expect(
-			page.locator("[data-detail-panel][data-active]"),
-		).toBeFocused();
-		await page.keyboard.press("Escape");
+		await expect(page.getByRole("link", { name: "WealthQuest" })).toBeFocused();
 		await page.keyboard.press("Escape");
 		await expect(page).toHaveURL(/\/$/);
 		// Back on the shell after the swap, then re-enter the view: the
@@ -414,16 +400,43 @@ test.describe("keyboard cursor coherence (#6186)", () => {
 		await page.keyboard.press("ArrowDown");
 		await page.keyboard.press("Enter");
 		await expect(page).toHaveURL(/\/projects$/);
-		await expect(
-			page.getByRole("button", { name: "ServiceFlow" }),
-		).toBeFocused();
+		await expect(page.getByRole("link", { name: "ServiceFlow" })).toBeFocused();
 		await page.keyboard.press("ArrowDown");
+		await expect(page.getByRole("link", { name: "WealthQuest" })).toBeFocused();
 		await expect(
-			page.getByRole("button", { name: "WealthQuest" }),
-		).toBeFocused();
-		await expect(
-			page.getByRole("button", { name: "EventCommerce" }),
+			page.getByRole("link", { name: "EventCommerce" }),
 		).not.toBeFocused();
+	});
+
+	test("clicking the inert projects background keeps ArrowDown/Enter navigation alive", async ({
+		page,
+		context,
+	}) => {
+		await page.goto("/projects");
+		await expect(page.getByRole("link", { name: "ServiceFlow" })).toBeFocused();
+		// Click an inert page background point (top-left of the screen, away
+		// from the list, the back link, and the mute control): the click
+		// blurs the row and leaves focus on the body — the bug precondition.
+		await page.mouse.click(30, 80);
+		await expect(page.locator("body")).toBeFocused();
+		await expect(
+			page.getByRole("link", { name: "ServiceFlow" }),
+		).not.toBeFocused();
+		// ArrowDown still moves the cursor and restores focus into the list.
+		await page.keyboard.press("ArrowDown");
+		await expect(page.getByRole("link", { name: "WealthQuest" })).toBeFocused();
+		await expect(
+			page.getByRole("link", { name: "WealthQuest" }),
+		).toHaveAttribute("data-active", /.*/);
+		// Enter still opens the active project link in a new tab and the row
+		// keeps the focus.
+		const popupPromise = context.waitForEvent("page");
+		await page.keyboard.press("Enter");
+		const popup = await popupPromise;
+		await popup.waitForURL("https://jonasotoaguilar.itch.io/wealthquest", {
+			waitUntil: "commit",
+		});
+		await expect(page.getByRole("link", { name: "WealthQuest" })).toBeFocused();
 	});
 });
 
@@ -649,35 +662,129 @@ test.describe("diagonal staggered menu — coarse collapse", () => {
 
 // Browser-level proof for the global light contrast-cut field (field
 // contract): every non-404 route — the shell AND the four views — shares the
-// STATIC white-to-light-blue diagonal gradient, while the 404 error route
-// keeps the dark radial glow untouched.
+// static white-to-light-blue-to-sea-blue diagonal gradient family at 112deg,
+// while the 404 error route keeps the dark radial glow untouched. The shell
+// and the other views keep the left-biased white cut (white through ~20%,
+// sea blue from ~30%); only /skills replaces the gradient transition with a
+// solid sea-blue base plus a single wide white parallelogram painted by a
+// ::before child, clipped corner-to-corner (upper-right and lower-left) so
+// the upper-left and lower-right corners stay blue.
 test.describe("global light field composition", () => {
-	test("shell and views share the static diagonal gradient; the 404 keeps the dark glow", async ({
+	// Computed backgroundImage serializes as
+	// "linear-gradient(112deg, rgb(...) 0%, rgb(...) 20%, ...)"; two-position
+	// stops ("rgb(...) 0% 40%") may serialize either expanded (one stop per
+	// position) or compact (both positions after one color), so parse every
+	// (color, position) pair from either shape. Assertions then survive
+	// serialization differences in spacing, position shape, and color syntax.
+	const parseStops = (image: string) =>
+		[
+			...image.matchAll(
+				/((?:rgb|rgba)\([^)]*\))\s+(-?[\d.]+)%(?:\s+(-?[\d.]+)%)?/g,
+			),
+		].flatMap((m) => {
+			const first = { color: m[1], pos: Number.parseFloat(m[2]) };
+			return m[3] !== undefined
+				? [first, { color: m[1], pos: Number.parseFloat(m[3]) }]
+				: [first];
+		});
+	const lastWhite = (stops: { color: string; pos: number }[]) =>
+		stops.filter((s) => s.color === "rgb(255, 255, 255)").at(-1)?.pos;
+	const firstSeaBlue = (stops: { color: string; pos: number }[]) =>
+		stops.find((s) => s.color === "rgb(22, 119, 200)")?.pos;
+	const near = (actual: number | undefined, expected: number) =>
+		actual !== undefined && Math.abs(actual - expected) <= 3;
+
+	test("shell and views share the left-biased diagonal gradient; skills overlays a corner-to-corner white parallelogram; the 404 keeps the dark glow", async ({
 		page,
 	}) => {
 		await page.setViewportSize({ width: 1280, height: 720 });
-		await page.goto("/");
-		const shellGlow = await page.locator(".glow-layer").evaluate((el) => {
-			const style = getComputedStyle(el);
-			return { image: style.backgroundImage, animation: style.animationName };
-		});
-		expect(shellGlow.image).toContain("linear-gradient");
-		expect(shellGlow.image).toContain("112deg");
-		expect(shellGlow.animation).toBe("none");
-		// The gradient starts white and ends sea blue (field tokens).
-		expect(shellGlow.image).toContain("rgb(255, 255, 255)");
-		expect(shellGlow.image).toContain("rgb(188, 212, 255)");
-		expect(shellGlow.image).toContain("rgb(22, 119, 200)");
 
-		// A view route shares the same static light field.
-		await page.goto("/about");
-		const viewGlow = await page
+		// The shell and another view keep the original left-biased field:
+		// white through ~20%, sea blue from ~30%, at 112deg.
+		for (const path of ["/", "/about"]) {
+			await page.goto(path);
+			const image = await page
+				.locator(".glow-layer")
+				.evaluate((el) => getComputedStyle(el).backgroundImage);
+			expect(image, `${path} is the static light field`).toContain(
+				"linear-gradient",
+			);
+			expect(image).toContain("112deg");
+			expect(image).toContain("rgb(255, 255, 255)");
+			expect(image).toContain("rgb(188, 212, 255)");
+			expect(image).toContain("rgb(22, 119, 200)");
+			const stops = parseStops(image);
+			expect(
+				near(lastWhite(stops), 20),
+				`${path} keeps the left-biased white cut`,
+			).toBe(true);
+			expect(
+				near(firstSeaBlue(stops), 30),
+				`${path} keeps the left-biased sea-blue start`,
+			).toBe(true);
+		}
+
+		// The shell glow is static: no breathing animation.
+		await page.goto("/");
+		const shellAnimation = await page
 			.locator(".glow-layer")
-			.evaluate((el) => getComputedStyle(el).backgroundImage);
-		expect(viewGlow).toContain("linear-gradient");
-		expect(viewGlow).toContain("112deg");
-		expect(viewGlow).toContain("rgb(255, 255, 255)");
-		expect(viewGlow).toContain("rgb(22, 119, 200)");
+			.evaluate((el) => getComputedStyle(el).animationName);
+		expect(shellAnimation).toBe("none");
+
+		// /skills replaces the gradient transition with a solid sea-blue base
+		// plus a single wide white parallelogram painted by a ::before child,
+		// clipped corner-to-corner (upper-right and lower-left) so the
+		// upper-left and lower-right corners stay blue.
+		await page.goto("/skills");
+		const skillsBase = await page.locator(".glow-layer").evaluate((el) => {
+			const style = getComputedStyle(el);
+			return { color: style.backgroundColor, image: style.backgroundImage };
+		});
+		expect(
+			skillsBase.image,
+			"skills base is a solid color, not a gradient band",
+		).toBe("none");
+		expect(skillsBase.color, "skills base is sea blue").toBe(
+			"rgb(22, 119, 200)",
+		);
+		const skillsCutout = await page.locator(".glow-layer").evaluate((el) => {
+			const style = getComputedStyle(el, "::before");
+			return {
+				color: style.backgroundColor,
+				position: style.position,
+				clipPath: style.clipPath,
+			};
+		});
+		expect(
+			skillsCutout.position,
+			"skills ::before is absolutely positioned",
+		).toBe("absolute");
+		expect(skillsCutout.color, "skills ::before is white").toBe(
+			"rgb(255, 255, 255)",
+		);
+		expect(skillsCutout.clipPath, "skills ::before is a polygon").toContain(
+			"polygon",
+		);
+		// Serialization-safe polygon check: browsers may normalize spacing,
+		// "%" suffixes, or unitless zeros to "0px", so parse the coordinate
+		// pairs and match the approved corner-to-corner points within the
+		// same tolerance as the stops.
+		const polygonPoints = [
+			...skillsCutout.clipPath.matchAll(
+				/(-?[\d.]+)(?:%|px)?\s+(-?[\d.]+)(?:%|px)?/g,
+			),
+		].map((m) => [Number.parseFloat(m[1]), Number.parseFloat(m[2])]);
+		for (const [x, y] of [
+			[65, 0],
+			[130, 0],
+			[65, 100],
+			[0, 100],
+		]) {
+			expect(
+				polygonPoints.some(([px, py]) => near(px, x) && near(py, y)),
+				`skills parallelogram touches (${x}%, ${y}%)`,
+			).toBe(true);
+		}
 
 		// The 404 error route keeps the dark radial glow untouched — both the
 		// literal /404 route and unknown paths (e.g. /contact), which render
