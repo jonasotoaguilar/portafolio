@@ -973,3 +973,339 @@ html[data-route]::view-transition-new(root) {
 		opacity: 1;
 	}
 }
+
+/* About profile band (about-view contract): the about route is a full-screen
+   status/profile composition — a white diagonal band over a SOLID sea-blue
+   field, with TWO right-side diagonal layers: a large gray diagonal band
+   behind the white band and a translucent crystalline glass panel (holding
+   the persona portrait) above it. A single route-scoped custom property
+   (--about-band-polygon) is the geometry source of truth for the white band,
+   consumed verbatim by BOTH the white background cutout (.glow-layer::before)
+   and the profile's clipping surface (.about-stage), so the white field and
+   the profile share one boundary and can never drift apart. The polygon
+   enters MUCH higher from the left than the original contract (16vh vs 44vh)
+   while keeping the previously established 36vh band height and the
+   upper-right diagonal character: the top edge starts near the top-left,
+   reaches the viewport's upper-right corner, and the band continues down the
+   right side as a broad white diagonal field. The angle is derived from the
+   same 16vh/100vw endpoints with atan2(), so the plane stays synchronized
+   with the clip boundary at every viewport aspect ratio. Inside the clipped
+   stage, .about-band is the ONE rotated parent centered on the band's spine —
+   every black rectangle, white section, divider, and text is an ordinary
+   unrotated flow child, so the whole profile shares the band's diagonal. The
+   giant black 18 is a decorative aria-hidden numeral; the content column hugs
+   it with a tight 0.125-0.5rem gap and consumes the full available row width
+   (flex 1, no artificial max-width), so the black strips reach the right-side
+   layout edge behind the right-side layers. The gray band (.about-band-gray)
+   is a full-height surface-gray diagonal plane on the right — left boundary
+   slanted from the upper-right toward the lower-left, NOT a vertical edge —
+   clipped with its own polygon and stacked BELOW the white band (z-index -1);
+   the glass band (.about-glass) is a fixed right-side full-height wedge with
+   a slanted left boundary, overflow-hidden, stacked ABOVE the white band
+   (z-index 1) and holding the optimized persona portrait (Astro asset import,
+   object-fit cover) under a flat glass tint — both decorative layers are
+   aria-hidden and pointer-events none. The Back to menu link is hidden on
+   this route only (Escape is the documented return path); the anchor stays in
+   the DOM as a non-visible route-safe fallback so the shared view script's
+   Escape -> goToMenu() (document.querySelector('a[href="/"]').click()) and
+   the delegated menu_close audio wiring keep working. Below narrower widths
+   the same diagonal row scales its internal geometry together and the
+   right-side layers narrow; no alternate card layout is introduced.
+   Route-scoped selectors only: no other route, the shell background, or
+   shared component behavior changes. */
+html[data-route="about"] {
+	--about-band-slope: 16vh;
+	--about-band-height: 36vh;
+	--about-band-angle: atan2(calc(-1 * var(--about-band-slope)), 100vw);
+	--about-band-polygon: polygon(
+		0 var(--about-band-slope),
+		100% 0,
+		100% var(--about-band-height),
+		0 calc(var(--about-band-slope) + var(--about-band-height))
+	);
+	/* The numeral zone tracks the actual Anton "18" advance (~0.85em of the
+	   numeral font size), so the glyphs fill their zone and the content
+	   column truly hugs the number instead of trailing a wide empty box. */
+	--about-numeral-font: min(calc(var(--about-band-height) * 0.64), 28vw);
+	--about-numeral-zone: calc(var(--about-numeral-font) * 0.85);
+	--about-gray-band-polygon: polygon(100% 0, 100% 100%, 30% 100%, 55% 0);
+	--about-glass-width: clamp(22rem, 34vw, 48rem);
+	--about-glass-height: 100vh;
+	--about-glass-polygon: polygon(100% 0, 100% 100%, 32% 100%, 64% 0);
+	--about-glass-object-position: 50% 20%;
+}
+
+/* Solid sea-blue field (Skills route pattern): the shared light-field
+   gradient is replaced by the sea-blue base for the about route only. */
+html[data-route="about"] .glow-layer {
+	background: var(--color-shell-sea-blue);
+	animation: none;
+}
+
+/* The white band: a ::before child of .glow-layer paints surface-light and
+   is clipped with the shared polygon, so the band's top edge reaches exactly
+   the viewport's upper-right corner. */
+html[data-route="about"] .glow-layer::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background: var(--color-surface-light);
+	clip-path: var(--about-band-polygon);
+}
+
+/* The profile clipping surface: a fixed full-viewport stage painted as solid
+   white and clipped with the SAME polygon as the white field — the profile
+   can never paint outside the band, and scanlines cannot tint the band gray. */
+html[data-route="about"] .about-stage {
+	position: fixed;
+	inset: 0;
+	z-index: 0;
+	background: var(--color-surface-light);
+	clip-path: var(--about-band-polygon);
+	pointer-events: none;
+}
+
+/* Large gray diagonal band BEHIND the white band: a full-viewport
+   surface-gray plane whose left boundary is a slanted edge running from the
+   upper-right region toward the lower-left region (occupying well over half
+   the screen on wide viewports) — NOT a rectangle with a vertical left edge.
+   Decorative: aria-hidden in markup, pointer-events none, stacked below the
+   white band (z-index -1) but above the sea-blue field. */
+html[data-route="about"] .about-band-gray {
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background: color-mix(
+		in srgb,
+		var(--color-surface-light-muted) 20%,
+		var(--color-bg-base)
+	);
+	clip-path: var(--about-gray-band-polygon);
+}
+
+/* Translucent crystalline glass band ABOVE the white band: a fixed right-side
+   full-height box clipped as a diagonal wedge whose left boundary runs from
+   the upper-right toward the lower-left (a band, not a panel with a vertical
+   left edge) and holding the optimized persona portrait. The image fills the
+   element with object-fit: cover and is clipped by the element (overflow
+   hidden + clip-path), so it can never overflow; a flat translucent pane tint
+   (::after) gives the crystalline sheen. Decorative: aria-hidden in markup,
+   pointer-events none, stacked above the white band (z-index 1). */
+html[data-route="about"] .about-glass {
+	position: fixed;
+	right: 0;
+	bottom: 0;
+	width: var(--about-glass-width);
+	height: var(--about-glass-height);
+	z-index: 1;
+	pointer-events: none;
+	overflow: hidden;
+	background: color-mix(in srgb, var(--color-accent-cyan) 22%, transparent);
+	clip-path: var(--about-glass-polygon);
+}
+
+html[data-route="about"] .about-glass img {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: var(--about-glass-object-position);
+}
+
+html[data-route="about"] .about-glass::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background: color-mix(in srgb, var(--color-surface-light) 18%, transparent);
+}
+
+/* The ONE rotated parent: the whole profile row (numeral + content column)
+   tilts with the band's diagonal and is centered on the band's spine (the
+   fixed lift cancels the row's tilt drop at the right end and the numeral's
+   rise at the left), so it reads as one continuous plane inside the band
+   across responsive viewports. */
+html[data-route="about"] .about-band {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: calc(var(--about-band-slope) + var(--about-band-height) / 2 - 3.5rem);
+	transform: translateY(-50%) rotate(var(--about-band-angle));
+	transform-origin: center;
+	display: flex;
+	align-items: center;
+	gap: clamp(0.125rem, 0.75vw, 0.5rem);
+	padding-left: clamp(0.5rem, 2vw, 1.75rem);
+	padding-right: clamp(1rem, 3vw, 2.5rem);
+}
+
+html[data-route="about"] .about-numeral {
+	flex: none;
+	width: var(--about-numeral-zone);
+	/* Sized from the band height and capped so the Anton glyphs stay inside
+	   their glyph-tracking zone — the number never collides with the content
+	   column. */
+	font-family: var(--font-display);
+	font-size: var(--about-numeral-font);
+	line-height: 0.9;
+	letter-spacing: 0;
+	text-transform: uppercase;
+	color: var(--color-bg-base);
+	user-select: none;
+}
+
+html[data-route="about"] .about-content {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: clamp(0.375rem, 1vh, 0.625rem);
+	/* The column hugs the 18 (tight gap) and consumes the full available row
+	   width: flex 1 + min-width 0 keeps it tight against the numeral with NO
+	   artificial max-width, so the black strips extend to the right-side
+	   layout edge (the glass portrait may visually overlay the far-right
+	   portion, but the black elements' layout width reaches behind it). */
+	flex: 1;
+	min-width: 0;
+}
+
+html[data-route="about"] .about-block {
+	width: 100%;
+	border-radius: 2px;
+}
+
+/* Black top rectangle with white profile information (name + role). */
+html[data-route="about"] .about-block--solid {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+	padding: clamp(0.875rem, 1.8vw, 1.5rem) clamp(1rem, 2.2vw, 1.75rem);
+	background-color: var(--color-bg-base);
+	color: var(--color-surface-light);
+}
+
+html[data-route="about"] .about-name {
+	font-family: var(--font-display);
+	font-size: clamp(1.75rem, 3vw, 2.5rem);
+	line-height: 0.95;
+	letter-spacing: 0;
+	text-transform: uppercase;
+	color: var(--color-surface-light);
+}
+
+html[data-route="about"] .about-role {
+	font-family: var(--font-label);
+	font-size: clamp(1rem, 1.6vw, 1.25rem);
+	line-height: 1.1;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: color-mix(in srgb, var(--color-surface-light) 88%, transparent);
+}
+
+/* White section with black information (tagline), directly on the band. */
+html[data-route="about"] .about-tagline {
+	font-family: var(--font-display);
+	font-size: clamp(1.125rem, 2vw, 1.75rem);
+	line-height: 1.05;
+	letter-spacing: 0;
+	text-transform: uppercase;
+	color: var(--color-text-on-light);
+}
+
+/* Small black divider rectangle (decorative, aria-hidden). */
+html[data-route="about"] .about-divider {
+	flex: none;
+	width: 100%;
+	height: 8px;
+	border-radius: 2px;
+	background-color: var(--color-bg-base);
+}
+
+/* More black profile information (focus areas), below the divider. */
+html[data-route="about"] .about-focus-label {
+	font-family: var(--font-label);
+	font-size: clamp(0.875rem, 1.4vw, 1.125rem);
+	line-height: 1.1;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--color-accent-on-light);
+}
+
+html[data-route="about"] .about-focus-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+/* About (about-view contract) hides the visible Back to menu link only —
+   Escape is the documented return path (DESIGN.md view table). The anchor
+   stays in the DOM as a non-visible route-safe fallback so the shared view
+   script's goToMenu() and the delegated menu_close audio wiring keep
+   working; Resume/Projects/Skills keep the visible link. */
+html[data-route="about"] .view-link {
+	display: none;
+}
+
+/* Responsive geometry (about-view contract): every width keeps the same
+   diagonal composition. Below 1280px or on coarse pointers, the row scales
+   its numeral, text, gaps, and padding together, and the right-side layers
+   narrow — instead of switching to a different layout. */
+@media (max-width: 1279px), (pointer: coarse) {
+	html[data-route="about"] {
+		--about-band-height: 36vh;
+		--about-numeral-font: min(calc(var(--about-band-height) * 0.3), 17vw);
+		--about-numeral-zone: calc(var(--about-numeral-font) * 0.85);
+		--about-gray-band-polygon: polygon(100% 0, 100% 100%, 34% 100%, 60% 0);
+		--about-glass-width: max(10rem, 30vw);
+		--about-glass-height: 100vh;
+		--about-glass-polygon: polygon(100% 0, 100% 100%, 32% 100%, 64% 0);
+	}
+
+	html[data-route="about"] .about-band {
+		gap: clamp(0.125rem, 0.5vw, 0.375rem);
+		padding-left: clamp(0.25rem, 1.5vw, 1rem);
+	}
+
+	html[data-route="about"] .about-numeral {
+		width: var(--about-numeral-zone);
+		font-size: var(--about-numeral-font);
+	}
+
+	html[data-route="about"] .about-content {
+		gap: clamp(0.25rem, 0.8vh, 0.5rem);
+		flex: 1;
+		min-width: 0;
+	}
+
+	html[data-route="about"] .about-block--solid {
+		gap: 0.25rem;
+		padding: clamp(0.5rem, 1.4vw, 1rem) clamp(0.625rem, 1.8vw, 1.25rem);
+	}
+
+	html[data-route="about"] .about-name {
+		font-size: clamp(1.25rem, 2.5vw, 2rem);
+	}
+
+	html[data-route="about"] .about-role {
+		font-size: clamp(0.75rem, 1.3vw, 1rem);
+	}
+
+	html[data-route="about"] .about-tagline {
+		font-size: clamp(0.875rem, 1.8vw, 1.5rem);
+	}
+
+	html[data-route="about"] .about-focus-label {
+		font-size: clamp(0.75rem, 1.2vw, 1rem);
+	}
+
+	html[data-route="about"] .about-focus-list {
+		gap: clamp(0.25rem, 0.8vw, 0.5rem);
+	}
+
+	html[data-route="about"] .about-focus-list .view-chip {
+		padding: 0.35rem 0.6rem;
+		font-size: clamp(0.75rem, 1.2vw, 1rem);
+	}
+}

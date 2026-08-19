@@ -56,7 +56,12 @@ function loadYamlFile(file) {
 }
 
 export function assetPath(assetsDir, file) {
-	const dir = file.startsWith("persona_") ? "persona" : "sprites";
+	// persona_* and the about portrait live under assets/persona; everything
+	// else (sprites) lives under assets/sprites.
+	const dir =
+		file.startsWith("persona_") || file.startsWith("persono_")
+			? "persona"
+			: "sprites";
 	return join(assetsDir, dir, file);
 }
 

@@ -1419,15 +1419,24 @@ test.describe("control placement", () => {
 				// corner directly.
 				expect(Math.abs(muteBox.y - 24)).toBeLessThanOrEqual(2);
 				const heading = await headingTextBox();
-				for (const target of [
-					heading,
-					await page.getByRole("link", { name: "Back to menu" }).boundingBox(),
-				]) {
-					if (!target) {
+				assertNoOverlap(heading, await hintsBox(page));
+				assertNoOverlap(heading, muteBox);
+				if (path === "/about") {
+					// About (about-view contract) hides the Back to menu link:
+					// Escape is its documented return path, so there is no
+					// visible back link to measure on this route.
+					await expect(
+						page.getByRole("link", { name: "Back to menu" }),
+					).toHaveCount(0);
+				} else {
+					const back = await page
+						.getByRole("link", { name: "Back to menu" })
+						.boundingBox();
+					if (!back) {
 						throw new Error(`expected a visible header box on ${path}`);
 					}
-					assertNoOverlap(target, await hintsBox(page));
-					assertNoOverlap(target, muteBox);
+					assertNoOverlap(back, await hintsBox(page));
+					assertNoOverlap(back, muteBox);
 				}
 			}
 		});
@@ -1656,5 +1665,510 @@ test.describe("sprite pattern bounds", () => {
 			).toBeLessThanOrEqual(probe.viewport);
 			expect(probe.blocked, `${path} never blocks pointers`).toBe(false);
 		}
+	});
+});
+// ABOUT profile band (about-view contract): the about route composes a
+// single white diagonal band over a SOLID sea-blue field, plus two right-side
+// diagonal layers — a large gray band BEHIND the white band and a translucent
+// crystalline glass band (holding the optimized persona portrait) ABOVE it.
+// One route-scoped custom property (--about-band-polygon) is the geometry
+// source of truth for the white band, consumed verbatim by BOTH the white
+// background cutout (.glow-layer::before) and the profile's clipping surface
+// (.about-stage), so the white field and the profile share one boundary and
+// can never drift apart. The polygon enters MUCH higher from the left than
+// the original contract (16vh vs 44vh) while keeping the previously
+// established 36vh band height and the upper-right diagonal character: the
+// top edge starts near the top-left and reaches the viewport's upper-right
+// corner. .about-band is the ONLY transformed element (the rotated parent) —
+// profile blocks, dividers, and text are ordinary flow children, so the whole
+// profile shares the band's diagonal. The giant 18 is a decorative aria-hidden
+// numeral whose zone tracks the Anton glyph advance, so the content column
+// hugs it with a tight 0.125-0.5rem flex gap and consumes the full row width
+// (flex 1, no artificial max-width), so the black strips reach the right-side
+// layout edge behind the layers. The gray band and the glass band are
+// decorative layers: aria-hidden, pointer-events none, clipped as genuine
+// diagonals (slanted left boundaries, not vertical edges), and stacked below
+// (z -1) / above (z +1) the white band respectively. Below 1280px the same
+// diagonal row scales its internal geometry together and the right-side
+// layers narrow; no alternate card layout is introduced.
+test.describe("ABOUT profile band", () => {
+	test("desktop: high left entry, shared polygon clip, one rotated parent, tight profile, gray + glass layers, no overflow", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 720 });
+		await page.goto("/about");
+		// The polygon is a single route-scoped custom property; its second
+		// point is the upper-right corner, its left entry is MUCH higher than
+		// the original 44vh contract (16vh), and the band height is back to
+		// the previously established 36vh (not thickened).
+		const poly = await page.evaluate(() => {
+			const root = document.documentElement;
+			const style = getComputedStyle(root);
+			const glow = document.querySelector(".glow-layer")!;
+			// The resolved stage clip (same geometry as the white cutout) is
+			// returned in px, so we can assert the exact band proportions.
+			const resolved = getComputedStyle(
+				document.querySelector(".about-stage")!,
+			).clipPath;
+			return {
+				raw: style.getPropertyValue("--about-band-polygon").trim(),
+				height: style.getPropertyValue("--about-band-height").trim(),
+				resolved,
+				innerWidth: window.innerWidth,
+				innerHeight: window.innerHeight,
+				glowColor: getComputedStyle(glow).backgroundColor,
+				glowImage: getComputedStyle(glow).backgroundImage,
+			};
+		});
+		const points = poly.raw
+			.replace(/^polygon\((.*)\)$/s, "$1")
+			.split(",")
+			.map((p) => p.trim().split(/\s+/));
+		expect(points).toHaveLength(4);
+		// Height restored to 36vh; the resolved clip must match the exact
+		// approved polygon: left entry 16vh, upper-right corner, right height
+		// 36vh, left bottom 52vh (16vh + 36vh).
+		expect(poly.height).toBe("36vh");
+		expect(points[1]).toEqual(["100%", "0"]);
+		expect(points[0]).toEqual(["0", "16vh"]);
+		const rpts = poly.resolved
+			.replace(/^polygon\((.*)\)$/s, "$1")
+			.split(",")
+			.map((p) =>
+				p
+					.trim()
+					.split(/\s+/)
+					.map((v, i) => {
+						if (v.endsWith("%"))
+							return (
+								(parseFloat(v) / 100) *
+								(i === 0 ? poly.innerWidth : poly.innerHeight)
+							);
+						return parseFloat(v);
+					}),
+			);
+		const toPx = (v: number) => (v / 100) * poly.innerHeight;
+		expect(rpts[0][0]).toBeCloseTo(0, 0);
+		expect(rpts[0][1]).toBeCloseTo(toPx(16), 0);
+		expect(rpts[1][0]).toBeCloseTo(poly.innerWidth, 0);
+		expect(rpts[1][1]).toBeCloseTo(0, 0);
+		expect(rpts[2][0]).toBeCloseTo(poly.innerWidth, 0);
+		expect(rpts[2][1]).toBeCloseTo(toPx(36), 0);
+		expect(rpts[3][0]).toBeCloseTo(0, 0);
+		expect(rpts[3][1]).toBeCloseTo(toPx(52), 0);
+		// The field is solid sea-blue (no shared light-field gradient).
+		expect(poly.glowColor).toBe("rgb(22, 119, 200)");
+		expect(poly.glowImage).toBe("none");
+		// The white cutout and the profile surface share the same resolved
+		// clip boundary: one geometry source of truth.
+		const shared = await page.evaluate(() => {
+			const glow = document.querySelector(".glow-layer")!;
+			const stage = document.querySelector(".about-stage")!;
+			return {
+				cutout: getComputedStyle(glow, "::before").clipPath,
+				stage: getComputedStyle(stage).clipPath,
+			};
+		});
+		expect(shared.cutout).not.toBe("none");
+		expect(shared.stage).toBe(shared.cutout);
+		// One rotated parent; children are untransformed flow children.
+		const band = await page.evaluate(() => {
+			const bandEl = document.querySelector(".about-band")!;
+			const name = document.querySelector(".about-name")!;
+			const divider = document.querySelector(".about-divider")!;
+			const style = (el: Element) => getComputedStyle(el);
+			return {
+				transform: style(bandEl).transform,
+				gap: style(bandEl).gap,
+				childTransforms: [name, divider].map((el) => style(el).transform),
+				numeralWidth: document
+					.querySelector(".about-numeral")!
+					.getBoundingClientRect().width,
+			};
+		});
+		expect(band.transform).not.toBe("none");
+		expect(band.childTransforms).toEqual(["none", "none"]);
+		// Tighter profile geometry: the flex gap between the 18 and the
+		// content column is at most 0.5rem (old contract allowed 0.75rem).
+		const gapPx = parseFloat(band.gap);
+		expect(gapPx).toBeGreaterThanOrEqual(2);
+		expect(gapPx).toBeLessThanOrEqual(8);
+		// The numeral zone tracks the Anton glyph advance (~0.85em of the
+		// font), so the content truly hugs the 18 instead of trailing a wide
+		// empty box (the old zone was ~450px; the glyph-tracking zone is well
+		// under 260px).
+		expect(band.numeralWidth).toBeLessThan(260);
+		// Containment: the stage clip trims the rotated row to the band, so
+		// painted content can never escape the band. The meaningful contracts
+		// are that the numeral (the leftmost member) stays inside the resolved
+		// polygon and that the full-width rotated row never creates document
+		// overflow (no horizontal scrollbar).
+		const containment = await page.evaluate(() => {
+			const clip = getComputedStyle(
+				document.querySelector(".about-stage")!,
+			).clipPath;
+			const toPx = (v: string) => {
+				v = v.trim();
+				if (v.endsWith("vh")) return (parseFloat(v) / 100) * window.innerHeight;
+				if (v.endsWith("vw")) return (parseFloat(v) / 100) * window.innerWidth;
+				if (v.endsWith("%")) return (parseFloat(v) / 100) * window.innerWidth;
+				return parseFloat(v);
+			};
+			const pts = clip
+				.replace(/^polygon\((.*)\)$/s, "$1")
+				.split(",")
+				.map((p) => {
+					const [x, y] = p.trim().split(/\s+/);
+					return [toPx(x), toPx(y)];
+				});
+			const inside = (px: number, py: number) => {
+				let hit = false;
+				for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+					const [xi, yi] = pts[i];
+					const [xj, yj] = pts[j];
+					if (
+						yi > py !== yj > py &&
+						px < ((xj - xi) * (py - yi)) / (yj - yi) + xi
+					)
+						hit = !hit;
+				}
+				return hit;
+			};
+			const corners = (el: Element) => {
+				const r = el.getBoundingClientRect();
+				return [
+					[r.left, r.top],
+					[r.right, r.top],
+					[r.left, r.bottom],
+					[r.right, r.bottom],
+				] as const;
+			};
+			const fullyInside = (sel: string) =>
+				corners(document.querySelector(sel)!).every(([x, y]) => inside(x, y));
+			return {
+				numeralInside: fullyInside(".about-numeral"),
+				scrollWidth: document.documentElement.scrollWidth,
+				innerWidth: window.innerWidth,
+				stageClip: clip,
+			};
+		});
+		expect(containment.numeralInside).toBe(true);
+		expect(containment.scrollWidth).toBeLessThanOrEqual(containment.innerWidth);
+		expect(containment.stageClip).not.toBe("none");
+		// Decorative members: the giant 18 and the divider are aria-hidden.
+		await expect(page.locator(".about-numeral")).toHaveAttribute(
+			"aria-hidden",
+			"true",
+		);
+		await expect(page.locator(".about-numeral")).toBeVisible();
+		await expect(page.locator(".about-divider")).toHaveAttribute(
+			"aria-hidden",
+			"true",
+		);
+		// The content column hugs the 18 and consumes the full row width with
+		// NO artificial max-width, so the black strips reach the right-side
+		// layout edge (the glass portrait overlays the far-right portion; the
+		// black elements' layout width reaches behind it).
+		const geometry = await page.evaluate(() => {
+			const numeral = document.querySelector(".about-numeral")!;
+			const content = document.querySelector(".about-content")!;
+			const glass = document.querySelector(".about-glass")!;
+			const n = numeral.getBoundingClientRect();
+			const c = content.getBoundingClientRect();
+			const glassRect = glass.getBoundingClientRect();
+			return {
+				numeralLeft: n.left,
+				contentLeft: c.left,
+				contentRight: c.right,
+				contentWidth: c.width,
+				innerWidth: window.innerWidth,
+				glassLeft: glassRect.left,
+				contentMaxWidth: getComputedStyle(content).maxWidth,
+				scrollWidth: document.documentElement.scrollWidth,
+			};
+		});
+		expect(geometry.numeralLeft).toBeLessThan(geometry.contentLeft);
+		expect(geometry.contentWidth).toBeGreaterThan(0);
+		// No artificial width cap: the column is free to fill the row, and the
+		// black strips reach the right-side layout edge behind the glass.
+		expect(geometry.contentMaxWidth).toBe("none");
+		expect(geometry.contentRight).toBeGreaterThanOrEqual(
+			geometry.innerWidth * 0.9,
+		);
+		expect(geometry.contentRight).toBeGreaterThan(geometry.glassLeft);
+		expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.innerWidth);
+
+		// Gray diagonal band BEHIND the white band: decorative layer on the
+		// right, stacked below the stage, clipped with its own polygon.
+		await expect(page.locator(".about-band-gray")).toHaveCount(1);
+		await expect(page.locator(".about-band-gray")).toHaveAttribute(
+			"aria-hidden",
+			"true",
+		);
+		const gray = await page.evaluate(() => {
+			const el = document.querySelector(".about-band-gray")!;
+			const s = getComputedStyle(el);
+			const clip = s.clipPath;
+			const points = clip
+				.replace(/^polygon\((.*)\)$/s, "$1")
+				.split(",")
+				.map((p) => p.trim().split(/\s+/));
+			// Normalize either rgb()/rgba() or color(srgb r g b) serialization
+			// to 0-255 channels.
+			const toRGB = (c: string): number[] => {
+				const rgb = c.match(/rgba?\(([^)]+)\)/);
+				if (rgb)
+					return rgb[1]
+						.split(/[\s,/]+/)
+						.slice(0, 3)
+						.map((v) => parseFloat(v));
+				const srgb = c.match(/color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/);
+				if (srgb)
+					return [srgb[1], srgb[2], srgb[3]].map((v) =>
+						Math.round(parseFloat(v) * 255),
+					);
+				return [0, 0, 0];
+			};
+			return {
+				pointer: s.pointerEvents,
+				z: s.zIndex,
+				clip,
+				bg: toRGB(s.backgroundColor),
+				distinctX: new Set(points.map((p) => p[0])).size,
+				distinctY: new Set(points.map((p) => p[1])).size,
+				stageZ: getComputedStyle(document.querySelector(".about-stage")!)
+					.zIndex,
+			};
+		});
+		expect(gray.pointer).toBe("none");
+		expect(gray.clip).not.toBe("none");
+		// Genuinely diagonal (a slanted left boundary), not a rectangle with a
+		// vertical left edge: the clip resolves to >=3 distinct x values (a
+		// vertical-edge rectangle has exactly 2), and the band covers the full
+		// viewport height (y present at both 0 and 100%).
+		expect(gray.distinctX).toBeGreaterThanOrEqual(3);
+		expect(gray.distinctY).toBeGreaterThanOrEqual(2);
+		// Visibly dark charcoal, not white or a saturated tint.
+		const [gr, gg, gb] = gray.bg;
+		expect(Math.max(gr, gg, gb)).toBeLessThanOrEqual(100);
+		expect(Math.min(gr, gg, gb)).toBeGreaterThanOrEqual(20);
+		expect(Math.max(gr, gg, gb) - Math.min(gr, gg, gb)).toBeLessThanOrEqual(20);
+		// Stacked below the white band (z-index -1 < stage z-index 0).
+		expect(parseInt(gray.z, 10)).toBeLessThan(parseInt(gray.stageZ, 10));
+
+		// Translucent crystalline glass panel ABOVE the white band: clipped,
+		// overflow-hidden, containing the loaded persona portrait.
+		await expect(page.locator(".about-glass")).toHaveCount(1);
+		await expect(page.locator(".about-glass")).toHaveAttribute(
+			"aria-hidden",
+			"true",
+		);
+		await expect(page.locator(".about-glass img")).toHaveCount(1);
+		// The portrait derivative loads (natural size 800x1200).
+		const img = page.locator(".about-glass img");
+		await expect
+			.poll(() => img.evaluate((el) => (el as HTMLImageElement).naturalWidth), {
+				timeout: 5000,
+			})
+			.toBeGreaterThan(0);
+		await expect(img).toHaveAttribute("alt", "");
+		const glass = await page.evaluate(() => {
+			const el = document.querySelector(".about-glass")!;
+			const s = getComputedStyle(el);
+			const img = document.querySelector(".about-glass img")!;
+			const is = getComputedStyle(img);
+			const ir = img.getBoundingClientRect();
+			const er = el.getBoundingClientRect();
+			const clip = s.clipPath;
+			const points = clip
+				.replace(/^polygon\((.*)\)$/s, "$1")
+				.split(",")
+				.map((p) => p.trim().split(/\s+/));
+			return {
+				pointer: s.pointerEvents,
+				z: s.zIndex,
+				clip,
+				overflow: s.overflow,
+				stageZ: getComputedStyle(document.querySelector(".about-stage")!)
+					.zIndex,
+				distinctX: new Set(points.map((p) => p[0])).size,
+				distinctY: new Set(points.map((p) => p[1])).size,
+				fullHeight: er.height >= window.innerHeight - 1,
+				imgObjFit: is.objectFit,
+				imgObjPos: is.objectPosition,
+				imgCoversPanel: ir.width >= er.width && ir.height >= er.height,
+			};
+		});
+		expect(glass.pointer).toBe("none");
+		expect(glass.clip).not.toBe("none");
+		expect(glass.overflow).toBe("hidden");
+		// Genuinely diagonal (a slanted left boundary), not a panel with a
+		// vertical left edge (>=3 distinct x values); and full-height enough
+		// to read as a band.
+		expect(glass.distinctX).toBeGreaterThanOrEqual(3);
+		expect(glass.distinctY).toBeGreaterThanOrEqual(2);
+		expect(glass.fullHeight).toBe(true);
+		// Stacked above the white band (z-index 1 > stage z-index 0).
+		expect(parseInt(glass.z, 10)).toBeGreaterThan(parseInt(glass.stageZ, 10));
+		// The image fills the glass frame with object-fit: cover and a tuned
+		// object-position, and it covers the whole panel surface.
+		expect(glass.imgObjFit).toBe("cover");
+		expect(glass.imgObjPos).not.toBe("50% 50%");
+		expect(glass.imgCoversPanel).toBe(true);
+	});
+
+	test("desktop: the Back to menu link is hidden but the Escape fallback anchor stays", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 720 });
+		await page.goto("/about");
+		await expect(page.getByRole("link", { name: "Back to menu" })).toHaveCount(
+			0,
+		);
+		// The non-visible route-safe fallback stays in the DOM so the shared
+		// view script's Escape -> goToMenu() still resolves an anchor.
+		const fallback = page.locator('a[href="/"]');
+		await expect(fallback).toHaveCount(1);
+		await expect(fallback).toBeHidden();
+	});
+
+	test("medium widths: the same diagonal row scales without overlap", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1239, height: 829 });
+		await page.goto("/about");
+		const collapsed = await page.evaluate(() => {
+			const stage = document.querySelector(".about-stage");
+			const band = document.querySelector(".about-band");
+			const glow = document.querySelector(".glow-layer");
+			if (!stage || !band || !glow) return null;
+			return {
+				stagePosition: getComputedStyle(stage).position,
+				stageClip: getComputedStyle(stage).clipPath,
+				bandTransform: getComputedStyle(band).transform,
+				cutoutDisplay: getComputedStyle(glow, "::before").display,
+			};
+		});
+		expect(collapsed).not.toBeNull();
+		expect(collapsed!.stagePosition).toBe("fixed");
+		expect(collapsed!.stageClip).not.toBe("none");
+		expect(collapsed!.bandTransform).not.toBe("none");
+		expect(collapsed!.cutoutDisplay).not.toBe("none");
+		await expect(page.locator(".about-numeral")).toBeVisible();
+		const boxes = await page.evaluate(() => {
+			const content = document.querySelector(".about-content")!;
+			const c = content.getBoundingClientRect();
+			return {
+				contentWidth: c.width,
+				contentRight: c.right,
+				contentMaxWidth: getComputedStyle(content).maxWidth,
+				scrollWidth: document.documentElement.scrollWidth,
+				innerWidth: window.innerWidth,
+				glassCount: document.querySelectorAll(".about-glass").length,
+				grayCount: document.querySelectorAll(".about-band-gray").length,
+			};
+		});
+		expect(boxes.contentWidth).toBeGreaterThan(0);
+		expect(boxes.contentMaxWidth).toBe("none");
+		expect(boxes.contentRight).toBeGreaterThanOrEqual(boxes.innerWidth * 0.9);
+		expect(boxes.glassCount).toBe(1);
+		expect(boxes.grayCount).toBe(1);
+		expect(boxes.scrollWidth).toBeLessThanOrEqual(boxes.innerWidth);
+	});
+
+	test("narrow mobile: the same diagonal row remains readable and contained", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto("/about");
+		const flow = await page.evaluate(() => {
+			const stage = document.querySelector(".about-stage")!;
+			const band = document.querySelector(".about-band")!;
+			const numeral = document.querySelector(".about-numeral")!;
+			const content = document.querySelector(".about-content")!;
+			const glass = document.querySelector(".about-glass")!;
+			const gray = document.querySelector(".about-band-gray")!;
+			const n = numeral.getBoundingClientRect();
+			const c = content.getBoundingClientRect();
+			const glassRect = glass.getBoundingClientRect();
+			// Resolve the band polygon and confirm the numeral stays inside it
+			// at mobile width too (the full-width rotated row is trimmed by
+			// the stage clip, so the meaningful contracts are numeral
+			// containment plus no document overflow).
+			const clip = getComputedStyle(stage).clipPath;
+			const toPx = (v: string) => {
+				v = v.trim();
+				if (v.endsWith("vh")) return (parseFloat(v) / 100) * window.innerHeight;
+				if (v.endsWith("vw")) return (parseFloat(v) / 100) * window.innerWidth;
+				if (v.endsWith("%")) return (parseFloat(v) / 100) * window.innerWidth;
+				return parseFloat(v);
+			};
+			const pts = clip
+				.replace(/^polygon\((.*)\)$/s, "$1")
+				.split(",")
+				.map((p) => {
+					const [x, y] = p.trim().split(/\s+/);
+					return [toPx(x), toPx(y)];
+				});
+			const inside = (px: number, py: number) => {
+				let hit = false;
+				for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+					const [xi, yi] = pts[i];
+					const [xj, yj] = pts[j];
+					if (
+						yi > py !== yj > py &&
+						px < ((xj - xi) * (py - yi)) / (yj - yi) + xi
+					)
+						hit = !hit;
+				}
+				return hit;
+			};
+			const cornersInside = (r: DOMRect) => {
+				return (
+					inside(r.left, r.top) &&
+					inside(r.right, r.top) &&
+					inside(r.left, r.bottom) &&
+					inside(r.right, r.bottom)
+				);
+			};
+			const glassClip = getComputedStyle(glass).clipPath;
+			const grayClip = getComputedStyle(gray).clipPath;
+			const distinctX = (p: string) =>
+				new Set(
+					p
+						.replace(/^polygon\((.*)\)$/s, "$1")
+						.split(",")
+						.map((pt) => pt.trim().split(/\s+/)[0]),
+				).size;
+			return {
+				stagePosition: getComputedStyle(stage).position,
+				bandTransform: getComputedStyle(band).transform,
+				numeral: [n.left, n.top, n.right, n.bottom],
+				content: [c.left, c.top, c.right, c.bottom],
+				numeralInside: cornersInside(n),
+				contentMaxWidth: getComputedStyle(content).maxWidth,
+				glassLeft: glassRect.left,
+				glassNarrow: glassRect.width <= window.innerWidth * 0.5,
+				glassDiagonal: distinctX(glassClip) >= 3,
+				grayDiagonal: distinctX(grayClip) >= 3,
+				scrollWidth: document.documentElement.scrollWidth,
+				innerWidth: window.innerWidth,
+			};
+		});
+		expect(flow.stagePosition).toBe("fixed");
+		expect(flow.bandTransform).not.toBe("none");
+		expect(flow.content[2]).toBeGreaterThan(flow.content[0]);
+		expect(flow.numeralInside).toBe(true);
+		// The content keeps the same diagonal row: no width cap, reaches the
+		// right-side layout edge, and still starts left of the (narrowed)
+		// glass so a readable portion remains.
+		expect(flow.contentMaxWidth).toBe("none");
+		expect(flow.content[2]).toBeGreaterThanOrEqual(flow.innerWidth * 0.9);
+		expect(flow.content[0]).toBeLessThan(flow.glassLeft);
+		// Right-side layers narrow proportionally but keep diagonal boundaries.
+		expect(flow.glassNarrow).toBe(true);
+		expect(flow.glassDiagonal).toBe(true);
+		expect(flow.grayDiagonal).toBe(true);
+		expect(flow.scrollWidth).toBeLessThanOrEqual(flow.innerWidth);
 	});
 });

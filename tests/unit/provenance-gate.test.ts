@@ -57,9 +57,9 @@ function fakeAssets(dir: string, files: string[]) {
 }
 
 describe("provenance gate — register", () => {
-	it("real register: 25 complete owner entries with locked roles/selection", () => {
+	it("real register: 26 complete owner entries with locked roles/selection", () => {
 		const register = loadRegister(join(ROOT, "assets", "PROVENANCE.yaml"));
-		expect(register.entries).toHaveLength(25);
+		expect(register.entries).toHaveLength(26);
 		expect(validateRegister(register, join(ROOT, "assets"))).toEqual([]);
 		expect(
 			register.entries.find((e: any) => e.file === "persona_1.png"),
@@ -86,7 +86,18 @@ describe("provenance gate — register", () => {
 		expect(
 			register.entries.some((e: any) => e["usage-role"] === "icon-accent"),
 		).toBe(false);
-		expect(register.entries.filter((e: any) => !e.selected)).toHaveLength(13);
+		expect(register.entries.filter((e: any) => !e.selected)).toHaveLength(14);
+		// The about portrait is registered as a principal-persona source
+		// (selected: false — the page consumes a separate src/assets webp
+		// derivative, not the optimizer output).
+		expect(
+			register.entries.find((e: any) => e.file === "persono_about.png"),
+		).toMatchObject({
+			creator: OWNER,
+			"commercial-use": "permitted",
+			"usage-role": "principal-persona",
+			selected: false,
+		});
 	});
 
 	it("malformed entries are rejected with the failing field named", () => {

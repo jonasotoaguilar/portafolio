@@ -648,11 +648,13 @@ test.describe("diagonal staggered menu — coarse collapse", () => {
 });
 
 // Browser-level proof for the global light contrast-cut field (field
-// contract): every non-404 route — the shell AND the four views — shares the
-// STATIC white-to-light-blue diagonal gradient, while the 404 error route
-// keeps the dark radial glow untouched.
+// contract): the shell AND the views share the STATIC white-to-light-blue
+// diagonal gradient — except the about route, which (about-view contract)
+// swaps the gradient for the sea-blue band variant (solid sea-blue field
+// with a white polygon-cut band) — while the 404 error route keeps the dark
+// radial glow untouched.
 test.describe("global light field composition", () => {
-	test("shell and views share the static diagonal gradient; the 404 keeps the dark glow", async ({
+	test("shell and views share the static diagonal gradient (about uses the sea-blue band variant); the 404 keeps the dark glow", async ({
 		page,
 	}) => {
 		await page.setViewportSize({ width: 1280, height: 720 });
@@ -669,15 +671,23 @@ test.describe("global light field composition", () => {
 		expect(shellGlow.image).toContain("rgb(188, 212, 255)");
 		expect(shellGlow.image).toContain("rgb(22, 119, 200)");
 
-		// A view route shares the same static light field.
+		// About (about-view contract) swaps the shared gradient for the
+		// sea-blue band variant: a solid sea-blue field with a white
+		// polygon-cut band.
 		await page.goto("/about");
-		const viewGlow = await page
-			.locator(".glow-layer")
-			.evaluate((el) => getComputedStyle(el).backgroundImage);
-		expect(viewGlow).toContain("linear-gradient");
-		expect(viewGlow).toContain("112deg");
-		expect(viewGlow).toContain("rgb(255, 255, 255)");
-		expect(viewGlow).toContain("rgb(22, 119, 200)");
+		const aboutGlow = await page.locator(".glow-layer").evaluate((el) => {
+			const style = getComputedStyle(el);
+			return {
+				image: style.backgroundImage,
+				color: style.backgroundColor,
+				cutout: getComputedStyle(el, "::before").backgroundColor,
+				cutoutClip: getComputedStyle(el, "::before").clipPath,
+			};
+		});
+		expect(aboutGlow.image).toBe("none");
+		expect(aboutGlow.color).toBe("rgb(22, 119, 200)");
+		expect(aboutGlow.cutout).toBe("rgb(255, 255, 255)");
+		expect(aboutGlow.cutoutClip).not.toBe("none");
 
 		// The 404 error route keeps the dark radial glow untouched — both the
 		// literal /404 route and unknown paths (e.g. /contact), which render
