@@ -977,50 +977,165 @@ test.describe("SKILLS recycled seven-slot list", () => {
 });
 
 test.describe("RESUME view", () => {
-	test("renders the verified CV facts across every section", async ({
+	test("renders degree, selectable experience, and professional summary", async ({
 		page,
 	}) => {
 		await page.goto("/resume");
-		// Content-region scope: dev-only Astro toolbar buttons live outside
-		// <main> and would otherwise inflate the page-wide button count.
-		await expect(page.locator("main").getByRole("button")).toHaveCount(5);
-		const panel = page.locator("[data-detail-panel][data-active]");
+		await expect(
+			page.getByRole("heading", { level: 1, name: "Resume" }),
+		).toBeVisible();
 
-		await expect(panel).toContainText("USACH");
-		await expect(panel).toContainText(
-			"Ingeniería de Ejecución en Computación e Informática",
+		// Degree block (the white lower mass of the title polygon).
+		const titlePanel = page.locator("[data-resume-title-panel]");
+		await expect(titlePanel).toContainText(
+			"Computer Science and Informatics Engineer",
 		);
-		await expect(panel).toContainText("Mar 2020–Apr 2025");
-		await expect(panel).toContainText("Mar 2017–Nov 2019");
+		await expect(titlePanel).toContainText("USACH");
+		await expect(titlePanel).toContainText("Mar 2020–Apr 2025");
 
-		await page.getByRole("button", { name: "Experience" }).click();
-		await expect(panel).toContainText("Productos Barber Chile");
-		await expect(panel).toContainText("2020–2026");
-		await expect(panel).toContainText("Policomp");
-		await expect(panel).toContainText("Jan–Mar 2020");
+		// Compact experience list: exactly the two verified entries.
+		await expect(page.locator("main").getByRole("button")).toHaveCount(2);
+		await expect(
+			page.getByRole("button", { name: /Productos Barber Chile/ }),
+		).toBeVisible();
+		await expect(page.getByRole("button", { name: /Policomp/ })).toBeVisible();
 
-		await page.getByRole("button", { name: "Projects" }).click();
-		await expect(panel).toContainText("ServiceFlow");
-		await expect(panel).toContainText("WealthQuest");
-		await expect(panel).toContainText("Academic publication");
-		await expect(panel).toContainText("May 2025");
+		// The reserved description region opens on the first entry.
+		const region = page.locator("[data-resume-description]");
+		await expect(region).toContainText("Productos Barber Chile");
+		await expect(region).toContainText("Sales and customer service");
+		await expect(region).toContainText("2020–2026");
 
-		await page.getByRole("button", { name: "Skills" }).click();
-		for (const skill of [
-			"Python",
-			"Java",
-			"Spring Boot",
-			"TypeScript/JavaScript",
-			"SQL and related tooling",
-		]) {
-			await expect(panel.getByText(skill, { exact: true })).toBeVisible();
+		// Summary panel: PROFESSIONAL SUMMARY heading and the source summary.
+		const summary = page.locator("[data-resume-summary]");
+		await expect(summary).toContainText("Professional");
+		await expect(summary).toContainText("Summary");
+		await expect(summary).toContainText("Junior Backend Developer");
+		await expect(summary).toContainText("ServiceFlow");
+		await expect(summary).toContainText("academic publication");
+
+		// Projects and skills never appear as resume sections.
+		for (const section of ["Education", "Projects", "Skills", "Languages"]) {
+			await expect(page.getByRole("button", { name: section })).toHaveCount(0);
 		}
+		await expect(page.getByText("WealthQuest")).toHaveCount(0);
+	});
 
-		await page.getByRole("button", { name: "Languages" }).click();
-		await expect(panel).toContainText("Spanish");
-		await expect(panel).toContainText("native");
-		await expect(panel).toContainText("English");
-		await expect(panel).toContainText("basic technical reading");
+	test("desktop composition matches the reference map at 1440x900", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1440, height: 900 });
+		await page.goto("/resume");
+		const box = async (locator: ReturnType<typeof page.locator>) =>
+			(await locator.boundingBox()) ?? null;
+
+		// Upper-left primary polygon: born at/near the left edge, 38-46% wide.
+		const title = await box(page.locator("[data-resume-title-panel]"));
+		if (!title) throw new Error("expected title panel box");
+		expect(title.x / 1440).toBeLessThanOrEqual(0.05);
+		expect(title.width / 1440).toBeGreaterThanOrEqual(0.38);
+		expect(title.width / 1440).toBeLessThanOrEqual(0.46);
+
+		// Description region: 27-35% wide, directly on the field.
+		const desc = await box(page.locator("[data-resume-description]"));
+		if (!desc) throw new Error("expected description box");
+		expect(desc.width / 1440).toBeGreaterThanOrEqual(0.27);
+		expect(desc.width / 1440).toBeLessThanOrEqual(0.35);
+
+		// Compact list: 17-23% wide, below the description.
+		const list = await box(page.locator("[data-resume-list]"));
+		if (!list) throw new Error("expected list box");
+		expect(list.width / 1440).toBeGreaterThanOrEqual(0.17);
+		expect(list.width / 1440).toBeLessThanOrEqual(0.23);
+		expect(list.y).toBeGreaterThanOrEqual(desc.y + desc.height);
+
+		// Summary plate: x 52-60%, y 68-78%, width 35-42%, landscape.
+		const summary = await box(page.locator("[data-resume-summary]"));
+		if (!summary) throw new Error("expected summary box");
+		expect(summary.x / 1440).toBeGreaterThanOrEqual(0.52);
+		expect(summary.x / 1440).toBeLessThanOrEqual(0.6);
+		expect(summary.y / 900).toBeGreaterThanOrEqual(0.68);
+		expect(summary.y / 900).toBeLessThanOrEqual(0.78);
+		expect(summary.width / 1440).toBeGreaterThanOrEqual(0.35);
+		expect(summary.width / 1440).toBeLessThanOrEqual(0.42);
+		expect(summary.width).toBeGreaterThan(summary.height);
+
+		// No overlap between the compact list and the summary plate.
+		expect(list.x + list.width).toBeLessThanOrEqual(summary.x);
+
+		// The dominant central visual mass crosses the middle third.
+		const figure = await box(page.locator(".resume-scene-figure"));
+		if (!figure) throw new Error("expected figure box");
+		expect(figure.x / 1440).toBeLessThanOrEqual(0.34);
+		expect((figure.x + figure.width) / 1440).toBeGreaterThanOrEqual(0.66);
+
+		// The escaped summary title stays fully readable: the plate no longer
+		// clips its children, the title rises above the plate's top edge, and
+		// the body copy begins below the title (reserved space, no overlap).
+		const summaryClip = await page
+			.locator("[data-resume-summary]")
+			.evaluate((el) => getComputedStyle(el).clipPath);
+		expect(summaryClip).toBe("none");
+		const word = await box(page.locator(".resume-summary-word"));
+		const body = await box(page.locator(".resume-summary-body"));
+		if (!word || !body) throw new Error("expected summary word/body boxes");
+		expect(word.y).toBeLessThan(summary.y);
+		expect(word.y + word.height).toBeLessThanOrEqual(body.y);
+		expect(body.y).toBeGreaterThanOrEqual(summary.y);
+		expect(body.y + body.height).toBeLessThanOrEqual(
+			summary.y + summary.height,
+		);
+	});
+
+	test("selection updates the description; focus stays in the compact list", async ({
+		page,
+	}) => {
+		await page.goto("/resume");
+		const barber = page.getByRole("button", { name: /Productos Barber Chile/ });
+		const policomp = page.getByRole("button", { name: /Policomp/ });
+		const region = page.locator("[data-resume-description]");
+
+		// Initial state: the first entry is focused and selected.
+		await expect(barber).toBeFocused();
+		await expect(barber).toHaveAttribute("data-active", /.*/);
+		await expect(barber).toHaveAttribute("aria-pressed", "true");
+		await expect(region).toContainText("Productos Barber Chile");
+
+		// ArrowDown moves selection and the description together; the
+		// keyboard cursor never leaves the list.
+		await page.keyboard.press("ArrowDown");
+		await expect(policomp).toBeFocused();
+		await expect(policomp).toHaveAttribute("data-active", /.*/);
+		await expect(policomp).toHaveAttribute("aria-pressed", "true");
+		await expect(barber).not.toHaveAttribute("data-active", /.*/);
+		await expect(region).toContainText("Policomp");
+		await expect(region).toContainText("IT Support Intern");
+		await expect(region).not.toContainText("Productos Barber Chile");
+
+		// ArrowUp wraps back to the first entry.
+		await page.keyboard.press("ArrowUp");
+		await expect(barber).toBeFocused();
+		await expect(region).toContainText("Productos Barber Chile");
+
+		// Enter selects in place; focus stays on the item.
+		await page.keyboard.press("ArrowDown");
+		await page.keyboard.press("Enter");
+		await expect(policomp).toBeFocused();
+		await expect(region).toContainText("Policomp");
+
+		// Space selects in place too.
+		await page.keyboard.press("Space");
+		await expect(policomp).toBeFocused();
+		await expect(region).toContainText("Policomp");
+
+		// Click selects as well.
+		await barber.click();
+		await expect(region).toContainText("Productos Barber Chile");
+		await expect(barber).toHaveAttribute("aria-pressed", "true");
+
+		// Escape leaves the view back to the shell.
+		await page.keyboard.press("Escape");
+		await expect(page).toHaveURL(/\/$/);
 	});
 
 	test("renders no contact-number content in any route's HTML", async ({
@@ -1056,24 +1171,85 @@ test.describe("RESUME view", () => {
 		}
 	});
 
-	test("detail panel stacks below the list and scrolls internally on small screens", async ({
+	test("no-JS: every experience description and the summary stay in document flow", async ({
+		browser,
+	}) => {
+		const context = await browser.newContext({ javaScriptEnabled: false });
+		const page = await context.newPage();
+		await page.setViewportSize({ width: 800, height: 600 });
+		await page.goto("/resume");
+
+		// The fallback list renders both entries with their descriptions.
+		await expect(page.locator("[data-resume-fallback] li")).toHaveCount(2);
+		const fallback = page.locator("[data-resume-fallback]");
+		await expect(fallback).toContainText("Productos Barber Chile");
+		await expect(fallback).toContainText("Sales and customer service");
+		await expect(fallback).toContainText("Policomp");
+		await expect(fallback).toContainText("IT Support Intern");
+		// Degree and summary stay in flow.
+		await expect(page.locator("[data-resume-title-panel]")).toContainText(
+			"Computer Science and Informatics Engineer",
+		);
+		await expect(page.locator("[data-resume-summary]")).toContainText(
+			"Junior Backend Developer",
+		);
+		// No enhancement gate: the page scrolls over the content.
+		await expect(page.locator("html")).not.toHaveAttribute(
+			"data-game-ready",
+			/.*/,
+		);
+		const scrollable = await page.evaluate(
+			() => document.documentElement.scrollHeight > window.innerHeight,
+		);
+		expect(scrollable).toBe(true);
+		// The summary is reachable by scrolling (in flow, not clipped).
+		await page.evaluate(() =>
+			window.scrollTo(0, document.documentElement.scrollHeight),
+		);
+		await expect(page.locator("[data-resume-summary]")).toBeInViewport();
+		await context.close();
+	});
+
+	test("mobile: single column with no horizontal overflow", async ({
 		page,
 	}) => {
 		await page.setViewportSize({ width: 375, height: 720 });
 		await page.goto("/resume");
 
-		const listBox = await page.locator("[data-list]").boundingBox();
-		const panelBox = await page
-			.locator("[data-detail-panel][data-active]")
+		const noOverflow = await page.evaluate(
+			() => document.documentElement.scrollWidth <= window.innerWidth,
+		);
+		expect(noOverflow).toBe(true);
+		// The summary panel flows below the experience list.
+		const listBox = await page.locator("[data-resume-list]").boundingBox();
+		const summaryBox = await page
+			.locator("[data-resume-summary]")
 			.boundingBox();
-		if (!listBox || !panelBox) {
-			throw new Error("expected visible list and panel boxes");
+		if (!listBox || !summaryBox) {
+			throw new Error("expected visible list and summary boxes");
 		}
-		expect(panelBox.y).toBeGreaterThanOrEqual(listBox.y + listBox.height);
-		const overflowY = await page
-			.locator("[data-detail-panel][data-active]")
-			.evaluate((el) => getComputedStyle(el).overflowY);
-		expect(overflowY).toBe("auto");
+		expect(summaryBox.y).toBeGreaterThanOrEqual(listBox.y + listBox.height);
+		// The right collage never overlays content on mobile.
+		await expect(page.locator(".resume-scene-collage")).toBeHidden();
+		// The escaped summary title sits above its body (no overlap).
+		const wordBox = await page.locator(".resume-summary-word").boundingBox();
+		const bodyBox = await page.locator(".resume-summary-body").boundingBox();
+		if (!wordBox || !bodyBox) throw new Error("expected summary word/body");
+		expect(wordBox.y + wordBox.height).toBeLessThanOrEqual(bodyBox.y);
+		// Bottom clearance: at full scroll the summary's last line sits above
+		// the fixed bottom-right control cluster.
+		await page.evaluate(() => {
+			const main = document.querySelector("main");
+			if (main) main.scrollTop = main.scrollHeight;
+		});
+		const hints = await page.locator(".key-hints").boundingBox();
+		const bodyAfterScroll = await page
+			.locator(".resume-summary-body")
+			.boundingBox();
+		if (!hints || !bodyAfterScroll) throw new Error("expected scroll boxes");
+		expect(bodyAfterScroll.y + bodyAfterScroll.height).toBeLessThanOrEqual(
+			hints.y,
+		);
 	});
 });
 

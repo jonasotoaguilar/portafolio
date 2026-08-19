@@ -1,3 +1,4 @@
+// Content collections: projects (glob), skills/siteConfig/resume (file loaders).
 import { defineCollection } from "astro:content";
 import { file, glob } from "astro/loaders";
 

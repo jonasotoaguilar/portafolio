@@ -190,4 +190,81 @@ test.describe("navigation effect sounds", () => {
 		await expect.poll(() => counts.select).toBeGreaterThanOrEqual(1);
 		expect(counts.close).toBe(0);
 	});
+
+	test("resume list keys play exactly one effect per action, direct load and after a client-side navigation", async ({
+		page,
+	}) => {
+		// Every play() attempt is recorded (response counting cannot see
+		// replays of an already-buffered Audio element), so an action that
+		// triggers TWO handlers (e.g. the generic view.ts re-binding after a
+		// client-side navigation) would record two plays of the same effect.
+		await page.addInitScript(() => {
+			const seen: string[] = [];
+			(globalThis as { __effectPlays?: string[] }).__effectPlays = seen;
+			const original = HTMLMediaElement.prototype.play;
+			HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+				const src = this.src;
+				if (src.includes("button_select")) seen.push("select");
+				else if (src.includes("button_click")) seen.push("click");
+				else if (src.includes("menu_close")) seen.push("close");
+				return original.call(this);
+			};
+		});
+		const plays = (name: string) =>
+			page.evaluate((effect) => {
+				const seen = (globalThis as { __effectPlays?: string[] }).__effectPlays;
+				return (seen ?? []).filter((value) => value === effect).length;
+			}, name);
+
+		// Direct load: one select per arrow move, one click per Enter and
+		// per Space (Space activates through the native click wiring).
+		await page.goto("/resume");
+		await expect(
+			page.getByRole("button", { name: /Productos Barber Chile/ }),
+		).toBeFocused();
+		await page.keyboard.press("ArrowDown");
+		await expect.poll(() => plays("select")).toBe(1);
+		await page.keyboard.press("ArrowUp");
+		await expect.poll(() => plays("select")).toBe(2);
+		await page.keyboard.press("Enter");
+		await expect.poll(() => plays("click")).toBe(1);
+		await page.keyboard.press("Space");
+		await expect.poll(() => plays("click")).toBe(2);
+		expect(await plays("close")).toBe(0);
+
+		// Client-side navigation from /projects (a view that loads view.ts):
+		// the generic list handler must not re-bind on /resume, or every
+		// action below would fire twice.
+		await page.goto("/projects");
+		await page.getByRole("link", { name: "Back to menu" }).click();
+		await page.getByRole("link", { name: "Resume" }).click();
+		await expect(
+			page.getByRole("heading", { level: 1, name: "Resume" }),
+		).toBeVisible();
+		await page.waitForFunction(() =>
+			document.getAnimations().every((animation) => {
+				const pseudo =
+					(animation.effect as KeyframeEffect | null)?.pseudoElement ?? "";
+				return !pseudo.includes("view-transition");
+			}),
+		);
+		// Park the pointer away from the list: after the swap the cursor
+		// rests over the first list item, whose hover feedback would play an
+		// extra select and hide a doubled keyboard handler.
+		await page.mouse.move(10, 10);
+		const selectBefore = await plays("select");
+		await page.keyboard.press("ArrowDown");
+		await expect.poll(() => plays("select")).toBe(selectBefore + 1);
+		const clickBefore = await plays("click");
+		await page.keyboard.press("Enter");
+		await expect.poll(() => plays("click")).toBe(clickBefore + 1);
+		await page.keyboard.press("Space");
+		await expect.poll(() => plays("click")).toBe(clickBefore + 2);
+		// Escape leaves the view: exactly one close (a second handler would
+		// click the back link twice and play close twice).
+		const closeBefore = await plays("close");
+		await page.keyboard.press("Escape");
+		await expect(page).toHaveURL("/");
+		await expect.poll(() => plays("close")).toBe(closeBefore + 1);
+	});
 });

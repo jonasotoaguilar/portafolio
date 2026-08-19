@@ -33,44 +33,33 @@ export const skillsSchema = z.record(
 const item = <T extends z.ZodTypeAny>(shape: T) => z.array(shape).min(1);
 
 /**
- * Resume content typed from the verified CV. Strict everywhere so that any
- * unknown key (phone, rank, level, metric, ...) fails the build instead of
- * being silently stripped; skills are plain string names only.
+ * Resume content typed from the verified CV, English-only for the RESUME
+ * view: the degree, professional experience with selectable descriptions,
+ * and the professional summary. Projects and skills have their own views
+ * and never render here, so the collection must not carry them. Strict
+ * everywhere so that any unknown key (phone, rank, level, metric, project,
+ * skill, ...) fails the build instead of being silently stripped.
  */
 export const resumeSchema = z
 	.object({
-		education: item(
-			z
-				.object({
-					institution: z.string(),
-					title: z.string(),
-					period: z.string(),
-				})
-				.strict(),
-		),
+		degree: z
+			.object({
+				institution: z.string(),
+				title: z.string(),
+				period: z.string(),
+			})
+			.strict(),
 		experience: item(
 			z
 				.object({
 					company: z.string(),
 					role: z.string(),
 					period: z.string(),
-					details: z.array(z.string()),
-				})
-				.strict(),
-		),
-		projects: item(
-			z
-				.object({
-					name: z.string(),
-					published: z.string().optional(),
 					description: z.string(),
 				})
 				.strict(),
 		),
-		skills: item(z.string()),
-		languages: item(
-			z.object({ name: z.string(), proficiency: z.string() }).strict(),
-		),
+		summary: z.string(),
 	})
 	.strict();
 
