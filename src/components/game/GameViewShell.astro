@@ -3,19 +3,23 @@ import ViewHeader from "./ViewHeader.astro";
 
 interface Props {
 	title: string;
+	/** Render the shared ViewHeader (h1 + back-to-menu row). Views that
+	    compose their own header (the PROJECTS party screen) opt out and
+	    render the heading and back link inside their own top zone. */
+	header?: boolean;
 	/** Extra classes merged onto the view root (e.g. the skills scrollable
 	    variant). */
 	class?: string;
 }
 
-const { title, class: className = "" } = Astro.props;
+const { title, header = true, class: className = "" } = Astro.props;
 ---
 
 <main
 	class={`game-view flex min-h-svh flex-col gap-6 px-6 py-8 ${className}`}
 	data-view
 >
-	<ViewHeader title={title} />
+	{header && <ViewHeader title={title} />}
 	<slot />
 </main>
 

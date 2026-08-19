@@ -11,10 +11,9 @@
 // step. These functions are pure so the mapping is unit-testable without a
 // DOM; src/scripts/skills-scroll.ts wires them to the live slot nodes.
 //
-// This module also owns the wheel math: trackpad deltas accumulate into a
-// remainder and emit one discrete transition per threshold (default 53px),
-// exactly like one ArrowUp/Down press — wheel changes focus/content, never
-// scrollTop.
+// The wheel math lives in the shared src/lib/wheel.ts (both the skills and
+// projects carousels consume it) and is re-exported here so this module's
+// public surface stays the single import point for skills consumers.
 
 /** Number of persistent slot nodes the enhanced skills list shows. */
 export const VISIBLE_SLOTS = 7;
@@ -108,62 +107,17 @@ export function clickSkillSlot(state: SkillsState, slot: number): SkillsState {
 	};
 }
 
-/** Wheel delta threshold that emits one discrete transition (px). */
-export const WHEEL_THRESHOLD_PX = 53;
-
-/** Assumed line height for deltaMode === 1 (lines -> px). */
-export const WHEEL_LINE_HEIGHT = 16;
-
-/**
- * Normalizes a WheelEvent deltaY to pixels for the given deltaMode
- * (0 = px, 1 = lines, 2 = pages).
- */
-export function normalizeWheelDelta(
-	deltaY: number,
-	deltaMode: number,
-	pageLength: number,
-): number {
-	if (deltaMode === 1) return deltaY * WHEEL_LINE_HEIGHT;
-	if (deltaMode === 2) return deltaY * pageLength;
-	return deltaY;
-}
-
 /** Running remainder of unspent wheel delta, carried across events. */
-export interface WheelAccumulator {
-	remainder: number;
-}
+export type { WheelAccumulator } from "../wheel";
+export {
+	consumeWheelSteps,
+	normalizeWheelDelta,
+	WHEEL_LINE_HEIGHT,
+	WHEEL_THRESHOLD_PX,
+} from "../wheel";
 
-/**
- * Accumulates a normalized wheel delta and returns the number of discrete
- * transitions to emit (negative = up). Recovered contract: ONE wheel event
- * emits AT MOST ONE transition — a mouse wheel notch is a single intent, so
- * a large delta never skips several skills at once. Sub-threshold trackpad
- * deltas still pool across events (the fractional part stays in the
- * accumulator), and the excess of a large delta is banked rather than lost:
- * it flushes one step at a time on later events. The accumulator is clamped
- * to one threshold after each emit so sustained large deltas cannot grow the
- * bank without bound.
- */
-export function consumeWheelSteps(
-	acc: WheelAccumulator,
-	deltaY: number,
-	deltaMode: number,
-	pageLength: number,
-	threshold = WHEEL_THRESHOLD_PX,
-): number {
-	if (!(threshold > 0)) return 0;
-	acc.remainder += normalizeWheelDelta(deltaY, deltaMode, pageLength);
-	const rawSteps = Math.trunc(acc.remainder / threshold);
-	if (rawSteps === 0) return 0;
-	// Truncating a tiny negative fraction yields -0; Math.max(-1, min(1, -0))
-	// normalizes it to 0, so callers never see a signed zero step.
-	const steps = Math.max(-1, Math.min(1, rawSteps));
-	acc.remainder -= steps * threshold;
-	acc.remainder = Math.max(-threshold, Math.min(threshold, acc.remainder));
-	return steps;
-}
-
-/** Standard 1..3999 Roman numeral glyph table, largest first. */
+// Roman numeral plate for skills card (recovered contract): global visible
+// position (1-based) as Roman numeral, "I" for first, "XXII" for 22nd.
 const ROMAN_GLYPHS: ReadonlyArray<readonly [number, string]> = [
 	[1000, "M"],
 	[900, "CM"],
@@ -180,12 +134,6 @@ const ROMAN_GLYPHS: ReadonlyArray<readonly [number, string]> = [
 	[1, "I"],
 ];
 
-/**
- * Position plate glyph for the skills card (recovered contract): the global
- * visible position (1-based) rendered as a Roman numeral, so the first card
- * shows "I" and the 22nd "XXII". Returns an empty string for out-of-range
- * inputs so callers can treat it as "no plate".
- */
 export function toRoman(value: number): string {
 	if (!Number.isInteger(value) || value < 1 || value > 3999) return "";
 	let remaining = value;

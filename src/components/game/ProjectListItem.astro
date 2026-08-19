@@ -1,0 +1,123 @@
+---
+import { Git } from "developer-icons";
+
+import {
+	GITHUB_ICON_PATHS,
+	GLOBE_ICON_PATHS,
+	PROJECT_LINK_LABELS,
+	projectLinkKind,
+} from "../../lib/projects/links";
+import {
+	metricAriaText,
+	metricValue,
+	PULL_REQUEST_ICON_PATH,
+} from "../../lib/projects/metrics";
+
+interface Props {
+	/** Entry slug; the row's id doubles as the `#slug` deep-link fragment
+	    target, so hash preselection and the stage sync can key on it. */
+	id: string;
+	title: string;
+	/** The project URL; rows always open it in a new tab. */
+	link: string;
+	/** GitHub metrics; null renders an em dash (non-GitHub projects). */
+	pullRequests: number | null;
+	commits: number | null;
+	active?: boolean;
+}
+
+const { id, title, link, pullRequests, commits, active = false } = Astro.props;
+const kind = projectLinkKind(link);
+---
+
+<!-- No-JS fallback project row (projects contract): the page renders every
+     project as this semantic link row in normal document flow (SEO and
+     zero-JS keyboard activation both work on the real <a>). The enhanced
+     controller adopts the first v = min(count, 5) rows as persistent slot
+     nodes (data-project-slot), removes the rest, and mutates only their
+     content/ARIA afterwards — so this component stays a plain static row.
+     It deliberately carries NO data-list-item: the generic view.ts list
+     logic must no-op on Projects (its document-level Escape still works).
+     The GitHub metrics (PR + commits) sit at the right edge before the link
+     icon: the PR glyph is an authored inline SVG (the icon library has no
+     PR export) and the commit count uses the library's Git icon; each icon
+     is paired with its visible value and an sr-only noun, and non-GitHub
+     projects render an em dash. The link icon at the far right follows the
+     URL: GitHub mark for GitHub links, globe for deployed/site links. The
+     icon is a named image (role="img") whose accessible name explains the
+     repeated glyph without visible text — "Open on GitHub" for GitHub URLs,
+     "Open project website" otherwise — so the row's accessible name composes
+     as "Title 12 pull requests 205 commits Open on GitHub"; the anchor's
+     native title tooltip shows the link copy on hover and each metric span
+     carries its own copy. The enhanced controller re-derives all of these
+     per record when a recycled slot changes. -->
+<li class="project-list-item">
+	<a
+		href={link}
+		target="_blank"
+		rel="noopener noreferrer"
+		id={id}
+		data-project-row
+		data-active={active ? "true" : undefined}
+		aria-current={active ? "true" : undefined}
+		class="project-row focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400"
+		title={PROJECT_LINK_LABELS[kind]}
+	>
+		<span class="project-row-title">{title}</span>
+		<span class="project-row-metrics">
+			<span
+				class="project-metric"
+				data-metric-pr
+				title={metricAriaText("pr", pullRequests)}
+			>
+				<svg
+					class="project-metric-icon"
+					viewBox="0 0 24 24"
+					fill="currentColor"
+					fill-rule="evenodd"
+					aria-hidden="true"
+					focusable="false"
+				>
+					<path d={PULL_REQUEST_ICON_PATH} />
+				</svg>
+				<span class="project-metric-value" data-metric-pr-value>
+					{metricValue(pullRequests)}
+				</span>
+				<span class="sr-only" data-metric-pr-aria>
+					{metricAriaText("pr", pullRequests)}
+				</span>
+			</span>
+			<span
+				class="project-metric"
+				data-metric-commits
+				title={metricAriaText("commits", commits)}
+			>
+				<Git
+					className="project-metric-icon"
+					size={24}
+					aria-hidden="true"
+					focusable="false"
+				/>
+				<span class="project-metric-value" data-metric-commits-value>
+					{metricValue(commits)}
+				</span>
+				<span class="sr-only" data-metric-commits-aria>
+					{metricAriaText("commits", commits)}
+				</span>
+			</span>
+		</span>
+		<svg
+			class="project-row-icon"
+			viewBox="0 0 24 24"
+			fill="currentColor"
+			fill-rule="evenodd"
+			role="img"
+			aria-label={PROJECT_LINK_LABELS[kind]}
+			focusable="false"
+		>
+			{(kind === "github" ? GITHUB_ICON_PATHS : GLOBE_ICON_PATHS).map(
+				(d) => <path d={d} />,
+			)}
+		</svg>
+	</a>
+</li>

@@ -67,10 +67,38 @@ function skillsOwnsArrows(target: EventTarget | null): boolean {
 	);
 }
 
+// PROJECTS owns its arrows AND its activation both inside the fixed
+// five-slot recycled window and on the inert page background:
+// projects-scroll.ts implements the edge-stuck carousel (which the generic
+// move cannot produce), the rows are real links, and its keydown handler
+// is document-level with the shell's inert-background filter — so after a
+// background click the arrows still move the cursor and Enter/ArrowRight
+// still open the active link (new tab). The generic cursor must never move
+// or open on that route, whichever element the key arrived from. The rows
+// drop data-list-item, so this check is the only Projects-aware seam in
+// the generic controller.
+function projectsOwnsList(target: EventTarget | null): boolean {
+	if (document.documentElement.dataset.route !== "projects") return false;
+	if (!(target instanceof Node)) return true;
+	if (root?.querySelector("[data-projects-viewport]")?.contains(target)) {
+		return true;
+	}
+	return !(
+		target instanceof HTMLElement &&
+		target.closest("button, a, input, textarea, select, [contenteditable]")
+	);
+}
+
 function onKeydown(event: KeyboardEvent): void {
 	if (event.key === "Escape") {
 		event.preventDefault();
-		if (escapeHierarchy(panelOpen()) === "close-panel") {
+		// PROJECTS keeps its detail stage permanently synchronized with the
+		// carousel cursor (the controller always holds exactly one
+		// data-active panel): there is no closable panel on that route, so
+		// Escape leaves straight for the menu. Every other view keeps the
+		// close-panel-first hierarchy.
+		const projectsStage = document.documentElement.dataset.route === "projects";
+		if (!projectsStage && escapeHierarchy(panelOpen()) === "close-panel") {
 			// Closing the panel stays inside the view — no sound; feedback
 			// only plays when a menu is actually left (to-menu below).
 			closePanel();
@@ -88,6 +116,12 @@ function onKeydown(event: KeyboardEvent): void {
 	) {
 		// The skills carousel handles the move (attributes, focus, one-row
 		// scroll, select sound); the generic handler must not also move.
+		return;
+	}
+	if (projectsOwnsList(event.target)) {
+		// The projects carousel owns arrow moves, and Enter/ArrowRight are
+		// native link activation (new tab). The generic handler must not
+		// also move or open.
 		return;
 	}
 	const result = reduceListKey({ activeIndex }, event.key, items.length);

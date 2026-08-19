@@ -1,0 +1,33 @@
+---
+import type { Project } from "../../lib/content/schemas";
+
+interface Props {
+	project: Project;
+	active?: boolean;
+}
+
+const { project, active = false } = Astro.props;
+---
+
+{/* Bottom zone (projects contract): the selected project's description on a
+    transparent surface in its own stable row below the list (the route CSS
+    lets the region own the remaining height and its internal overflow, so a
+    long description never moves the list). A small outlined DESCRIPTION
+    label chip names the zone; the description is the dominant reading
+    element with clear bottom breathing room. The project link lives on the
+    LIST ROW itself (the row is the semantic link that opens the project in
+    a new tab), so it is deliberately NOT repeated here. The stack renders
+    in the top zone's black band instead, so it is not repeated here either.
+    The data-detail-panel hook keeps the generic view.ts Escape-to-menu
+    flow; the projects carousel controller toggles data-active so exactly
+    one panel stays synchronized with the cursor. */}
+<aside
+	data-detail-panel
+	data-active={active ? "true" : undefined}
+	tabindex="-1"
+	aria-label={`${project.title} project`}
+	class="projects-detail-panel view-panel max-md:max-h-[50dvh] max-md:overflow-y-auto"
+>
+	<p class="projects-detail-label">Description</p>
+	<p class="projects-detail-description">{project.description}</p>
+</aside>

@@ -9,6 +9,13 @@ export const projectSchema = z.object({
 	/** Declared content semantics; off-site link behavior is derived from the URL. */
 	external: z.boolean().default(false),
 	order: z.number().int(),
+	/**
+	 * GitHub metrics (projects contract): exact default-branch commit count
+	 * and pull-request total. `null` means the project has no GitHub
+	 * repository (e.g. WealthQuest on itch.io) and renders an em dash.
+	 */
+	pullRequests: z.number().int().nullable().default(null),
+	commits: z.number().int().nullable().default(null),
 });
 
 /**

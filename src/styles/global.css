@@ -704,7 +704,7 @@ html[data-route="shell"] [data-menu-item]:focus-visible::after {
 }
 
 /* Light-field view surfaces (field contract): the shared semantic surface
-   classes used by the view components (GameListItem, DetailPanel,
+   classes used by the view components (GameListItem, ProjectDetail,
    ViewHeader) and the view pages. Cards are flat white 2px-radius panels
    with muted-light separation states; the selected list item echoes the
    shell menu's active treatment — muted surface, dark-blue accent text, and
@@ -762,6 +762,645 @@ html[data-route="shell"] [data-menu-item]:focus-visible::after {
 
 .view-link:hover {
 	color: var(--color-bg-base);
+}
+
+/* PROJECTS party-screen composition (projects contract): a route-local
+   adaptation of the P3-style party screen. Three zones distributed across
+   the full viewport instead of a centered capped column, every rule scoped
+   to html[data-route="projects"] so the shared view classes (used by RESUME
+   and the other views) keep their generic contract. The shell's px-6/py-8
+   padding is overridden so the zones run full-bleed and the black header
+   band starts at the very top of the viewport (padding-block zeroed; the
+   band's own inset padding keeps the safe internal spacing); the fixed
+   overlays (top-right mute, bottom-right hints) keep their positions, and
+   the zones' inset padding keeps the back link and the description clear
+   of them.
+    Top zone: ONE continuous black header, not separated white and black
+    cards, LEFT-ANCHORED at a PARTIAL width on desktop (~65% of the
+    viewport, so the composition reads as a block on the light field; only
+    narrow viewports fall back to the full width). The PROJECTS label (the
+    view's h1) sits left in the black area
+    with a rotated + skewed diagonal treatment (PARTY-style lettering: a
+    dominant counterclockwise rotate over a restrained skew, pivoted at the
+    left edge so the word stays left-anchored and readable — never a
+    vertical decoration; the band's top padding carries the lifted right
+    end); the back link is visually hidden (sr-only, revealed only on
+    focus-visible) — the real a[href="/"] stays for Escape-to-menu and the
+    delegated close sound, and the clipped link takes no layout space, so
+    the label row never centers around an empty gap. The selected project's
+    name is large black Anton, LEFT-aligned inside the integrated white
+    title band (a diagonal clip on the band's right edge), and the
+    technologies render as ICONS ONLY on the black band directly below —
+    developer-icons brand glyphs as SSR React markup (no client directive,
+    no hydrated island), with sr-only accessible names, never visible
+    text. The stage follows the list cursor through the projects-scroll
+    controller, which toggles data-active on exactly one [data-project-top]
+    stage (keyed by data-project-top-for) — the projects carousel is the
+    single source of truth; the generic view.ts cursor no-ops on this
+    route. Without JS (no data-game-ready) every stage block stays in
+    normal document flow and the first project's values are the visible
+    default. The top composition, the list zone, and the detail panel all
+    share the same route-scoped --projects-column width.
+   Center zone: the list is a content-sized row directly below the header
+   with generous top spacing and larger display type; inactive items are
+   transparent over the light field; only the focused item is a white
+   rectangular highlight with a red offset geometry layer behind it — a
+   translated ::before on the <li> keyed by the row's data-active
+   presence, the same offset-decorative-layer precedent as the skill cards'
+   active parallelogram, never a box-shadow. No flex growth and no vertical
+   centering: the list never floats in the leftover viewport and never
+   rides up when the detail region's content changes. Under the
+   enhancement layer the first min(count, 5) rows become persistent
+   recycled slots (fixed window, no native scrolling, wheel/keys drive the
+   discrete window transitions); a decorative right-edge scrollbar appears
+   only when the collection overflows five.
+   Bottom zone: the detail panel is transparent, labeled by a small
+   outlined DESCRIPTION chip, and sits in its own stable row below the
+   list; under the enhancement layer (≥768px) the region owns the remaining
+   viewport height and scrolls internally, so the description's top edge
+   stays anchored and extra lines extend downward inside the region rather
+   than pulling the list upward. The description is the dominant reading
+   element — markedly larger display-scale body type with a generous
+   measure and clear bottom breathing room; the project link lives on the
+   list row, never here. The light field carries the contrast (description
+   ≈20:1). */
+/* Shared projects column (projects contract): ONE route-scoped container
+   variable feeds the top composition, the list zone, and the detail panel,
+   so the black header/white title band and the project list can never drift
+   apart — all of them are LEFT-anchored at the same desktop width (~65% of
+   the viewport, the existing reference target) and share the full-width
+   fallback on narrow viewports. */
+html[data-route="projects"] {
+	--projects-column: 100%;
+	/* ONE shared parallelogram slant for the top composition (projects
+	   contract): the outer clip-path cuts the black header, the white
+	   title band, and the tech band together, so their right edges follow
+	   the same diagonal and the whole top reads as a single slanted block
+	   (mobile keeps the full-width column and the same slant). */
+	--projects-top-slant: clamp(3.5rem, 8vw, 6.5rem);
+	/* Shared right gutter (projects contract): a reserved rail to the right
+	   of the list rows that hosts the decorative scrollbar, so the rail is
+	   clearly separated from the last metric/link instead of glued to it.
+	   The legend mirrors the same gutter so its columns stay aligned with
+	   the rows. */
+	--projects-gutter: clamp(0.75rem, 1.25vw, 1.25rem);
+}
+
+@media (min-width: 768px) {
+	html[data-route="projects"] {
+		--projects-column: 65%;
+	}
+}
+
+html[data-route="projects"] .projects-screen {
+	width: 100%;
+	max-width: none;
+	padding-inline: 0;
+	/* Header band runs flush to the viewport top: no light-field gap above
+	   the black header. Safe spacing lives inside .projects-top's own
+	   inset padding; the detail panel carries the bottom breathing room. */
+	padding-block: 0;
+}
+
+html[data-route="projects"] .projects-top {
+	background-color: var(--color-bg-base);
+	/* ONE outer parallelogram (projects contract): the left edge stays
+	   vertical at the column origin and the RIGHT edge slants, clipping
+	   the black header, the white title band, and the tech band together —
+	   three contiguous internal bands inside a single shape, never
+	   separated cards or a rectangular strip. The clip is applied to the
+	   whole section, so the white middle band's right edge follows the
+	   same diagonal as the bands above and below it. */
+	clip-path: polygon(
+		0 0,
+		100% 0,
+		calc(100% - var(--projects-top-slant)) 100%,
+		0 100%
+	);
+	/* Top padding carries the label's diagonal: the left-anchored
+	   counterclockwise rotate lifts the right end of PROJECTS well above
+	   its layout box, so the black band holds that headroom and the word
+	   never clips at the viewport top. The band is FULL-BLEED within the
+	   shared column (no horizontal inset on the section): the readable
+	   inset lives on the inner header row, title text, and tech row
+	   instead, so the black header and the nested white title band both
+	   span the column width. */
+	padding: clamp(2rem, 4vw, 3.25rem) 0 1.25rem;
+	width: var(--projects-column);
+}
+
+html[data-route="projects"] .projects-header-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem 1rem;
+	/* Content inset lives here, not on the band: the label and (sr-only)
+	   back link keep the shared readable inset while the band stays
+	   full-bleed within the column. The right side keeps clearing the
+	   fixed top-right mute control. */
+	padding: 0 clamp(4.75rem, 9vw, 6.5rem) 0 clamp(1.25rem, 4vw, 3rem);
+}
+
+html[data-route="projects"] .projects-label {
+	font-family: var(--font-display);
+	font-size: clamp(2.25rem, 4.5vw, 3.5rem);
+	line-height: 1;
+	text-transform: uppercase;
+	color: var(--color-text-primary);
+	/* PARTY-style diagonal (projects contract): a dominant counterclockwise
+	   rotate gives the word a clearly slanted BASELINE — the right end
+	   visibly rises well above the left — while the restrained skew keeps
+	   only a subtle backward lean on the letters. Never horizontal, never
+	   vertical, never merely italic. Pivoted at the left edge the word
+	   stays left-anchored and readable; the header band's top padding
+	   carries the lifted end clear of the viewport top, the back link, and
+	   the white title band below. */
+	transform: rotate(-12deg) skewX(-6deg);
+	transform-origin: left center;
+}
+
+html[data-route="projects"] .projects-header-row .view-link {
+	/* Visually hidden back link (projects contract): the "Back to menu"
+	   TEXT is gone from the resting composition — the link stays as the
+	   real a[href="/"] (sr-only) so Escape-to-menu (view.ts goToMenu) and
+	   the delegated close sound (effects.ts a[href="/"]) keep their
+	   contract, with the accessible name preserved for assistive tech. It
+	   never leaves a gap: the clipped element takes no layout space, so
+	   the label stays left-anchored with no centered void. */
+	color: var(--color-text-primary);
+}
+
+/* Revealed only while focused: sighted keyboard users get a visible
+   back link exactly when they tab to it (the skip-link pattern), then it
+   returns to the clipped state. The route-scoped selector outranks
+   Tailwind's sr-only utility. */
+html[data-route="projects"] .projects-header-row .view-link:focus-visible {
+	position: static;
+	width: auto;
+	height: auto;
+	padding: 0;
+	margin: 0;
+	overflow: visible;
+	clip: auto;
+	white-space: normal;
+	font-family: var(--font-label);
+	font-size: 1.25rem;
+	line-height: 1.6;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+}
+
+html[data-route="projects"] .projects-header-row .view-link:hover {
+	color: var(--color-accent-cyan);
+}
+
+html[data-route="projects"] .projects-title-band {
+	margin-top: 1rem;
+	background-color: var(--color-surface-light);
+	/* No clip of its own: the OUTER .projects-top parallelogram cuts the
+	   whole top composition, so the white band's right edge follows the
+	   same diagonal as the bands above and below it (contiguous internal
+	   bands — the middle band reads as nested inside the outer shape,
+	   never as a separate rectangular strip). */
+}
+
+html[data-route="projects"] .projects-title {
+	font-family: var(--font-display);
+	font-size: clamp(2.5rem, 5vw, 4.25rem);
+	line-height: 0.95;
+	text-transform: uppercase;
+	text-align: left;
+	color: var(--color-bg-base);
+	/* The band is full-bleed; the title text carries the readable inset so
+	   it stays aligned with the label and tech icons below it. */
+	padding: 0.45rem clamp(1.25rem, 4vw, 3rem) 0.6rem;
+}
+
+html[data-route="projects"] .projects-tech-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem 1.5rem;
+	/* The right inset clears the parallelogram's slanted edge (the clip
+	   removes the bottom-right corner), so wrapped icons never get cut by
+	   the outer shape; the bottom padding clears the corner's deepest cut. */
+	padding: 0.75rem clamp(1.25rem, 4vw, 3rem) 1.5rem;
+}
+
+html[data-route="projects"] .projects-tech-item {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	color: var(--color-text-primary);
+}
+
+html[data-route="projects"] .projects-tech-icon {
+	width: 1.5rem;
+	height: 1.5rem;
+	flex: none;
+}
+
+/* Dark-on-black brand glyphs (projects contract): a few verified
+   developer-icons marks are dark (NextJs near-black, Zod deep navy, C#
+   deep purple) and would vanish on the black band. The smallest
+   route-scoped presentation fix re-renders them as white silhouettes —
+   the library's exact shape, recolored — the same visual voice as the
+   RustLight glyph already mapped for the band. Never a replaced or
+   invented glyph. */
+html[data-route="projects"] .projects-tech-item--light .projects-tech-icon {
+	filter: brightness(0) invert(1);
+}
+
+/* Metrics legend (projects contract): a compact key naming the two
+   icon-only metrics — the authored pull-request glyph and the library's
+   Git icon — so the repeated icons at each row's right edge are
+   understandable without visible text on the rows themselves. The legend
+   mirrors the project row's horizontal grid/column geometry (title flex
+   area, PR metric, commits metric, external-link icon) with the same gap,
+   inset padding, and link-column width, plus the list region's right
+   gutter, so the labels sit directly above their PR/commit columns
+   instead of floating as an unrelated right-aligned group. Non-interactive
+   (the rows carry the actual values). */
+html[data-route="projects"] .projects-metrics-legend {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	/* Mirrors the rows' inset padding plus the list region's right gutter,
+	   so the legend and the rows share the same content box. */
+	padding: 0 calc(1rem + var(--projects-gutter)) 0 1rem;
+	margin-bottom: 0.875rem;
+}
+
+/* Empty title column: mirrors the row's flexible title area, so the
+   legend is anchored to the right-edge metric cluster, not right-aligned. */
+html[data-route="projects"] .projects-metrics-legend-title {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+html[data-route="projects"] .projects-metrics-legend-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	color: var(--color-text-on-light-secondary);
+}
+
+/* The legend icons follow the row's metric icon scale. */
+html[data-route="projects"] .projects-metrics-legend-icon {
+	flex: none;
+	width: clamp(1.375rem, 1.75vw, 1.5rem);
+	height: clamp(1.375rem, 1.75vw, 1.5rem);
+}
+
+html[data-route="projects"] .projects-metrics-legend-label {
+	font-family: var(--font-label);
+	/* The legend reads as a compact key, not data: the labels stay smaller
+	   than the row values so the wider "COMMITS" label keeps the PR label
+	   close to its column instead of pushing it far left. */
+	font-size: 1rem;
+	line-height: 1.2;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+/* Empty external-link column: mirrors the row's link glyph width so the
+   metric labels keep the rows' right-edge geometry. */
+html[data-route="projects"] .projects-metrics-legend-link {
+	flex: none;
+	width: 1.5rem;
+}
+
+/* Stage switching (projects contract): with the enhancement layer's
+   data-active state exactly one stage block is visible; the inactive
+   blocks are display:none, so hidden duplicate presentation never reaches
+   assistive tech. The projects-scroll controller toggles data-active on
+   the stage whose data-project-top-for matches the cursor's record id
+   (id-keyed, so future 5+ entries need no CSS changes and hash
+   preselection flows through the same attribute). */
+html[data-game-ready][data-route="projects"] [data-project-top] {
+	display: none;
+}
+
+html[data-game-ready][data-route="projects"] [data-project-top][data-active] {
+	display: block;
+}
+
+/* Center zone (projects contract): the list is a CONTENT-SIZED row that
+   sits directly below the header band — no flex growth and no vertical
+   centering, so it never floats in the leftover viewport and never rides
+   up when the detail region's content changes. The top padding is the
+   deliberate breathing room under the band; the left inset aligns the
+   items with the band content. Inactive items stay transparent over the
+   light field with a color-only hover hint; the focused item is the white
+   rectangular highlight (the generic cyan bottom bar is dropped on this
+   route only) with the red offset layer behind it. The :focus-visible
+   accent outline is untouched, so the focus indicator stays visible. */
+html[data-route="projects"] .projects-list-zone {
+	/* The list shares the top composition's route-scoped column width, so
+	   the rows always align with the black header and white title band
+	   above them (left-anchored, full-width fallback on narrow viewports). */
+	width: var(--projects-column);
+	padding: clamp(0.75rem, 1.5vw, 1.25rem) clamp(1.25rem, 4vw, 3rem) 0;
+}
+
+/* The list itself: full width, tight-but-intentional row rhythm. :where()
+   keeps this rule's specificity below the later shared skills list rule
+   (.skills-viewport [data-list]) — the routes are mutually exclusive, but
+   without it biome's descending-specificity check would flag the pair. */
+html[data-route="projects"] :where([data-list]) {
+	width: 100%;
+	min-width: 0;
+	gap: clamp(0.75rem, 1.25vw, 1rem);
+}
+
+/* Project rows (projects contract): every project renders as a SEMANTIC
+   link row (the row IS the project link — it opens the URL in a new tab
+   with zero JS). Inactive rows stay transparent over the light field with
+   a color-only hover hint; the focused row is the white rectangular
+   highlight (no generic cyan bar: rows do not use .view-list-item) with
+   the red offset layer behind it. The :focus-visible accent outline is
+   untouched, so the focus indicator stays visible. Positioned rows paint
+   above the red layer (same precedent as the skill cards). */
+html[data-route="projects"] .project-row {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	width: 100%;
+	min-height: 3rem;
+	padding: 0.25rem 1rem;
+	font-family: var(--font-display);
+	font-size: clamp(1.75rem, 2.75vw, 2.5rem);
+	line-height: 1.05;
+	text-transform: uppercase;
+	text-align: left;
+	color: var(--color-text-on-light);
+	background-color: transparent;
+	border-radius: 2px;
+	text-decoration: none;
+	transition:
+		background-color 150ms ease-out,
+		color 150ms ease-out;
+}
+
+html[data-route="projects"] .project-row:hover {
+	background-color: transparent;
+	color: var(--color-accent-on-light);
+}
+
+html[data-route="projects"] .project-row[data-active] {
+	background-color: var(--color-surface-light);
+	color: var(--color-bg-base);
+}
+
+/* The title is the row's only flexible child: it truncates before the
+   metrics and the link glyph, so a long name never pushes the right-edge
+   cluster off the row (no horizontal overflow contract). */
+html[data-route="projects"] .project-row-title {
+	min-width: 0;
+	flex: 1 1 auto;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Right-edge metrics cluster (projects contract): the PR and commit values
+   sit between the title and the external-link icon, aligned with it. Each
+   metric is its icon + value; the sr-only noun explains the icon and each
+   span carries a native tooltip. The values use the label voice so the
+   numbers read as data, not as part of the title. */
+html[data-route="projects"] .project-row-metrics {
+	display: inline-flex;
+	align-items: center;
+	gap: 1rem;
+	flex: none;
+}
+
+html[data-route="projects"] .project-metric {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+}
+
+html[data-route="projects"] .project-metric-icon {
+	flex: none;
+	width: clamp(1.375rem, 1.75vw, 1.5rem);
+	height: clamp(1.375rem, 1.75vw, 1.5rem);
+}
+
+html[data-route="projects"] .project-metric-value {
+	font-family: var(--font-label);
+	font-size: clamp(1.25rem, 1.75vw, 1.75rem);
+	line-height: 1.2;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+/* The link glyph sits at the row's right edge (github mark vs globe), flat
+   filled geometry inherited from currentColor. */
+html[data-route="projects"] .project-row-icon {
+	flex: none;
+	width: 1.5rem;
+	height: 1.5rem;
+}
+
+html[data-route="projects"] [data-list] > li {
+	position: relative;
+}
+
+html[data-route="projects"] [data-list] > li:has([data-active])::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: var(--color-accent-red);
+	transform: translate(0.5rem, 0.5rem);
+	pointer-events: none;
+}
+
+/* Recycled-slot window (projects contract): the ENHANCED viewport is a
+   fixed, NON-scrolling stage — overflow hidden, no scrollTop, no native
+   scrollbar — and the controller keeps exactly min(count, 5) persistent
+   slot rows (JS-gated on [data-projects-enhanced]). Without the
+   enhancement gate (no-JS or failed init) the viewport stays a plain block
+   in normal document flow and the page scrolls over every fallback row. */
+html[data-route="projects"] .projects-list-region {
+	position: relative;
+	/* Reserved right rail for the decorative scrollbar: the rows end
+	   before the gutter, so the rail is never glued to the last
+	   metric/link and the absolute scrollbar stays in bounds (no
+	   horizontal overflow, no clipping). */
+	padding-right: var(--projects-gutter);
+}
+
+html[data-route="projects"]
+	.projects-list-region[data-projects-enhanced]
+	.projects-list-viewport {
+	overflow: hidden;
+	/* Never a native scrollbar in the enhanced stage. */
+	scrollbar-width: none;
+}
+
+html[data-route="projects"]
+	.projects-list-region[data-projects-enhanced]
+	.projects-list-viewport::-webkit-scrollbar {
+	display: none;
+	width: 0;
+}
+
+/* Slot introduction (projects contract): when the window advances, only
+   the slot whose record actually changed gets a brief rise-and-fade
+   introduction — the viewport geometry itself never moves. Reduced motion
+   drops the animation. */
+html[data-route="projects"] .project-row-intro {
+	animation: project-row-intro 200ms ease-out;
+}
+
+@keyframes project-row-intro {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html[data-route="projects"] .project-row-intro {
+		animation: none;
+	}
+}
+
+/* Projects right-edge scrollbar (projects contract): a small decorative
+   track in the reserved right gutter (outside the row content, never
+   glued to the last metric/link) with a black rail and a white thumb
+   whose height mirrors the visible/count ratio and whose position mirrors
+   the window start. It is purely visual — pointer-events none, never a
+   drag control, never a native scrollbar — and renders only in the
+   enhanced mode (JS-gated) when the collection overflows five
+   ([data-projects-overflow]). Coarse pointers never see it. Wheel changes
+   focus, not the scrollbar. */
+html[data-route="projects"] .projects-scrollbar {
+	position: absolute;
+	top: 0;
+	/* Flush to the region's right edge, inside the reserved gutter. */
+	right: 0;
+	bottom: 0;
+	display: none;
+	width: 7px;
+	background: var(--color-bg-base);
+	pointer-events: none;
+	z-index: 1;
+}
+
+html[data-route="projects"]
+	.projects-list-region[data-projects-enhanced][data-projects-overflow]
+	.projects-scrollbar {
+	display: block;
+}
+
+html[data-route="projects"] .projects-scrollbar-thumb {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	background: var(--color-surface-light);
+	clip-path: polygon(0 0, calc(100% - 3px) 0, 100% 100%, 3px 100%);
+	pointer-events: none;
+}
+
+/* Coarse pointers: touch users interact with the rows directly — the
+   decorative scrollbar never renders. */
+@media (pointer: coarse) {
+	html[data-route="projects"] .projects-scrollbar {
+		display: none;
+	}
+}
+
+/* Bottom zone (projects contract): the detail panel is transparent and
+   sits in its own stable row below the list — under the enhancement layer
+   the region owns the remaining viewport height and its own overflow, so
+   the description's top edge stays anchored and extra lines extend
+   downward and scroll inside the region instead of pulling the list up.
+   The description is larger left-aligned body type with breathing room at
+   the bottom edge; a small outlined DESCRIPTION chip labels the zone
+   above it. Only the projects route's panel is affected. */
+html[data-route="projects"] .projects-detail-panel {
+	background-color: transparent;
+	/* The description region shares the same route-scoped column as the top
+	   composition and the list (left-anchored); the description's own
+	   max-width caps the measure on very wide viewports. */
+	width: var(--projects-column);
+	padding: 0 clamp(1.25rem, 4vw, 3rem) 1.5rem;
+}
+
+/* Description label (projects contract): a restrained outlined chip —
+   small button-like rounded rectangle, not a decorative pill — naming the
+   detail zone immediately above the description. It is a visible label
+   (<p>, not interactive) in the system's label voice (Bebas caps, wide
+   tracking); the near-black text and border keep ~20:1 contrast on the
+   light field. */
+html[data-route="projects"] .projects-detail-label {
+	display: inline-flex;
+	align-items: center;
+	width: fit-content;
+	margin-bottom: 0.875rem;
+	padding: 0.25rem 0.75rem;
+	border: 1px solid
+		color-mix(in srgb, var(--color-text-on-light) 55%, transparent);
+	border-radius: 0.5rem;
+	font-family: var(--font-label);
+	font-size: 1rem;
+	line-height: 1.2;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--color-text-on-light);
+}
+
+/* Detail-region overflow (projects contract): with the enhancement layer
+   the panel flexes to fill the remaining viewport height and scrolls
+   internally, decoupling the list zone's position from the description's
+   content height. Gated on data-game-ready so the no-JS flow keeps every
+   panel content-sized in normal document flow; gated to ≥768px so mobile
+   keeps its existing view-scroll + capped-panel contract untouched. */
+@media (min-width: 768px) {
+	html[data-game-ready][data-route="projects"] [data-detail-panel] {
+		flex: 1 1 0;
+		min-height: 0;
+		overflow-y: auto;
+	}
+}
+
+html[data-route="projects"] .projects-detail-description {
+	/* The dominant reading element of the bottom zone: markedly larger
+	   display-scale body type with a generous measure (the external link
+	   below stays subordinate, smaller and muted by the shared view-link
+	   contract). */
+	max-width: 60rem;
+	font-size: clamp(1.5rem, 2.4vw, 2.125rem);
+	line-height: 1.4;
+	color: var(--color-text-on-light);
+}
+
+/* Bottom zone, mobile (projects contract): the panel keeps its internal
+   scroll (the component's max-md:max-h-[50dvh] max-md:overflow-y-auto
+   classes) and the description keeps its large display-scale body type —
+   this block only reallocates the panel's inner bottom padding on small
+   viewports so the last lines and the external link scroll clear of the
+   fixed bottom-right key hints (right 1.75rem / bottom 1.5rem, z-50; the
+   hints hide below 560px height or on coarse pointers, where the extra
+   padding is just breathing room). Desktop type and bottom anchoring are
+   untouched. */
+@media (max-width: 767px) {
+	html[data-route="projects"] .projects-detail-panel {
+		padding-bottom: 5rem;
+	}
 }
 
 /* Skills rank-card list (skills contract): one flattened parallelogram card

@@ -29,18 +29,54 @@ const PROJECT_LINKS: [string, string][] = [
 	],
 ];
 
+// Every project link the collection declares, including the five beyond the
+// enhanced five-slot window (they live in the controller's data blob and in
+// the zero-JS fallback rows).
+const ALL_PROJECT_LINKS: [string, string][] = [
+	...PROJECT_LINKS,
+	[
+		"opencode-tokenmeter",
+		"https://github.com/jonasotoaguilar/opencode-tokenmeter",
+	],
+	["minuto", "https://github.com/jonasotoaguilar/minuto"],
+	["llmux", "https://github.com/jonasotoaguilar/llmux"],
+	["sentinel", "https://github.com/jonasotoaguilar/sentinel"],
+	["raguard", "https://github.com/jonasotoaguilar/raguard"],
+];
+
 test.describe("links and SEO", () => {
-	test("PROJECTS renders each project link exactly once with its declared href", async ({
+	test("PROJECTS renders each windowed project link exactly once with its declared href", async ({
 		page,
 	}) => {
 		await page.goto("/projects");
 		for (const [label, href] of PROJECT_LINKS) {
-			// Non-active detail panels are gated behind the no-scroll enhancement,
-			// so href-based locators check the document content of every panel.
+			// The four records inside the enhanced window keep their real
+			// anchor rows (the collection's rows beyond the five-slot window
+			// are recycled away; their links are covered by the data-blob
+			// test below and the zero-JS fallback test in views.spec).
 			const link = page.locator(`a[href="${href}"]`);
 			await expect(link).toHaveCount(1);
 			await expect(link).toHaveAttribute("href", href);
-			await expect(link).toHaveText(label);
+			// The row's text also carries the right-edge metrics, so the
+			// title assertion targets the title span.
+			await expect(link.locator(".project-row-title")).toHaveText(label);
+		}
+	});
+
+	test("PROJECTS wires every project link into the enhanced controller data", async ({
+		page,
+	}) => {
+		await page.goto("/projects");
+		const records = await page
+			.locator("#projects-data")
+			.evaluate((el) => JSON.parse(el.textContent ?? "[]"));
+		expect(records).toHaveLength(ALL_PROJECT_LINKS.length);
+		for (const [label, href] of ALL_PROJECT_LINKS) {
+			const record = records.find(
+				(entry: { title: string; link: string }) => entry.title === label,
+			);
+			expect(record).toBeDefined();
+			expect(record.link).toBe(href);
 		}
 	});
 

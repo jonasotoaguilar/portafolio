@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	assertExactlyFour,
-	isExternalLink,
-	sortByOrder,
-} from "../../src/lib/content/projects";
+import { isExternalLink, sortByOrder } from "../../src/lib/content/projects";
 import {
 	projectSchema,
 	siteConfigSchema,
@@ -16,6 +12,8 @@ const VALID_PROJECT = {
 	stack: ["Go", "TypeScript"],
 	link: "https://example.com/serviceflow",
 	order: 1,
+	pullRequests: 12,
+	commits: 205,
 };
 
 describe("projectSchema", () => {
@@ -27,6 +25,51 @@ describe("projectSchema", () => {
 		expect(project.stack).toEqual(["Go", "TypeScript"]);
 		expect(project.link).toBe("https://example.com/serviceflow");
 		expect(project.external).toBe(false);
+	});
+
+	it("parses the GitHub metrics", () => {
+		const project = projectSchema.parse(VALID_PROJECT);
+
+		expect(project.pullRequests).toBe(12);
+		expect(project.commits).toBe(205);
+	});
+
+	it("defaults missing metrics to null (non-GitHub projects)", () => {
+		const {
+			pullRequests: _pr,
+			commits: _commits,
+			...withoutMetrics
+		} = VALID_PROJECT;
+		const project = projectSchema.parse(withoutMetrics);
+
+		expect(project.pullRequests).toBeNull();
+		expect(project.commits).toBeNull();
+	});
+
+	it("accepts explicit null metrics (e.g. WealthQuest on itch.io)", () => {
+		const project = projectSchema.parse({
+			...VALID_PROJECT,
+			pullRequests: null,
+			commits: null,
+		});
+
+		expect(project.pullRequests).toBeNull();
+		expect(project.commits).toBeNull();
+	});
+
+	it("accepts a zero metric count", () => {
+		const project = projectSchema.parse({ ...VALID_PROJECT, pullRequests: 0 });
+
+		expect(project.pullRequests).toBe(0);
+	});
+
+	it("rejects non-integer metrics", () => {
+		expect(() =>
+			projectSchema.parse({ ...VALID_PROJECT, pullRequests: 12.5 }),
+		).toThrow();
+		expect(() =>
+			projectSchema.parse({ ...VALID_PROJECT, commits: "205" }),
+		).toThrow();
 	});
 
 	it("preserves an explicit external: true", () => {
@@ -66,26 +109,6 @@ describe("projectSchema without featured", () => {
 
 		expect(project.external).toBe(false);
 		expect("featured" in project).toBe(false);
-	});
-});
-
-describe("assertExactlyFour", () => {
-	it("throws when fewer than four entries exist", () => {
-		const entries = [1, 2, 3];
-
-		expect(() => assertExactlyFour(entries)).toThrow(/exactly 4/);
-	});
-
-	it("throws when more than four entries exist", () => {
-		const entries = [1, 2, 3, 4, 5];
-
-		expect(() => assertExactlyFour(entries)).toThrow(/exactly 4/);
-	});
-
-	it("returns the four entries unchanged", () => {
-		const entries = [1, 2, 3, 4];
-
-		expect(assertExactlyFour(entries)).toEqual([1, 2, 3, 4]);
 	});
 });
 

@@ -1,14 +1,3 @@
-/**
- * Content completeness boundary: the portfolio page MUST render exactly the
- * four declared projects. Throwing here fails the build with no output.
- */
-export function assertExactlyFour<T>(entries: T[]): T[] {
-	if (entries.length !== 4) {
-		throw new Error(`Expected exactly 4 projects, got ${entries.length}`);
-	}
-	return entries;
-}
-
 /** Render order is the declared `order` field; input is not mutated. */
 export function sortByOrder<T extends { order: number }>(entries: T[]): T[] {
 	return [...entries].sort((a, b) => a.order - b.order);

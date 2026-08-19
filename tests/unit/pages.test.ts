@@ -20,6 +20,8 @@ const { MOCK_PROJECTS, MOCK_SITE, MOCK_SKILLS } = vi.hoisted(() => {
 				link: "https://github.com/jonasotoaguilar/ServiceFlow",
 				order: 1,
 				external: true,
+				pullRequests: 12,
+				commits: 205,
 			},
 		},
 		{
@@ -31,6 +33,8 @@ const { MOCK_PROJECTS, MOCK_SITE, MOCK_SKILLS } = vi.hoisted(() => {
 				link: "https://jonasotoaguilar.itch.io/wealthquest",
 				order: 2,
 				external: true,
+				pullRequests: null,
+				commits: null,
 			},
 		},
 		{
@@ -42,6 +46,8 @@ const { MOCK_PROJECTS, MOCK_SITE, MOCK_SKILLS } = vi.hoisted(() => {
 				link: "https://github.com/jonasotoaguilar/eventcommerce",
 				order: 3,
 				external: true,
+				pullRequests: 51,
+				commits: 11,
 			},
 		},
 		{
@@ -53,6 +59,8 @@ const { MOCK_PROJECTS, MOCK_SITE, MOCK_SKILLS } = vi.hoisted(() => {
 				link: "https://github.com/BlendedGames-bGames/bGames-FintualSensor",
 				order: 4,
 				external: true,
+				pullRequests: 0,
+				commits: 7,
 			},
 		},
 	];

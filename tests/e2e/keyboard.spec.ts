@@ -261,13 +261,11 @@ test.describe("keyboard cursor coherence (#6186)", () => {
 
 	test("entering a list view focuses the active item", async ({ page }) => {
 		await page.goto("/projects");
-		await expect(
-			page.getByRole("button", { name: "ServiceFlow" }),
-		).toBeFocused();
+		await expect(page.getByRole("link", { name: "ServiceFlow" })).toBeFocused();
 		// A hash-preselected active item receives focus on entry too.
 		await page.goto("/projects#eventcommerce");
 		await expect(
-			page.getByRole("button", { name: "EventCommerce" }),
+			page.getByRole("link", { name: "EventCommerce" }),
 		).toBeFocused();
 	});
 
@@ -275,94 +273,90 @@ test.describe("keyboard cursor coherence (#6186)", () => {
 		page,
 	}) => {
 		await page.goto("/projects");
-		await expect(
-			page.getByRole("button", { name: "ServiceFlow" }),
-		).toBeFocused();
+		await expect(page.getByRole("link", { name: "ServiceFlow" })).toBeFocused();
 		await page.keyboard.press("ArrowDown");
+		await expect(page.getByRole("link", { name: "WealthQuest" })).toBeFocused();
 		await expect(
-			page.getByRole("button", { name: "WealthQuest" }),
-		).toBeFocused();
-		await expect(
-			page.getByRole("button", { name: "WealthQuest" }),
+			page.getByRole("link", { name: "WealthQuest" }),
 		).toHaveAttribute("data-active", /.*/);
 		await expect(
-			page.getByRole("button", { name: "WealthQuest" }),
-		).toHaveAttribute("aria-pressed", "true");
+			page.getByRole("link", { name: "WealthQuest" }),
+		).toHaveAttribute("aria-current", /.*/);
 		await page.keyboard.press("ArrowDown");
 		await expect(
-			page.getByRole("button", { name: "EventCommerce" }),
+			page.getByRole("link", { name: "EventCommerce" }),
 		).toBeFocused();
 		await expect(
-			page.getByRole("button", { name: "EventCommerce" }),
+			page.getByRole("link", { name: "EventCommerce" }),
 		).toHaveAttribute("data-active", /.*/);
 		await expect(
-			page.getByRole("button", { name: "ServiceFlow" }),
+			page.getByRole("link", { name: "ServiceFlow" }),
 		).not.toHaveAttribute("data-active", /.*/);
-		// Wrapping: two ArrowDowns from the last item return to the first.
+		// Wrapping (nine-record collection): walk to the last record, then
+		// one more ArrowDown wraps back to the first.
+		for (let step = 0; step < 6; step += 1) {
+			await page.keyboard.press("ArrowDown");
+		}
+		await expect(page.getByRole("link", { name: "raguard" })).toBeFocused();
 		await page.keyboard.press("ArrowDown");
-		await page.keyboard.press("ArrowDown");
-		await expect(
-			page.getByRole("button", { name: "ServiceFlow" }),
-		).toBeFocused();
+		await expect(page.getByRole("link", { name: "ServiceFlow" })).toBeFocused();
 	});
 
-	test("Enter and ArrowRight open the focused item's detail panel", async ({
+	test("Enter on a focused project row opens its URL in a new tab; ArrowRight never opens", async ({
 		page,
+		context,
 	}) => {
 		await page.goto("/projects");
 		await page.keyboard.press("ArrowDown");
 		await page.keyboard.press("ArrowDown");
 		await expect(
-			page.getByRole("button", { name: "EventCommerce" }),
+			page.getByRole("link", { name: "EventCommerce" }),
 		).toBeFocused();
-		const panel = page.locator("[data-detail-panel][data-active]");
-		await page.keyboard.press("Enter");
-		await expect(panel).toContainText("EventCommerce");
-		await expect(panel).toBeFocused();
-		// After closing, ArrowRight opens the same focused item again.
-		await page.keyboard.press("Escape");
-		await expect(page.locator("[data-detail-panel][data-active]")).toHaveCount(
-			0,
-		);
+		// ArrowRight is inert on the projects carousel (activation is the
+		// link's own; the generic open must not run).
 		await page.keyboard.press("ArrowRight");
-		await expect(panel).toContainText("EventCommerce");
-		await expect(panel).toBeFocused();
+		await expect(
+			page.getByRole("link", { name: "EventCommerce" }),
+		).toBeFocused();
+		await expect(page.locator("[data-detail-panel]:focus")).toHaveCount(0);
+		// Enter is native link activation: the URL opens in a new tab and
+		// the row keeps the focus.
+		const popupPromise = context.waitForEvent("page");
+		await page.keyboard.press("Enter");
+		const popup = await popupPromise;
+		await popup.waitForURL("https://github.com/jonasotoaguilar/eventcommerce", {
+			waitUntil: "commit",
+		});
+		await expect(
+			page.getByRole("link", { name: "EventCommerce" }),
+		).toBeFocused();
 	});
 
 	test("roving tabindex leaves a single tab stop in the list", async ({
 		page,
 	}) => {
 		await page.goto("/projects");
-		const serviceflow = page.getByRole("button", { name: "ServiceFlow" });
-		const wealthquest = page.getByRole("button", { name: "WealthQuest" });
-		const eventcommerce = page.getByRole("button", { name: "EventCommerce" });
+		const serviceflow = page.getByRole("link", { name: "ServiceFlow" });
+		const wealthquest = page.getByRole("link", { name: "WealthQuest" });
+		const eventcommerce = page.getByRole("link", { name: "EventCommerce" });
 		await expect(serviceflow).toHaveAttribute("tabindex", "0");
 		await expect(wealthquest).toHaveAttribute("tabindex", "-1");
 		await expect(eventcommerce).toHaveAttribute("tabindex", "-1");
 		await page.keyboard.press("ArrowDown");
 		await expect(wealthquest).toHaveAttribute("tabindex", "0");
 		await expect(serviceflow).toHaveAttribute("tabindex", "-1");
-		// Tab leaves the single tab stop into the open panel's link — never
-		// into a sibling list item.
+		// Tab leaves the single tab stop — never into a sibling row or into
+		// the detail panel (the projects panel is not in the tab order).
 		await page.keyboard.press("Tab");
 		await expect(eventcommerce).not.toBeFocused();
-		await expect(page.getByRole("link", { name: "WealthQuest" })).toBeFocused();
+		await expect(page.locator("[data-detail-panel]:focus")).toHaveCount(0);
 	});
 
-	test("Escape closes the panel first, restores focus to the item, then returns to the menu", async ({
+	test("Escape on PROJECTS goes straight to the menu (no closable panel)", async ({
 		page,
 	}) => {
 		await page.goto("/projects");
-		const serviceflow = page.getByRole("button", { name: "ServiceFlow" });
-		await expect(serviceflow).toBeFocused();
-		await page.keyboard.press("Enter");
-		await expect(
-			page.locator("[data-detail-panel][data-active]"),
-		).toBeFocused();
-		await page.keyboard.press("Escape");
-		await expect(page.locator("[data-detail-panel][data-active]")).toHaveCount(
-			0,
-		);
+		const serviceflow = page.getByRole("link", { name: "ServiceFlow" });
 		await expect(serviceflow).toBeFocused();
 		await page.keyboard.press("Escape");
 		await expect(page).toHaveURL(/\/$/);
@@ -389,19 +383,11 @@ test.describe("keyboard cursor coherence (#6186)", () => {
 		await expect(menuItem(page, "Projects")).toBeFocused();
 		await page.keyboard.press("Enter");
 		await expect(page).toHaveURL(/\/projects$/);
-		await expect(
-			page.getByRole("button", { name: "ServiceFlow" }),
-		).toBeFocused();
-		// Move the view cursor, open, close.
+		await expect(page.getByRole("link", { name: "ServiceFlow" })).toBeFocused();
+		// Move the view cursor, then leave with Escape (the projects detail
+		// stage never closes; Escape goes straight to the menu).
 		await page.keyboard.press("ArrowDown");
-		await expect(
-			page.getByRole("button", { name: "WealthQuest" }),
-		).toBeFocused();
-		await page.keyboard.press("Enter");
-		await expect(
-			page.locator("[data-detail-panel][data-active]"),
-		).toBeFocused();
-		await page.keyboard.press("Escape");
+		await expect(page.getByRole("link", { name: "WealthQuest" })).toBeFocused();
 		await page.keyboard.press("Escape");
 		await expect(page).toHaveURL(/\/$/);
 		// Back on the shell after the swap, then re-enter the view: the
@@ -414,16 +400,43 @@ test.describe("keyboard cursor coherence (#6186)", () => {
 		await page.keyboard.press("ArrowDown");
 		await page.keyboard.press("Enter");
 		await expect(page).toHaveURL(/\/projects$/);
-		await expect(
-			page.getByRole("button", { name: "ServiceFlow" }),
-		).toBeFocused();
+		await expect(page.getByRole("link", { name: "ServiceFlow" })).toBeFocused();
 		await page.keyboard.press("ArrowDown");
+		await expect(page.getByRole("link", { name: "WealthQuest" })).toBeFocused();
 		await expect(
-			page.getByRole("button", { name: "WealthQuest" }),
-		).toBeFocused();
-		await expect(
-			page.getByRole("button", { name: "EventCommerce" }),
+			page.getByRole("link", { name: "EventCommerce" }),
 		).not.toBeFocused();
+	});
+
+	test("clicking the inert projects background keeps ArrowDown/Enter navigation alive", async ({
+		page,
+		context,
+	}) => {
+		await page.goto("/projects");
+		await expect(page.getByRole("link", { name: "ServiceFlow" })).toBeFocused();
+		// Click an inert page background point (top-left of the screen, away
+		// from the list, the back link, and the mute control): the click
+		// blurs the row and leaves focus on the body — the bug precondition.
+		await page.mouse.click(30, 80);
+		await expect(page.locator("body")).toBeFocused();
+		await expect(
+			page.getByRole("link", { name: "ServiceFlow" }),
+		).not.toBeFocused();
+		// ArrowDown still moves the cursor and restores focus into the list.
+		await page.keyboard.press("ArrowDown");
+		await expect(page.getByRole("link", { name: "WealthQuest" })).toBeFocused();
+		await expect(
+			page.getByRole("link", { name: "WealthQuest" }),
+		).toHaveAttribute("data-active", /.*/);
+		// Enter still opens the active project link in a new tab and the row
+		// keeps the focus.
+		const popupPromise = context.waitForEvent("page");
+		await page.keyboard.press("Enter");
+		const popup = await popupPromise;
+		await popup.waitForURL("https://jonasotoaguilar.itch.io/wealthquest", {
+			waitUntil: "commit",
+		});
+		await expect(page.getByRole("link", { name: "WealthQuest" })).toBeFocused();
 	});
 });
 
