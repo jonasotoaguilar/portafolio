@@ -134,10 +134,15 @@ export interface WheelAccumulator {
 }
 
 /**
- * Accumulates a normalized wheel delta and returns how many discrete
- * transitions to emit (negative = up). The fractional part stays in the
- * accumulator, so sub-threshold deltas pool across events and one large
- * delta can emit several steps at once.
+ * Accumulates a normalized wheel delta and returns the number of discrete
+ * transitions to emit (negative = up). Recovered contract: ONE wheel event
+ * emits AT MOST ONE transition — a mouse wheel notch is a single intent, so
+ * a large delta never skips several skills at once. Sub-threshold trackpad
+ * deltas still pool across events (the fractional part stays in the
+ * accumulator), and the excess of a large delta is banked rather than lost:
+ * it flushes one step at a time on later events. The accumulator is clamped
+ * to one threshold after each emit so sustained large deltas cannot grow the
+ * bank without bound.
  */
 export function consumeWheelSteps(
 	acc: WheelAccumulator,
@@ -148,10 +153,48 @@ export function consumeWheelSteps(
 ): number {
 	if (!(threshold > 0)) return 0;
 	acc.remainder += normalizeWheelDelta(deltaY, deltaMode, pageLength);
-	const steps = Math.trunc(acc.remainder / threshold);
-	// Truncating a tiny negative fraction yields -0; normalize it away so
-	// callers never see a signed zero step.
-	if (steps === 0) return 0;
+	const rawSteps = Math.trunc(acc.remainder / threshold);
+	if (rawSteps === 0) return 0;
+	// Truncating a tiny negative fraction yields -0; Math.max(-1, min(1, -0))
+	// normalizes it to 0, so callers never see a signed zero step.
+	const steps = Math.max(-1, Math.min(1, rawSteps));
 	acc.remainder -= steps * threshold;
+	acc.remainder = Math.max(-threshold, Math.min(threshold, acc.remainder));
 	return steps;
+}
+
+/** Standard 1..3999 Roman numeral glyph table, largest first. */
+const ROMAN_GLYPHS: ReadonlyArray<readonly [number, string]> = [
+	[1000, "M"],
+	[900, "CM"],
+	[500, "D"],
+	[400, "CD"],
+	[100, "C"],
+	[90, "XC"],
+	[50, "L"],
+	[40, "XL"],
+	[10, "X"],
+	[9, "IX"],
+	[5, "V"],
+	[4, "IV"],
+	[1, "I"],
+];
+
+/**
+ * Position plate glyph for the skills card (recovered contract): the global
+ * visible position (1-based) rendered as a Roman numeral, so the first card
+ * shows "I" and the 22nd "XXII". Returns an empty string for out-of-range
+ * inputs so callers can treat it as "no plate".
+ */
+export function toRoman(value: number): string {
+	if (!Number.isInteger(value) || value < 1 || value > 3999) return "";
+	let remaining = value;
+	let out = "";
+	for (const [numeral, glyph] of ROMAN_GLYPHS) {
+		while (remaining >= numeral) {
+			out += glyph;
+			remaining -= numeral;
+		}
+	}
+	return out;
 }

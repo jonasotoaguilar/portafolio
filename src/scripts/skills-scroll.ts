@@ -7,6 +7,7 @@ import {
 	type SkillsState,
 	stepSkillsDown,
 	stepSkillsUp,
+	toRoman,
 	VISIBLE_SLOTS,
 	type WheelAccumulator,
 } from "../lib/skills/window";
@@ -109,6 +110,19 @@ function makeController(
 
 	let state: SkillsState = initialSkillsState();
 	const accumulator: WheelAccumulator = { remainder: 0 };
+	const thumb = region.querySelector<HTMLElement>("[data-skills-thumb]");
+
+	function syncThumb(): void {
+		if (!thumb) return;
+		const maxStart = Math.max(1, data.length - VISIBLE_SLOTS);
+		const ratio = Math.min(1, VISIBLE_SLOTS / data.length);
+		const progress = state.windowStart / maxStart;
+		thumb.style.setProperty("--skills-thumb-width", `${ratio * 100}%`);
+		thumb.style.setProperty(
+			"--skills-thumb-left",
+			`${progress * (1 - ratio) * 100}%`,
+		);
+	}
 
 	// Render writes every slot's content and ARIA attributes; the slot nodes
 	// themselves are never replaced, so DOM focus is structurally preserved.
@@ -121,10 +135,14 @@ function makeController(
 				".skill-card-category",
 			);
 			const rank = button.querySelector<HTMLElement>(".skill-card-rank-value");
-			if (!record || !name || !category || !rank) return;
+			const position = button.querySelector<HTMLElement>(
+				".skill-card-position",
+			);
+			if (!record || !name || !category || !rank || !position) return;
 			name.textContent = record.name;
 			category.textContent = record.category;
 			rank.textContent = String(record.rank);
+			position.textContent = toRoman(globalIndex + 1);
 			const isActive = globalIndex === state.activeIndex;
 			button.toggleAttribute("data-active", isActive);
 			button.setAttribute("aria-selected", isActive ? "true" : "false");
@@ -132,6 +150,7 @@ function makeController(
 			button.setAttribute("aria-setsize", String(data.length));
 			button.tabIndex = slot === state.focusedSlot ? 0 : -1;
 		});
+		syncThumb();
 	}
 
 	// There is no scroll container: focus({preventScroll:true}) is a no-op
@@ -215,6 +234,17 @@ function makeController(
 			slotButtons.forEach((button, slot) => {
 				button.removeEventListener("click", clickHandlers[slot]);
 			});
+			const thumb = region.querySelector<HTMLElement>("[data-skills-thumb]");
+			if (thumb) {
+				const maxStart = Math.max(1, data.length - VISIBLE_SLOTS);
+				const ratio = Math.min(1, VISIBLE_SLOTS / data.length);
+				const progress = state.windowStart / maxStart;
+				thumb.style.setProperty("--skills-thumb-width", `${ratio * 100}%`);
+				thumb.style.setProperty(
+					"--skills-thumb-left",
+					`${progress * (1 - ratio) * 100}%`,
+				);
+			}
 		},
 	};
 }

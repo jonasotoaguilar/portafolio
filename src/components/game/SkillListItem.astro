@@ -1,5 +1,5 @@
 ---
-import { VISIBLE_SLOTS } from "../../lib/skills/window";
+import { toRoman, VISIBLE_SLOTS } from "../../lib/skills/window";
 
 interface Props {
 	/** Skill name, e.g. "Go". */
@@ -29,22 +29,23 @@ const { name, category, rank, index, active = false } = Astro.props;
 	class="skill-list-item"
 	style={`--skill-index: ${index % VISIBLE_SLOTS}`}
 >
-	<button
+		<button
 		type="button"
 		data-skill-card
 		data-active={active ? "true" : undefined}
 		class="skill-card view-list-item flex h-full min-h-11 items-center justify-between gap-4 px-4 py-1.5 font-display text-2xl uppercase leading-[1.05] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400"
-	>
-		{/* Counter-skewed content stays upright inside the skewed card; the
+		>
+			<span class="skill-card-position" aria-hidden="true">{toRoman(index + 1)}</span>
+			{/* Counter-skewed content stays upright inside the skewed card; the
 		    accessible name composes skill + category + rank from the visible
 		    text ("Go Backend RANK 3"). */}
-		<span class="skill-card-body">
-			<span class="block">{name}</span>
+			<span class="skill-card-body">
+				<span class="block">{name}</span>
+				<span class="skill-card-meta">
+					<span class="skill-card-rank-label">RANK</span>
+					<span class="skill-card-rank-value">{rank}</span>
+				</span>
+			</span>
 			<span class="skill-card-category">{category}</span>
-		</span>
-		<span class="skill-card-rank">
-			<span class="skill-card-rank-label">RANK</span>
-			<span class="skill-card-rank-value">{rank}</span>
-		</span>
-	</button>
+		</button>
 </li>

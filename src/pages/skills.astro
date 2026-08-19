@@ -31,7 +31,13 @@ const cards = Object.entries(skillsEntry.data).flatMap(([group, entries]) =>
 ---
 
 <BaseLayout title={VIEW_TITLES.skills} site={site}>
-	<GameViewShell title="Skills" class="skills-view">
+		<GameViewShell title="Skills" class="skills-view">
+			<img
+				class="skills-persona"
+				src="/assets/persona/persona_skills.png"
+				alt=""
+				aria-hidden="true"
+			/>
 		{/* Decorative field watermark (skills contract): giant DEVELOPER word
 		    in the display face, rotated along the white parallelogram's
 		    diagonal, painted behind the cards (styles in global.css). The

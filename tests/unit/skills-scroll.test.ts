@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
 	consumeWheelSteps,
 	normalizeWheelDelta,
+	toRoman,
 	WHEEL_LINE_HEIGHT,
 	WHEEL_THRESHOLD_PX,
 } from "../../src/lib/skills/window";
@@ -49,10 +50,10 @@ describe("consumeWheelSteps", () => {
 		expect(acc.remainder).toBe(1);
 	});
 
-	it("emits several steps from one large delta", () => {
+	it("emits at most one step from one large delta", () => {
 		const acc = { remainder: 0 };
-		expect(consumeWheelSteps(acc, WHEEL_THRESHOLD_PX * 3 + 10, 0, 800)).toBe(3);
-		expect(acc.remainder).toBe(10);
+		expect(consumeWheelSteps(acc, WHEEL_THRESHOLD_PX * 3 + 10, 0, 800)).toBe(1);
+		expect(acc.remainder).toBe(WHEEL_THRESHOLD_PX);
 	});
 
 	it("mirrors the math for upward (negative) deltas", () => {
@@ -74,5 +75,17 @@ describe("consumeWheelSteps", () => {
 		const acc = { remainder: 0 };
 		expect(consumeWheelSteps(acc, 10, 0, 800, 0)).toBe(0);
 		expect(acc.remainder).toBe(0);
+	});
+});
+
+describe("toRoman", () => {
+	it("renders one-based skill positions", () => {
+		expect(toRoman(1)).toBe("I");
+		expect(toRoman(22)).toBe("XXII");
+	});
+
+	it("rejects positions outside the supported range", () => {
+		expect(toRoman(0)).toBe("");
+		expect(toRoman(4000)).toBe("");
 	});
 });
