@@ -32,6 +32,7 @@ const cards = Object.entries(skillsEntry.data).flatMap(([group, entries]) =>
 
 <BaseLayout title={VIEW_TITLES.skills} site={site}>
 		<GameViewShell title="Skills" class="skills-view">
+			<div class="skills-white-shield" aria-hidden="true"></div>
 			<img
 				class="skills-persona"
 				src="/assets/persona/persona_skills.png"
@@ -48,36 +49,36 @@ const cards = Object.entries(skillsEntry.data).flatMap(([group, entries]) =>
 		<span class="skills-watermark" aria-hidden="true">
 			<span class="skills-watermark-text">DEVELOPER</span>
 		</span>
-		{/* Fixed seven-slot recycled list (skills contract): the fallback
-		    below renders all 22 cards in normal document flow (no-JS). On
-		    successful init, skills-scroll.ts adopts the first seven as
-		    persistent slots (data-skill-slot), removes the rest, and gates
-		    the enhanced CSS. In enhanced mode there is no native scrolling:
-		    the region is a fixed seven-row stage, the diagonal scrollbar is
-		    a fixed visual affordance, and wheel/keyboard drive the discrete
-		    window transitions. */}
-		<div class="skills-scroll-region">
-			<div class="skills-viewport" data-skills-viewport>
-				<GameList label="Skills">
-					{cards.map((card, index) => (
-						<SkillListItem
-							name={card.name}
-							category={card.category}
-							rank={card.rank}
-							index={index}
-							active={index === 0}
-						/>
-					))}
-				</GameList>
+			<div class="skills-layout">
+				{/* Fixed five-slot recycled list (skills contract): the fallback
+				    below renders all 22 cards in normal document flow (no-JS). On
+				    successful init, skills-scroll.ts adopts the first five as
+				    persistent slots (data-skill-slot), removes the rest, and gates
+				    the enhanced CSS. In enhanced mode there is no native scrolling:
+				    the region is a fixed five-row stage and wheel/keyboard drive the discrete
+				    window transitions. */}
+				<div class="skills-main-stack">
+					<h2 class="skills-list-heading">LIST</h2>
+					<div class="skills-scroll-region">
+						<div class="skills-rail" data-skills-rail aria-hidden="true">
+							<div class="skills-rail-thumb" data-skills-thumb></div>
+						</div>
+						<div class="skills-viewport" data-skills-viewport>
+							<GameList label="Skills">
+								{cards.map((card, index) => (
+									<SkillListItem
+										name={card.name}
+										category={card.category}
+										rank={card.rank}
+										index={index}
+										active={index === 0}
+									/>
+								))}
+							</GameList>
+						</div>
+					</div>
+				</div>
 			</div>
-			<span
-				class="skills-scrollbar"
-				data-skills-scrollbar
-				aria-hidden="true"
-			>
-				<span class="skills-scrollbar-thumb" data-skills-thumb></span>
-			</span>
-		</div>
 	</GameViewShell>
 </BaseLayout>
 

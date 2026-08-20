@@ -224,6 +224,68 @@ html[data-route="skills"] .skills-view {
 	isolation: isolate;
 }
 
+html[data-route="skills"] main {
+	position: relative;
+	isolation: isolate;
+	z-index: 0;
+}
+
+html[data-route="skills"] .glow-layer::before {
+	content: none;
+}
+
+html[data-route="skills"] .skills-white-shield {
+	position: fixed;
+	inset: 0;
+	background: var(--color-surface-light);
+	clip-path: var(--skills-band-polygon);
+	z-index: 0;
+	pointer-events: none;
+}
+
+html[data-route="skills"] .skills-layout {
+	display: flex;
+	align-items: flex-start;
+	gap: 1.5rem;
+	flex: 1;
+	min-height: 0;
+}
+
+html[data-route="skills"] .skills-main-stack {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+html[data-route="skills"] .skills-list-heading {
+	font-family: var(--font-label);
+	font-size: 1rem;
+	line-height: 1.2;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--color-text-on-light);
+	margin-bottom: 0.5rem;
+}
+
+@media (max-height: 720px) {
+	html[data-route="skills"] .game-view {
+		gap: 0.125rem;
+		padding-block: 0.25rem;
+	}
+
+	html[data-route="skills"] .game-view header {
+		gap: 0.125rem;
+		padding-block: 0.25rem;
+	}
+
+	html[data-route="skills"] .game-view header h1 {
+		font-size: 1.5rem;
+	}
+
+	html[data-route="skills"] .skills-list-heading {
+		margin-bottom: 0.125rem;
+	}
+}
+
 html[data-route="skills"] .skills-watermark {
 	position: fixed;
 	inset: 0;
@@ -1403,80 +1465,69 @@ html[data-route="projects"] .projects-detail-description {
 	}
 }
 
-/* Skills rank-card list (skills contract): one flattened parallelogram card
-   per skill — name + category on the left, RANK + numeric value on the
-   right. Cards lean opposite to the menu's italic (skewX(+8deg), content
-   counter-skewed so glyphs stay upright) and stagger along a diagonal via
-   the per-card --skill-index custom property (0.75rem x / 1px y per step;
-   tablet halves both; <768px and coarse pointers collapse the stagger to
-   full-width ≥44px targets). The offset is a REPEATED SLOT
-   (index % --skill-slot-count): every eighth card reuses slot 0 geometry,
-   so the diagonal never accumulates across the 22 cards and the enhanced
-   UI shows a fixed seven-slot window instead of a list that grows
-   diagonally across the page. The diagonal fits its window because the row
-   gap is at least six y-steps (slots 0..6 cover at most 6 * --skill-dy of
-   vertical drift), which also leaves a clean gap where slot 6 wraps back
-   to slot 0. The list takes a definite fluid width so every card is
-   uniform; the bottom padding only keeps the last card's red active shadow
-   visible at the bottom stop (the last card, slot 0, has no y-drift, so no
-   drift budget is needed). */
-.skills-scroll-region {
-	--skill-card-height: 5.25rem;
-	--skill-row-gap: 0.8rem;
-	--skill-slot-count: 7;
-	--skill-dx: 0.75rem;
-	--skill-dy: 0.0625rem;
-	/* The fixed window: exactly --skill-slot-count row pitches. The eighth
-	   card starts one pitch below the window edge, and the last visible
-	   card's 0.5rem red shadow lands exactly on the edge (the wrap invariant
-	   6 * --skill-dy <= --skill-row-gap guarantees it). The cap lives here —
-	   on the region, not the scroll container — so the overlay scrollbar
-	   anchored to the region's bottom hugs the window exactly. The window
-	   sizing is JS-gated: without the enhancement the region is plain
-	   document flow and all 22 fallback cards stay visible. */
-	--skills-window-height: calc(
-		var(--skill-slot-count) *
-		(var(--skill-card-height) + var(--skill-row-gap))
+/* Skills rank-card list (skills contract) PR2: five-slot diagonal stack with natural Y + proportional X, no transformed Y. Cards clamp(6.875rem,13.4dvh,9.375rem) so 110–150 range, pitch = cardH + gap. dx = clamp(0.065*cardW,0.22*pitch,0.08*cardW) gives 5–8% card width and 74–78° axis. Flex Y provides natural pitch; translateX only provides diagonal. No --skill-dy. Container padding prevents clipping of last card's X offset. */
+html[data-route="skills"] .skills-scroll-region {
+	--skills-card-height: clamp(6.875rem, 13.4dvh, 9.375rem);
+	--skills-row-gap: 0.5rem;
+	--skills-slot-count: 5;
+	--skills-card-width: min(34rem, 100%);
+	--skills-pitch: calc(var(--skills-card-height) + var(--skills-row-gap));
+	--skills-dx: clamp(
+		calc(var(--skills-card-width) * 0.065),
+		calc(var(--skills-pitch) * 0.22),
+		calc(var(--skills-card-width) * 0.08)
 	);
+	--skills-window-height: calc(var(--skills-slot-count) * var(--skills-pitch));
 	position: relative;
-}
-
-.skills-scroll-region[data-skills-enhanced] {
 	flex: 1;
 	min-height: 0;
+	padding-left: 1.5rem;
+	padding-right: calc(4 * var(--skills-dx) + 1rem);
+}
+
+html[data-route="skills"] .skills-scroll-region[data-skills-enhanced] {
 	max-height: var(--skills-window-height);
 }
 
-.skills-viewport [data-list] {
+html[data-route="skills"] .skills-viewport [data-list] {
 	width: min(100%, 34rem);
-	gap: var(--skill-row-gap);
-	padding: 1rem 1rem 1.25rem 1.25rem;
+	gap: var(--skills-row-gap);
+	padding: 0;
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
-	.skills-scroll-region {
-		--skill-dx: 0.375rem;
-		--skill-dy: 0.03125rem;
+	html[data-route="skills"] .skills-scroll-region {
+		--skills-card-width: min(28rem, 100%);
+		--skills-dx: clamp(
+			calc(var(--skills-card-width) * 0.0325),
+			calc(var(--skills-pitch) * 0.11),
+			calc(var(--skills-card-width) * 0.04)
+		);
 	}
 }
 
 @media (max-width: 767px), (pointer: coarse) {
-	.skills-scroll-region {
-		--skill-dx: 0;
-		--skill-dy: 0;
+	html[data-route="skills"] .skills-scroll-region {
+		--skills-dx: 0;
+		padding-left: 0;
+		padding-right: 0;
 	}
 }
 
-.skill-list-item {
+html[data-route="skills"] .skill-list-item {
 	position: relative;
-	height: var(--skill-card-height);
-	transform: translate(
-		calc(var(--skill-index) * var(--skill-dx)),
-		calc(var(--skill-index) * var(--skill-dy))
-	);
+	height: var(--skills-card-height);
+	transform: translateX(calc(var(--skill-index) * var(--skills-dx)));
 }
 
-.skill-card {
+@media (max-height: 720px) {
+	html[data-route="skills"] .skills-scroll-region {
+		--skills-card-width: min(30rem, 100%);
+		--skills-row-gap: 0.25rem;
+	}
+}
+
+html[data-route="skills"] .skill-card {
 	position: relative;
 	display: block;
 	overflow: hidden;
@@ -1496,13 +1547,13 @@ html[data-route="projects"] .projects-detail-description {
 	filter: saturate(0.82) hue-rotate(165deg);
 }
 
-.skill-card-body,
-.skill-card-position,
-.skill-card-category {
+html[data-route="skills"] .skill-card-body,
+html[data-route="skills"] .skill-card-position,
+html[data-route="skills"] .skill-card-category {
 	transform: skewX(-8deg);
 }
 
-.skill-card-body {
+html[data-route="skills"] .skill-card-body {
 	position: relative;
 	display: block;
 	height: 100%;
@@ -1513,7 +1564,7 @@ html[data-route="projects"] .projects-detail-description {
 	text-transform: uppercase;
 }
 
-.skill-card-position {
+html[data-route="skills"] .skill-card-position {
 	position: absolute;
 	top: -0.2rem;
 	left: -0.2rem;
@@ -1531,7 +1582,7 @@ html[data-route="projects"] .projects-detail-description {
 	clip-path: polygon(0 0, 100% 0, 78% 100%, 0 82%);
 }
 
-.skill-card-meta {
+html[data-route="skills"] .skill-card-meta {
 	position: absolute;
 	top: 0.8rem;
 	right: 0.8rem;
@@ -1541,7 +1592,7 @@ html[data-route="projects"] .projects-detail-description {
 	transform: skewX(-8deg);
 }
 
-.skill-card-category {
+html[data-route="skills"] .skill-card-category {
 	position: absolute;
 	left: -0.2rem;
 	right: -0.2rem;
@@ -1557,7 +1608,7 @@ html[data-route="projects"] .projects-detail-description {
 	text-transform: uppercase;
 }
 
-.skill-card-rank-label {
+html[data-route="skills"] .skill-card-rank-label {
 	color: var(--color-text-on-light);
 	font-family: var(--font-label);
 	font-size: 0.72rem;
@@ -1565,20 +1616,20 @@ html[data-route="projects"] .projects-detail-description {
 	line-height: 1.1;
 }
 
-.skill-card-rank-value {
+html[data-route="skills"] .skill-card-rank-value {
 	color: var(--color-accent-on-light);
 	font-family: var(--font-display);
 	font-size: 2.25rem;
 	line-height: 1;
 }
 
-.skill-card:focus-visible {
+html[data-route="skills"] .skill-card:focus-visible {
 	outline: 3px solid var(--color-accent-400);
 	outline-offset: 0.25rem;
 	filter: none;
 }
 
-.skill-list-item:has([data-active]) .skill-card {
+html[data-route="skills"] .skill-list-item:has([data-active]) .skill-card {
 	background: var(--color-surface-light);
 	border-color: var(--color-accent-500);
 	filter: none;
@@ -1591,7 +1642,7 @@ html[data-route="projects"] .projects-detail-description {
    to an empty value on the active slot after hydration (the no-JS fallback
    renders it statically on the first card); the button sits above the
    layer and its focus-visible outline is untouched. */
-.skill-list-item::before {
+html[data-route="skills"] .skill-list-item::before {
 	content: "";
 	position: absolute;
 	inset: 0;
@@ -1601,20 +1652,20 @@ html[data-route="projects"] .projects-detail-description {
 	transform: translate(0.5rem, 0.5rem) skewX(8deg);
 }
 
-.skill-list-item:has([data-active])::before {
+html[data-route="skills"] .skill-list-item:has([data-active])::before {
 	opacity: 1;
 }
 
 @media (max-width: 767px), (pointer: coarse) {
-	.skill-list-item {
+	html[data-route="skills"] .skill-list-item {
 		transform: none;
 	}
 }
 
-/* Skills list (skills contract): the ENHANCED viewport is a fixed,
-   NON-scrolling seven-slot stage — overflow hidden, no scrollTop, no
-   native scrollbar — and the region is capped at exactly seven row pitches
-   (JS-gated on [data-skills-enhanced]) so the fixed seven-slot window
+/* Skills list (skills contract) PR2: ENHANCED viewport is a fixed,
+   NON-scrolling five-slot stage — overflow hidden, no scrollTop, no
+   native scrollbar — and the region is capped at exactly five row pitches
+   (JS-gated on [data-skills-enhanced]) so the fixed five-slot window
    never grows on tall screens. Without the enhancement gate (no-JS or
    failed init) the viewport stays a plain block in normal document flow
    and the page scrolls over all 22 fallback cards. */
@@ -1622,81 +1673,57 @@ html[data-game-ready][data-route="skills"] [data-view] {
 	height: 100dvh;
 }
 
-.skills-scroll-region[data-skills-enhanced] .skills-viewport {
+html[data-route="skills"]
+	.skills-scroll-region[data-skills-enhanced]
+	.skills-viewport {
 	height: 100%;
 	overflow: hidden;
-	/* Never a native scrollbar in the enhanced stage. */
 	scrollbar-width: none;
 }
 
-.skills-scroll-region[data-skills-enhanced]
+html[data-route="skills"]
+	.skills-scroll-region[data-skills-enhanced]
 	.skills-viewport::-webkit-scrollbar {
 	display: none;
 	width: 0;
 }
 
-/* Skills diagonal scrollbar (skills contract): a small scrollbar near the
-   LOWER-LEFT of the list — not the page edge — a 6–8px track with a
-   parallelogram thumb clipped to lean with the card geometry (same shape
-   language as the card skew). It is now a purely FIXED VISUAL AFFORDANCE:
-   the thumb fills the track and never moves (there is no scrollTop to
-   mirror), it is not a drag control, and neither track nor thumb ever
-   intercepts pointers. It renders only in the enhanced mode (JS-gated) and
-   appears when the list is hovered or focused; coarse pointers never see
-   it. Wheel changes focus, not the scrollbar. */
-.skills-scroll-region[data-skills-enhanced] .skills-scrollbar {
+/* Skills vertical rail (skills contract) PR2: narrow left outer lane,
+   8–10px, vertical track rotated -atan2(dx,pitch), length hypot(4dx,4pitch),
+   thumb ratio 5/22, no drag, never band angle. */
+html[data-route="skills"] .skills-rail {
 	position: absolute;
-	left: 0.75rem;
-	bottom: 0.5rem;
-	display: block;
-	width: min(13rem, 42%);
-	height: 7px;
-	transform: rotate(-8deg);
-	background: color-mix(in srgb, var(--color-accent-cyan) 20%, transparent);
-	pointer-events: none;
-	z-index: 1;
-	visibility: hidden;
-	opacity: 0;
-	transition:
-		opacity 150ms ease-out,
-		visibility 0s linear 150ms;
-}
-
-.skills-scroll-region[data-skills-enhanced]:has(.skills-viewport:hover)
-	.skills-scrollbar,
-.skills-scroll-region[data-skills-enhanced]:has(.skills-viewport:focus-within)
-	.skills-scrollbar {
-	visibility: visible;
-	opacity: 1;
-	transition: opacity 150ms ease-out;
-}
-
-.skills-scroll-region[data-skills-enhanced] .skills-scrollbar-thumb {
-	position: absolute;
+	left: 0;
 	top: 0;
-	left: var(--skills-thumb-left, 0%);
-	width: var(--skills-thumb-width, 32%);
-	height: 100%;
-	background: color-mix(
-		in srgb,
-		var(--color-accent-cyan) 70%,
-		var(--color-bg-base)
-	);
+	width: 8px;
+	height: hypot(calc(4 * var(--skills-dx)), calc(4 * var(--skills-pitch)));
+	--_rail-angle: calc(0deg - atan2(var(--skills-dx), var(--skills-pitch)));
+	transform: rotate(-14deg);
+	transform-origin: top left;
+	background: var(--color-bg-base);
+	pointer-events: none;
+	z-index: 4;
+}
+
+html[data-route="skills"] .skills-rail-thumb {
+	position: absolute;
+	left: 0;
+	top: var(--skills-rail-thumb-top, 0%);
+	width: 100%;
+	height: var(--skills-rail-thumb-height, 22.727%);
+	background: var(--color-surface-light);
 	clip-path: polygon(0 0, calc(100% - 3px) 0, 100% 100%, 3px 100%);
 	pointer-events: none;
 }
 
-/* Coarse pointers: touch users interact with the slots directly — the
-   decorative scrollbar never renders. Same specificity as the enhanced
-   scrollbar rule so the display:none wins. */
 @media (pointer: coarse) {
-	.skills-scroll-region[data-skills-enhanced] .skills-scrollbar {
+	html[data-route="skills"] .skills-rail {
 		display: none;
 	}
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.skills-scrollbar {
+	html[data-route="skills"] .skills-rail {
 		transition: none;
 	}
 }

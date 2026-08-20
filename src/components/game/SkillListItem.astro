@@ -9,8 +9,8 @@ interface Props {
 	/** Rank on the 1..4 scale (1 basic, 2 intermediate, 3 advanced, 4 expert). */
 	rank: number;
 	/** Global list position; the diagonal stagger uses its repeated slot
-	    (index % VISIBLE_SLOTS), so the fixed window's geometry never
-	    accumulates drift across the 22 cards. */
+	    (index % VISIBLE_SLOTS) with VISIBLE_SLOTS=5, so the fixed five-slot
+	    window's geometry never accumulates drift across the 22 cards. */
 	index: number;
 	active?: boolean;
 }
@@ -19,7 +19,7 @@ const { name, category, rank, index, active = false } = Astro.props;
 ---
 
 <!-- No-JS fallback card (skills contract): the page renders all 22 of these
-     in normal document flow. The enhanced controller adopts the first seven
+     in normal document flow. The enhanced controller adopts the first five
      as persistent slot nodes (data-skill-slot), removes the rest, and
      mutates only their content/ARIA afterwards — so this component stays a
      plain static card. It deliberately carries NO data-list-item: the

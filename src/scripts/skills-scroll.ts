@@ -122,6 +122,11 @@ function makeController(
 			"--skills-thumb-left",
 			`${progress * (1 - ratio) * 100}%`,
 		);
+		thumb.style.setProperty("--skills-rail-thumb-height", `${ratio * 100}%`);
+		thumb.style.setProperty(
+			"--skills-rail-thumb-top",
+			`${progress * (1 - ratio) * 100}%`,
+		);
 	}
 
 	// Render writes every slot's content and ARIA attributes; the slot nodes
@@ -242,6 +247,14 @@ function makeController(
 				thumb.style.setProperty("--skills-thumb-width", `${ratio * 100}%`);
 				thumb.style.setProperty(
 					"--skills-thumb-left",
+					`${progress * (1 - ratio) * 100}%`,
+				);
+				thumb.style.setProperty(
+					"--skills-rail-thumb-height",
+					`${ratio * 100}%`,
+				);
+				thumb.style.setProperty(
+					"--skills-rail-thumb-top",
 					`${progress * (1 - ratio) * 100}%`,
 				);
 			}
