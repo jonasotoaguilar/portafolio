@@ -9,10 +9,25 @@ import {
 	VISIBLE_SLOTS,
 } from "../../src/lib/skills/window";
 
-// The approved persistent-slot contract: 22 records, 7 persistent slots,
+// Corrected five-slot contract: 22 records, 5 persistent slots,
 // one state {activeIndex, windowStart, focusedSlot}. The invariant
 // activeIndex = windowStart + focusedSlot holds after every step.
+// Wrap uses total-5, last slot is index 4 (fifth slot), not 7.
 const COUNT = 22;
+
+describe("VISIBLE_SLOTS contract", () => {
+	it("exposes exactly 5 visible slots", () => {
+		expect(VISIBLE_SLOTS).toBe(5);
+	});
+
+	it("wraps total-5: final window start is count-5", () => {
+		expect(COUNT - VISIBLE_SLOTS).toBe(17);
+	});
+
+	it("last slot is index 4 (fifth slot, not seventh)", () => {
+		expect(VISIBLE_SLOTS - 1).toBe(4);
+	});
+});
 
 describe("initialSkillsState", () => {
 	it("starts on skill 1 with the window at the top and focus on slot 1", () => {
@@ -25,7 +40,7 @@ describe("initialSkillsState", () => {
 });
 
 describe("stepSkillsDown", () => {
-	it("moves through the seven slots without moving the window", () => {
+	it("moves through the five slots without moving the window", () => {
 		let state = initialSkillsState();
 		for (let slot = 1; slot < VISIBLE_SLOTS; slot += 1) {
 			state = stepSkillsDown(state, COUNT);
@@ -35,30 +50,30 @@ describe("stepSkillsDown", () => {
 				focusedSlot: slot,
 			});
 		}
-		// Slot 1..7 all sit inside the initial window 1..7.
+		// Slot 1..5 all sit inside the initial window 1..5.
 		expect(state).toEqual({
-			activeIndex: 6,
+			activeIndex: 4,
 			windowStart: 0,
-			focusedSlot: 6,
+			focusedSlot: 4,
 		});
 	});
 
-	it("advances the window one skill at the bottom slot; focus stays stuck to slot 7", () => {
-		// From {6, 0, 6}: the window moves to skills 2..8 and the focus stays
+	it("advances the window one skill at the bottom slot; focus stays stuck to slot 5", () => {
+		// From {4, 0, 4}: the window moves to skills 2..6 and the focus stays
 		// on the bottom slot.
 		expect(
-			stepSkillsDown({ activeIndex: 6, windowStart: 0, focusedSlot: 6 }, COUNT),
-		).toEqual({ activeIndex: 7, windowStart: 1, focusedSlot: 6 });
+			stepSkillsDown({ activeIndex: 4, windowStart: 0, focusedSlot: 4 }, COUNT),
+		).toEqual({ activeIndex: 5, windowStart: 1, focusedSlot: 4 });
 		// Every further edge step rotates the window one skill per press.
-		for (let active = 7; active < 21; active += 1) {
+		for (let active = 5; active < 21; active += 1) {
 			const next = stepSkillsDown(
-				{ activeIndex: active, windowStart: active - 6, focusedSlot: 6 },
+				{ activeIndex: active, windowStart: active - 4, focusedSlot: 4 },
 				COUNT,
 			);
 			expect(next).toEqual({
 				activeIndex: active + 1,
-				windowStart: active - 5,
-				focusedSlot: 6,
+				windowStart: active - 3,
+				focusedSlot: 4,
 			});
 		}
 	});
@@ -77,7 +92,7 @@ describe("stepSkillsDown", () => {
 	it("wraps last -> first to the initial window and slot 1", () => {
 		expect(
 			stepSkillsDown(
-				{ activeIndex: 21, windowStart: 15, focusedSlot: 6 },
+				{ activeIndex: 21, windowStart: 17, focusedSlot: 4 },
 				COUNT,
 			),
 		).toEqual(initialSkillsState());
@@ -91,8 +106,8 @@ describe("stepSkillsDown", () => {
 
 describe("stepSkillsUp", () => {
 	it("moves back through the slots without moving the window", () => {
-		let state: SkillsState = { activeIndex: 6, windowStart: 0, focusedSlot: 6 };
-		for (let slot = 5; slot >= 0; slot -= 1) {
+		let state: SkillsState = { activeIndex: 4, windowStart: 0, focusedSlot: 4 };
+		for (let slot = 3; slot >= 0; slot -= 1) {
 			state = stepSkillsUp(state, COUNT);
 			expect(state).toEqual({
 				activeIndex: slot,
@@ -103,10 +118,10 @@ describe("stepSkillsUp", () => {
 	});
 
 	it("moves the window one skill back at the top slot; focus stays stuck to slot 1", () => {
-		// Inside the window: slot 7 -> slot 6, window untouched.
+		// Inside the window: slot 5 -> slot 4, window untouched.
 		expect(
-			stepSkillsUp({ activeIndex: 7, windowStart: 1, focusedSlot: 6 }, COUNT),
-		).toEqual({ activeIndex: 6, windowStart: 1, focusedSlot: 5 });
+			stepSkillsUp({ activeIndex: 5, windowStart: 1, focusedSlot: 4 }, COUNT),
+		).toEqual({ activeIndex: 4, windowStart: 1, focusedSlot: 3 });
 		// At the top slot: the window shifts one skill back.
 		expect(
 			stepSkillsUp({ activeIndex: 1, windowStart: 1, focusedSlot: 0 }, COUNT),
@@ -114,21 +129,21 @@ describe("stepSkillsUp", () => {
 	});
 
 	it("walks the window back one skill per press with focus stuck to the top slot", () => {
-		// From the last window: slots 7..2 move within the window, then the
+		// From the last window: slots 5..2 move within the window, then the
 		// window shifts one skill per press while slot 1 keeps the focus.
 		let state: SkillsState = {
 			activeIndex: 21,
-			windowStart: 15,
-			focusedSlot: 6,
+			windowStart: 17,
+			focusedSlot: 4,
 		};
-		for (let slot = 5; slot >= 1; slot -= 1) {
+		for (let slot = 3; slot >= 1; slot -= 1) {
 			state = stepSkillsUp(state, COUNT);
 			expect(state.focusedSlot).toBe(slot);
-			expect(state.windowStart).toBe(15);
+			expect(state.windowStart).toBe(17);
 		}
 		state = stepSkillsUp(state, COUNT);
-		expect(state).toEqual({ activeIndex: 15, windowStart: 15, focusedSlot: 0 });
-		for (let active = 14; active >= 1; active -= 1) {
+		expect(state).toEqual({ activeIndex: 17, windowStart: 17, focusedSlot: 0 });
+		for (let active = 16; active >= 1; active -= 1) {
 			state = stepSkillsUp(state, COUNT);
 			expect(state).toEqual({
 				activeIndex: active,
@@ -141,11 +156,11 @@ describe("stepSkillsUp", () => {
 		expect(state).toEqual(initialSkillsState());
 	});
 
-	it("wraps first -> last to the final window and slot 7", () => {
+	it("wraps first -> last to the final window and slot 5", () => {
 		expect(stepSkillsUp(initialSkillsState(), COUNT)).toEqual({
 			activeIndex: 21,
-			windowStart: 15,
-			focusedSlot: 6,
+			windowStart: 17,
+			focusedSlot: 4,
 		});
 	});
 
@@ -163,22 +178,22 @@ describe("clickSkillSlot", () => {
 			focusedSlot: 4,
 		});
 		expect(
-			clickSkillSlot({ activeIndex: 8, windowStart: 2, focusedSlot: 6 }, 3),
+			clickSkillSlot({ activeIndex: 8, windowStart: 2, focusedSlot: 4 }, 3),
 		).toEqual({
 			activeIndex: 5,
 			windowStart: 2,
 			focusedSlot: 3,
 		});
 		expect(
-			clickSkillSlot({ activeIndex: 21, windowStart: 15, focusedSlot: 6 }, 0),
-		).toEqual({ activeIndex: 15, windowStart: 15, focusedSlot: 0 });
+			clickSkillSlot({ activeIndex: 21, windowStart: 17, focusedSlot: 4 }, 0),
+		).toEqual({ activeIndex: 17, windowStart: 17, focusedSlot: 0 });
 	});
 
 	it("clamps out-of-range slots to the visible window", () => {
 		expect(clickSkillSlot(initialSkillsState(), 9)).toEqual({
-			activeIndex: 6,
+			activeIndex: 4,
 			windowStart: 0,
-			focusedSlot: 6,
+			focusedSlot: 4,
 		});
 		expect(clickSkillSlot(initialSkillsState(), -3)).toEqual(
 			initialSkillsState(),
@@ -188,7 +203,7 @@ describe("clickSkillSlot", () => {
 
 // Whatever the starting position, repeated moves never leave the list.
 describe("state bounds", () => {
-	it("always land inside the 22-skill list", () => {
+	it("always land inside the 22-skill list with 5-slot window", () => {
 		let state = initialSkillsState();
 		const states: SkillsState[] = [state];
 		for (let i = 0; i < 40; i += 1) {
@@ -199,13 +214,15 @@ describe("state bounds", () => {
 			state = stepSkillsUp(state, COUNT);
 			states.push(state);
 		}
-		for (const state of states) {
-			expect(state.activeIndex).toBeGreaterThanOrEqual(0);
-			expect(state.activeIndex).toBeLessThan(COUNT);
-			expect(state.windowStart).toBeGreaterThanOrEqual(0);
-			expect(state.windowStart).toBeLessThanOrEqual(COUNT - VISIBLE_SLOTS);
-			expect(state.focusedSlot).toBeGreaterThanOrEqual(0);
-			expect(state.focusedSlot).toBeLessThan(VISIBLE_SLOTS);
+		for (const s of states) {
+			expect(s.activeIndex).toBeGreaterThanOrEqual(0);
+			expect(s.activeIndex).toBeLessThan(COUNT);
+			expect(s.windowStart).toBeGreaterThanOrEqual(0);
+			expect(s.windowStart).toBeLessThanOrEqual(COUNT - VISIBLE_SLOTS);
+			expect(s.focusedSlot).toBeGreaterThanOrEqual(0);
+			expect(s.focusedSlot).toBeLessThan(VISIBLE_SLOTS);
+			// Triangulation: invariant must hold for every state.
+			expect(s.activeIndex).toBe(s.windowStart + s.focusedSlot);
 		}
 	});
 });

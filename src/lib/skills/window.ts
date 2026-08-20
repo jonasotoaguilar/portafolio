@@ -1,12 +1,12 @@
-// Pure state transitions for the SKILLS fixed seven-slot recycled list
+// Pure state transitions for the SKILLS fixed five-slot recycled list
 // (skills contract): the enhanced UI shows exactly VISIBLE_SLOTS persistent
 // parallelogram slot nodes whose text/category/rank content is updated as
 // the global data window advances — NOT a native scrollable 22-card list and
 // not a conventional carousel. One source of truth drives everything:
 //   DATA: 22 {name, category, rank} records
 //   activeIndex: 0..21 (the selected record)
-//   windowStart: 0..15 (first record of the visible window)
-//   focusedSlot: 0..6  (the roving-tabindex slot)
+//   windowStart: 0..17 (first record of the visible window)
+//   focusedSlot: 0..4  (the roving-tabindex slot)
 // The invariant activeIndex = windowStart + focusedSlot holds after every
 // step. These functions are pure so the mapping is unit-testable without a
 // DOM; src/scripts/skills-scroll.ts wires them to the live slot nodes.
@@ -16,7 +16,7 @@
 // public surface stays the single import point for skills consumers.
 
 /** Number of persistent slot nodes the enhanced skills list shows. */
-export const VISIBLE_SLOTS = 7;
+export const VISIBLE_SLOTS = 5;
 
 /** One flattened skill record (name + category + explicit 1..4 rank). */
 export interface SkillRecord {
@@ -35,7 +35,7 @@ export interface SkillsState {
 	focusedSlot: number;
 }
 
-/** Initial state: skill 1, window 1..7, focus on slot 1. */
+/** Initial state: skill 1, window 1..5, focus on slot 1. */
 export function initialSkillsState(): SkillsState {
 	return { activeIndex: 0, windowStart: 0, focusedSlot: 0 };
 }
@@ -68,7 +68,7 @@ export function stepSkillsDown(state: SkillsState, count = 22): SkillsState {
  * ArrowUp on the skills list: one record back. Inside the window the focus
  * moves to the previous slot; at the top slot the window moves back one
  * record and the focus stays stuck to the top slot. First -> last wraps to
- * the final window and slot 7.
+ * the final window and slot 5.
  */
 export function stepSkillsUp(state: SkillsState, count = 22): SkillsState {
 	if (count <= 0) return state;

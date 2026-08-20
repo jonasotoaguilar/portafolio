@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -8,11 +11,50 @@ import {
 	WHEEL_THRESHOLD_PX,
 } from "../../src/lib/skills/window";
 
+// Skills scroll contract: no geometry dependency, thumb is inlined logical
+// math (ratio = VISIBLE_SLOTS / count, progress = windowStart / maxStart),
+// wheel threshold ~53px preserved. Guard locks the committed baseline after
+// deletion of SkillsRail/geometry.
+
+// Guard: no geometry dependency and inlined thumb contract.
+describe("skills-scroll geometry guard", () => {
+	const scrollPath = resolve("src/scripts/skills-scroll.ts");
+	const scrollSource = readFileSync(scrollPath, "utf8");
+
+	it("does not import or reference geometry module", () => {
+		expect(scrollSource).not.toMatch(/from\s+["'].*geometry/i);
+		expect(scrollSource).not.toMatch(/import.*geometry/i);
+		expect(scrollSource).not.toMatch(/geometry\.ts/i);
+		expect(scrollSource).not.toMatch(/SkillsRail/);
+	});
+
+	it("does not use railThumbMetrics helper", () => {
+		expect(scrollSource).not.toMatch(/railThumbMetrics/);
+	});
+
+	it("inlines logical thumb math (ratio + progress + CSS vars)", () => {
+		// Inlined contract from committed baseline: ratio = VISIBLE_SLOTS /
+		// data.length, progress = windowStart / maxStart, then CSS vars.
+		expect(scrollSource).toContain("VISIBLE_SLOTS / data.length");
+		expect(scrollSource).toContain("windowStart / maxStart");
+		expect(scrollSource).toContain("--skills-thumb-width");
+		expect(scrollSource).toContain("--skills-thumb-left");
+		expect(scrollSource).toContain("maxStart");
+	});
+});
+
 // Skills wheel contract: deltas accumulate into a remainder and emit one
 // discrete transition per threshold (53px), exactly like one ArrowUp/Down
 // press — wheel changes focus/content, never scrollTop. The math is pure so
 // it is unit-testable without a DOM; skills-scroll.ts wires it to the
 // live wheel events (and never hijacks Ctrl+wheel, which stays zoom).
+
+describe("WHEEL_THRESHOLD_PX contract", () => {
+	it("preserves the ~53px wheel threshold", () => {
+		expect(WHEEL_THRESHOLD_PX).toBe(53);
+		expect(WHEEL_LINE_HEIGHT).toBe(16);
+	});
+});
 
 describe("normalizeWheelDelta", () => {
 	it("keeps pixel-mode deltas as-is", () => {
