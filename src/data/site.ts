@@ -8,7 +8,8 @@ export const site = {
   github: "https://github.com/jonasotoaguilar",
   githubHandle: "jonasotoaguilar",
   linkedinHandle: "jonathan-soto-dev",
-  // Public URL remains unverified; do not fabricate href from handle
+  // LinkedIn URL constructed from handle — not externally fetched; rel="me" signals ownership
+  linkedinUrl: "https://www.linkedin.com/in/jonathan-soto-dev",
   location: "Santiago, Chile",
   availability: "Open to remote",
   locale: "en",

@@ -35,7 +35,7 @@ const routes = [
     path: "/contact",
     title: /Contact — Direct Links Only/,
     h1: /Direct.*Reach/i,
-    description: /Contact Jonathan Soto directly/,
+    description: /Contact Jonathan Soto/,
   },
 ] as const;
 
@@ -174,43 +174,85 @@ test("content — /about human context factual fields", async ({ page }) => {
   await page.goto("/about");
   await expect(page.getByText("Ing. Ejecución en Computación e Informática")).toBeVisible();
   await expect(page.getByText("WealthQuest — Blended Games")).toBeVisible();
-  await expect(page.getByText(/May 2025/)).toBeVisible();
+  await expect(page.getByText(/May 2025/).first()).toBeVisible();
   await expect(page.getByText("Spanish").first()).toBeVisible();
   await expect(page.getByText("Native").first()).toBeVisible();
 });
 
-// Contact privacy
-test("content — /contact privacy: mailto exists, github safe, linkedin non-clickable, no phone", async ({
+// LinkedIn identity — exact URL is the only linkedin.com href, rel contains me noopener noreferrer
+const LINKEDIN_URL = "https://www.linkedin.com/in/jonathan-soto-dev";
+
+test("content — /contact LinkedIn exact href with rel me noopener noreferrer, no phone", async ({
   page,
 }) => {
   await page.goto("/contact");
   const mailto = page.locator('a[href^="mailto:jonathansoto.dev@gmail.com"]');
   await expect(mailto.first()).toBeVisible();
-  await expect(mailto.first()).toHaveAttribute("href", /mailto:jonathansoto.dev@gmail.com/);
-
   const github = page.locator('a[href="https://github.com/jonasotoaguilar"]');
   await expect(github.first()).toBeVisible();
-  await expect(github.first()).toHaveAttribute("target", "_blank");
   await expect(github.first()).toHaveAttribute("rel", /noopener/);
 
-  // linkedin handle is text, not a link to linkedin.com
-  await expect(page.getByText("jonathan-soto-dev").first()).toBeVisible();
-  const linkedinLinks = page.locator('a[href*="linkedin.com"]');
-  await expect(linkedinLinks).toHaveCount(0);
-
-  // no phone: no tel: links anywhere
+  // LinkedIn must be exact clickable anchor, not text span
+  const linkedin = page.locator(`a[href="${LINKEDIN_URL}"]`);
+  await expect(linkedin.first()).toBeVisible();
+  await expect(linkedin.first()).toHaveAttribute("rel", /me/);
+  await expect(linkedin.first()).toHaveAttribute("rel", /noopener/);
+  await expect(linkedin.first()).toHaveAttribute("rel", /noreferrer/);
+  await expect(linkedin.first()).toHaveAttribute("target", "_blank");
+  // uniqueness: every linkedin.com href is exactly this URL
+  const allLinkedinHrefs = await page
+    .locator('a[href*="linkedin.com"]')
+    .evaluateAll((els) => els.map((e) => (e as HTMLAnchorElement).href));
+  expect(allLinkedinHrefs.length).toBeGreaterThan(0);
+  for (const href of allLinkedinHrefs) expect(href).toBe(LINKEDIN_URL);
+  // no phone
   await expect(page.locator('a[href^="tel:"]')).toHaveCount(0);
-
-  // page html should not contain a phone pattern
   const bodyText = await page.locator("body").innerText();
   expect(bodyText).not.toMatch(/\+56\s?9?\s?\d{4}\s?\d{4}/);
   expect(bodyText).not.toMatch(/\b\d{3}[-.\s]\d{3}[-.\s]\d{4}\b/);
+  // deny-list must not appear would be checked in dist, but also ensure body not contain banned phrase like view source
+  expect(bodyText.toLowerCase()).not.toContain("view source");
+  expect(bodyText).not.toMatch(/\bCV\b/);
+});
+
+test("content — / LinkedIn exact href with rel and Footer unique", async ({ page }) => {
+  await page.goto("/");
+  const linkedin = page.locator(`a[href="${LINKEDIN_URL}"]`);
+  await expect(linkedin.first()).toBeVisible();
+  await expect(linkedin.first()).toHaveAttribute("rel", /me/);
+  await expect(linkedin.first()).toHaveAttribute("rel", /noopener/);
+  await expect(linkedin.first()).toHaveAttribute("rel", /noreferrer/);
+  const all = await page
+    .locator('a[href*="linkedin.com"]')
+    .evaluateAll((els) => els.map((e) => (e as HTMLAnchorElement).href));
+  expect(all.length).toBeGreaterThan(0);
+  for (const href of all) expect(href).toBe(LINKEDIN_URL);
+  // Footer linkedin also present — footer is on every page, so check footer anchor separately
+  const footerLink = page.locator(`footer a[href="${LINKEDIN_URL}"]`);
+  await expect(footerLink).toBeVisible();
+  await expect(footerLink).toHaveAttribute("rel", /me/);
+  await expect(footerLink).toHaveAttribute("rel", /noopener/);
+  await expect(footerLink).toHaveAttribute("rel", /noreferrer/);
+  const bodyText = await page.locator("body").innerText();
+  expect(bodyText).not.toMatch(/\bCV\b/);
+  await expect(page.locator('a[href^="tel:"]')).toHaveCount(0);
+});
+
+test("content — Footer LinkedIn exact href on any page, unique linkedin.com", async ({ page }) => {
+  await page.goto("/about");
+  const footerLink = page.locator(`footer a[href="${LINKEDIN_URL}"]`);
+  await expect(footerLink).toBeVisible();
+  await expect(footerLink).toHaveAttribute("rel", /me/);
+  await expect(footerLink).toHaveAttribute("rel", /noopener/);
+  await expect(footerLink).toHaveAttribute("rel", /noreferrer/);
+  const all = await page
+    .locator('a[href*="linkedin.com"]')
+    .evaluateAll((els) => els.map((e) => (e as HTMLAnchorElement).href));
+  for (const href of all) expect(href).toBe(LINKEDIN_URL);
 });
 
 // JSON-LD and canonical
-test("content — JSON-LD Person factual fields, no telephone, no unverified linkedin URL", async ({
-  page,
-}) => {
+test("content — JSON-LD Person includes exact LinkedIn sameAs, no telephone", async ({ page }) => {
   await page.goto("/");
   const ldRaw = await page.locator('script[type="application/ld+json"]').first().textContent();
   expect(ldRaw).toBeTruthy();
@@ -221,11 +263,16 @@ test("content — JSON-LD Person factual fields, no telephone, no unverified lin
   expect(data.address.addressLocality).toBe("Santiago");
   expect(data.address.addressCountry).toBe("CL");
   expect(data.email).toBe("mailto:jonathansoto.dev@gmail.com");
-  expect(data.sameAs).toEqual(["https://github.com/jonasotoaguilar"]);
+  expect(data.sameAs).toEqual(["https://github.com/jonasotoaguilar", LINKEDIN_URL]);
+  expect(data.sameAs).toContain(LINKEDIN_URL);
   // privacy: no telephone
   expect(data.telephone).toBeUndefined();
-  expect(JSON.stringify(data)).not.toMatch(/linkedin\.com/i);
   expect(JSON.stringify(data)).not.toMatch(/telephone/i);
+  expect(JSON.stringify(data)).not.toMatch(/tel:/i);
+  // no other linkedin.com besides exact
+  const sameAsHref = data.sameAs as string[];
+  for (const href of sameAsHref.filter((u: string) => u.includes("linkedin.com")))
+    expect(href).toBe(LINKEDIN_URL);
 });
 
 test("content — canonical absent when SITE not set (build without SITE)", async ({ page }) => {

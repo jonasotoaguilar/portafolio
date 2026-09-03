@@ -298,3 +298,130 @@ test.describe("interaction — keyboard, focus, navigation, overflow, deep links
     }
   });
 });
+
+test.describe("contact-identity — About CTA, LinkedIn persistence, no-phone, finished copy", () => {
+  const LINKEDIN_URL = "https://www.linkedin.com/in/jonathan-soto-dev";
+
+  test("About CTA points to /contact, never /experience, survives ClientRouter back-forward", async ({
+    page,
+  }) => {
+    await page.goto("/about");
+    // primary CTA must be /contact, not /experience
+    const cta = page.getByRole("link", { name: /Contact/i }).first();
+    await expect(cta).toBeVisible();
+    await expect(cta).toHaveAttribute("href", "/contact");
+    await expect(page.getByRole("link", { name: /Experience Timeline/ })).toHaveCount(0);
+    // ensure no primary CTA to /experience
+    const experienceCta = page.locator('a[href="/experience"]', { hasText: /Experience Timeline/ });
+    await expect(experienceCta).toHaveCount(0);
+    // activate and verify navigation
+    await cta.click();
+    await page.waitForURL("**/contact");
+    await expect(page).toHaveURL(/\/contact$/);
+    // ClientRouter back-forward: go back to about, still CTA is /contact
+    await page.goBack();
+    await expect(page).toHaveURL(/\/about$/);
+    const ctaAfterBack = page.getByRole("link", { name: /Contact/i }).first();
+    await expect(ctaAfterBack).toHaveAttribute("href", "/contact");
+    await page.goForward();
+    await expect(page).toHaveURL(/\/contact$/);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/about$/);
+    // via ClientRouter navigation from home to about
+    await page.goto("/");
+    await page.getByRole("link", { name: /About/i }).first().click();
+    await expect(page).toHaveURL(/\/about$/);
+    const ctaViaRouter = page.getByRole("link", { name: /Contact/i }).first();
+    await expect(ctaViaRouter).toHaveAttribute("href", "/contact");
+  });
+
+  test("LinkedIn href persists on ClientRouter navigation and back-forward", async ({ page }) => {
+    await page.goto("/");
+    const checkLinkedin = async () => {
+      const all = await page
+        .locator('a[href*="linkedin.com"]')
+        .evaluateAll((els) => els.map((e) => (e as HTMLAnchorElement).href));
+      expect(all.length).toBeGreaterThan(0);
+      for (const href of all) expect(href).toBe(LINKEDIN_URL);
+      const footer = page.locator(`footer a[href="${LINKEDIN_URL}"]`);
+      await expect(footer).toBeVisible();
+      await expect(footer).toHaveAttribute("rel", /me/);
+      await expect(footer).toHaveAttribute("rel", /noopener/);
+      await expect(footer).toHaveAttribute("rel", /noreferrer/);
+    };
+    await checkLinkedin();
+    await page.getByRole("link", { name: /About/i }).first().click();
+    await expect(page).toHaveURL(/\/about$/);
+    await checkLinkedin();
+    await page
+      .getByRole("link", { name: /Contact/i })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/contact$/);
+    await checkLinkedin();
+    await page.goBack();
+    await expect(page).toHaveURL(/\/about$/);
+    await checkLinkedin();
+    await page.goBack();
+    await expect(page).toHaveURL(/\/$/);
+    await checkLinkedin();
+  });
+
+  test("/contact remains phone-free after ClientRouter", async ({ page }) => {
+    await page.goto("/");
+    await page
+      .getByRole("link", { name: /Contact/i })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/contact$/);
+    await expect(page.locator('a[href^="tel:"]')).toHaveCount(0);
+    const body = await page.locator("body").innerText();
+    expect(body).not.toMatch(/\+56/);
+    expect(body).not.toMatch(/\b8894\b/);
+    expect(body).not.toMatch(/\b2050\b/);
+    const ldRaw = await page.locator('script[type="application/ld+json"]').first().textContent();
+    expect(ldRaw).not.toMatch(/telephone/i);
+    expect(ldRaw).not.toMatch(/tel:/i);
+  });
+
+  test("finished-product copy persists after ClientRouter — no provenance, no CV, no privacy narration", async ({
+    page,
+  }) => {
+    const denyNeedles = [
+      /\bCV\b/,
+      /view source/i,
+      /owner-authorized/i,
+      /privacy by omission/i,
+      /JSON-LD/i,
+      /fabricated/i,
+      /text-only until/i,
+      /no form provider/i,
+      /facts-only from/i,
+      /as verified from/i,
+    ];
+    const checkNoDeny = async () => {
+      const text = await page.locator("body").innerText();
+      for (const re of denyNeedles)
+        expect(text, `deny pattern ${re} should not appear`).not.toMatch(re);
+      const html = await page.content();
+      // CV check via word boundary in HTML text (should not appear in public markup text)
+      expect(html).not.toMatch(/\bCV\b/);
+    };
+    for (const route of ["/about", "/contact", "/experience", "/projects", "/"]) {
+      await page.goto(route);
+      await checkNoDeny();
+    }
+    // via ClientRouter back-forward
+    await page.goto("/about");
+    await checkNoDeny();
+    await page
+      .getByRole("link", { name: /Contact/i })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/contact$/);
+    await checkNoDeny();
+    await page.goBack();
+    await expect(page).toHaveURL(/\/about$/);
+    await checkNoDeny();
+  });
+});

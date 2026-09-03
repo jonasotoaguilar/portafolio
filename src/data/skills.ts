@@ -39,16 +39,12 @@ export const skillGroups: SkillGroup[] = [
   {
     kicker: "07",
     label: "AI-Assisted Workflows",
-    items: [
-      "OpenCode / AI tooling",
-      "Prompt-aware generation (from CV)",
-      "Evaluation harness mindset",
-    ],
-    note: "As stated in CV — automation to amplify, not replace, engineering judgment.",
+    items: ["OpenCode / AI tooling", "Prompt-aware generation", "Evaluation harness mindset"],
+    note: "Automation to amplify engineering judgment.",
   },
 ];
 
 export const positioning = {
   primary: ["Python", "TypeScript", "Java"],
-  statement: "Backend range grounded in shipped repos and verified roles — no inflated seniority.",
+  statement: "Backend range grounded in shipped repos — no inflated seniority.",
 };

@@ -16,7 +16,7 @@ const canonical = siteUrl ? `${siteUrl}${path}` : undefined;
 
 const fullTitle = title.includes("Jonathan Soto") ? title : `${title} — Jonathan Soto`;
 
-// Safe JSON-LD — Person only, no telephone, no unverified LinkedIn URL
+// Safe JSON-LD — Person only, no telephone; sameAs includes constructed LinkedIn URL
 const personLd = {
   "@context": "https://schema.org",
   "@type": "Person",
@@ -30,7 +30,7 @@ const personLd = {
   },
   email: `mailto:${siteData.email}`,
   url: siteUrl ?? siteData.github,
-  sameAs: [siteData.github],
+  sameAs: [siteData.github, siteData.linkedinUrl],
   knowsAbout: ["Python", "TypeScript", "Java", "Backend Engineering"],
 };
 
