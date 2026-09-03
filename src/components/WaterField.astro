@@ -1,0 +1,42 @@
+---
+import { Image } from "astro:assets";
+import waterField from "../assets/visuals/water-field.png";
+
+interface Props {
+  variant?: "default" | "dense";
+}
+const { variant = "default" } = Astro.props as Props;
+---
+
+<div class="water-field" aria-hidden="true" transition:persist="water-field">
+  <Image
+    src={waterField}
+    alt=""
+    widths={[640, 1024, 1672]}
+    sizes="100vw"
+    loading="eager"
+    decoding="async"
+    class="water-field__image"
+  />
+  <div class="water-field__veil"></div>
+  <div class="water-field__caustic"></div>
+
+  {/* Decorative bubbles — CSS-driven, no semantics */}
+  <div class="pointer-events-none absolute inset-0 overflow-hidden">
+    {
+      Array.from({ length: variant === "dense" ? 14 : 9 }).map((_, i) => {
+        const left = 6 + (i * 73) % 88;
+        const size = 14 + (i % 4) * 10;
+        const dur = 11 + (i % 5) * 3;
+        const delay = (i * 1.1) % 6;
+        const x = (i % 2 === 0 ? 18 : -18) + (i % 3) * 6;
+        return (
+          <span
+            class="bubble"
+            style={`left:${left}%; bottom:-40px; width:${size}px; height:${size}px; --bubble-dur:${dur}s; --bubble-x:${x}px; animation-delay:${delay}s;`}
+          ></span>
+        );
+      })
+    }
+  </div>
+</div>

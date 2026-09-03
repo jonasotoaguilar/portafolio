@@ -1,0 +1,187 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ClippedPanel from "../components/ClippedPanel.astro";
+import { Image } from "astro:assets";
+import hero from "../assets/visuals/jona-hero.png";
+import { site } from "../data/site";
+import { projects } from "../data/projects";
+
+const teasers = projects.filter((p) => ["opencode-tokenmeter", "serviceflow"].includes(p.slug));
+---
+
+<BaseLayout
+  title="Jonathan Soto — Backend Engineer, Santiago · Open to Remote"
+  description="Backend Engineer in Santiago, Chile — Python, TypeScript, Java. Shipped projects with repo evidence, verifiable experience, and direct contact."
+  path="/"
+>
+  {/* Hero scene — full-screen menu entry */}
+  <section aria-labelledby="home-heading" class="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+    <div class="space-y-5">
+      <ClippedPanel clip="lg" tint>
+        <div class="p-6 sm:p-8" data-entrance>
+          <p class="font-mono text-[0.72rem] font-bold tracking-[0.16em] uppercase text-[var(--color-cyan-strong)]">
+            Portfolio — Menu 00 · Entry
+          </p>
+          <h1 id="home-heading" class="mt-2 font-black leading-[0.88] tracking-tighter">
+            <span class="block text-[2.4rem] sm:text-[3rem] lg:text-[3.6rem] uppercase italic" style="transform: skewX(-6deg);">Jonathan</span>
+            <span class="block text-[2.4rem] sm:text-[3rem] lg:text-[3.6rem] uppercase italic text-[var(--color-cyan-strong)]" style="transform: skewX(-6deg);">Soto</span>
+          </h1>
+          <p class="mt-3 inline-flex items-center gap-2 border-l-[4px] border-[var(--color-cyan)] bg-[var(--color-cyan-ghost)] px-3 py-2 font-mono text-[0.78rem] font-bold tracking-wide text-[var(--color-ink)]">
+            <span>Backend Engineer</span>
+            <span aria-hidden="true">·</span>
+            <span>{site.location}</span>
+            <span class="hidden sm:inline">· {site.availability}</span>
+          </p>
+          <p class="mt-4 max-w-[62ch] text-[0.98rem] leading-relaxed text-[var(--color-ink-soft)]">
+            I build backend systems that hold under real load — Python, TypeScript, Java. Evidence over claims: every project links to its public repo with honest shipped status.
+          </p>
+          <div class="mt-5 flex flex-wrap gap-2">
+            <a
+              href="/projects"
+              class="inline-flex items-center gap-2 border-[2px] border-[var(--color-ink)] bg-[var(--color-ink)] px-4 py-2.5 text-[0.82rem] font-black tracking-[0.08em] uppercase text-white shadow-[6px_6px_0_0_var(--color-cyan)] hover:translate-y-[1px] hover:shadow-[5px_5px_0_0_var(--color-cyan)] transition-all"
+              style="clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));"
+            >
+              View Projects
+              <span aria-hidden="true">→</span>
+            </a>
+            <a
+              href="/contact"
+              class="inline-flex items-center gap-2 border-[2px] border-[var(--color-ink)] bg-white px-4 py-2.5 text-[0.82rem] font-black tracking-[0.08em] uppercase text-[var(--color-ink)] shadow-[6px_6px_0_0_var(--color-ink)] hover:bg-[var(--color-surface-tint)] transition-colors"
+              style="clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));"
+            >
+              Contact Direct
+            </a>
+            <span class="inline-flex items-center gap-1.5 font-mono text-[0.72rem] text-[var(--color-muted)]">
+              <span class="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true"></span>
+              Available for remote
+            </span>
+          </div>
+          <div class="mt-5 grid grid-cols-3 gap-2 border-t border-dashed border-[var(--color-border)] pt-4">
+            <div>
+              <p class="font-mono text-[0.68rem] tracking-[0.12em] uppercase text-[var(--color-muted)]">Primary Stack</p>
+              <p class="mt-1 font-bold text-[0.86rem]">Python · TS · Java</p>
+            </div>
+            <div>
+              <p class="font-mono text-[0.68rem] tracking-[0.12em] uppercase text-[var(--color-muted)]">Location</p>
+              <p class="mt-1 font-bold text-[0.86rem]">Santiago, Chile</p>
+            </div>
+            <div>
+              <p class="font-mono text-[0.68rem] tracking-[0.12em] uppercase text-[var(--color-muted)]">Contact</p>
+              <p class="mt-1 font-mono text-[0.76rem] break-all"><a href={`mailto:${site.email}`} class="underline decoration-[var(--color-cyan-strong)] decoration-2 underline-offset-4">{site.email}</a></p>
+            </div>
+          </div>
+        </div>
+      </ClippedPanel>
+
+      {/* Quick nav panel — menu grammar */}
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3" data-entrance>
+        {
+          [
+            { href: "/projects", k: "01", t: "Projects", d: "4 shipped — repos & stacks" },
+            { href: "/skills", k: "02", t: "Skills", d: "Backend range, no inflation" },
+            { href: "/experience", k: "03", t: "Experience", d: "Verified roles & dates" },
+          ].map((c) => (
+            <a
+              href={c.href}
+              class="clip-panel group flex flex-col gap-2 p-4 hover:bg-[var(--color-surface-tint)] transition-colors"
+              style="--clip-size:14px"
+            >
+              <span class="font-mono text-[0.68rem] font-bold tracking-[0.14em] uppercase text-[var(--color-cyan-strong)]">{c.k}</span>
+              <span class="font-black tracking-tight uppercase text-[0.95rem]">{c.t}</span>
+              <span class="text-[0.82rem] leading-snug text-[var(--color-muted)]">{c.d}</span>
+              <span class="mt-1 inline-flex items-center gap-1 font-mono text-[0.72rem] font-bold tracking-wide uppercase group-hover:gap-2 transition-all">
+                Open <span aria-hidden="true">→</span>
+              </span>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+
+    {/* Figure panel */}
+    <div class="space-y-4">
+      <ClippedPanel ghost clip="lg">
+        <div class="relative overflow-hidden p-0" data-entrance transition:name="hero-image">
+          <Image
+            src={hero}
+            alt="Illustrated portrait of Jonathan Soto — original avatar-inspired figure, water-world palette"
+            widths={[420, 640, 840]}
+            sizes="(max-width: 1024px) 100vw, 520px"
+            loading="eager"
+            decoding="async"
+            class="h-auto w-full object-cover"
+            style="aspect-ratio: 1024/980; object-position: top center;"
+          />
+          <div class="absolute inset-0 bg-gradient-to-t from-[rgba(8,16,33,0.22)] via-transparent to-transparent pointer-events-none"></div>
+          <div class="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-3">
+            <span class="inline-flex items-center gap-2 border border-[var(--color-ink)] bg-white px-2.5 py-1.5 font-mono text-[0.68rem] font-bold tracking-[0.08em] uppercase shadow-[4px_4px_0_0_var(--color-ink)]">
+              <span class="h-2 w-2 bg-[var(--color-cyan)]" aria-hidden="true"></span>
+              Figure — original, avatar-inspired
+            </span>
+            <span class="hidden sm:inline-flex border border-[var(--color-ink)] bg-[var(--color-ink)] px-2.5 py-1.5 font-mono text-[0.68rem] font-bold tracking-wide text-white">01 / HERO</span>
+          </div>
+        </div>
+      </ClippedPanel>
+
+      <ClippedPanel tint>
+        <div class="p-4 sm:p-5" data-entrance>
+          <h2 class="font-mono text-[0.72rem] font-bold tracking-[0.14em] uppercase text-[var(--color-muted)]">Direct Contact — No Form</h2>
+          <div class="mt-3 flex flex-col gap-2">
+            <a href={`mailto:${site.email}`} class="inline-flex items-center justify-between border-[1.5px] border-[var(--color-ink)] bg-white px-3 py-2.5 font-mono text-[0.82rem] font-bold hover:bg-[var(--color-ink)] hover:text-white transition-colors">
+              <span>{site.email}</span>
+              <span aria-hidden="true">↗</span>
+            </a>
+            <div class="grid grid-cols-2 gap-2">
+              <a href={site.github} target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 border-[1.5px] border-[var(--color-ink)] bg-white px-3 py-2.5 text-[0.78rem] font-bold uppercase tracking-wide hover:bg-[var(--color-surface-tint)] transition-colors">
+                GitHub
+                <span aria-hidden="true">↗</span>
+              </a>
+              <span class="inline-flex items-center justify-center border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 font-mono text-[0.74rem] font-bold tracking-wide text-[var(--color-muted)]">
+                LinkedIn: {site.linkedinHandle}
+              </span>
+            </div>
+          </div>
+        </div>
+      </ClippedPanel>
+    </div>
+  </section>
+
+  {/* Featured teasers — distinct row */}
+  <section aria-labelledby="featured-heading" class="mt-8">
+    <div class="flex items-baseline justify-between gap-4">
+      <h2 id="featured-heading" class="font-mono text-[0.78rem] font-bold tracking-[0.14em] uppercase text-[var(--color-ink)]">
+        <span class="inline-block border-b-[3px] border-[var(--color-cyan)] pb-1">Featured — 02 Projects Teaser</span>
+      </h2>
+      <a href="/projects" class="font-mono text-[0.74rem] font-bold tracking-wide uppercase underline decoration-[var(--color-cyan-strong)] decoration-2 underline-offset-4">All 4 projects →</a>
+    </div>
+
+    <div class="mt-4 grid gap-4 md:grid-cols-2">
+      {
+        teasers.map((p, i) => (
+          <ClippedPanel>
+            <div class="p-5 sm:p-6" data-entrance style={`transition-delay:${i * 70}ms`}>
+              <div class="flex items-center gap-2">
+                <span class="chip">0{i + 1} · {p.name}</span>
+                <span class="font-mono text-[0.68rem] tracking-wide text-[var(--color-muted)]">{p.status}</span>
+              </div>
+              <p class="mt-3 text-[0.92rem] font-medium leading-snug text-[var(--color-ink-soft)]">{p.summary}</p>
+              <div class="mt-3 flex flex-wrap gap-1.5">
+                {p.stack.slice(0, 4).map((s) => (
+                  <span class="chip text-[0.66rem]">{s}</span>
+                ))}
+              </div>
+              <div class="mt-4 flex gap-2">
+                <a href={p.repo} target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 border border-[var(--color-ink)] bg-[var(--color-ink)] px-3 py-2 text-[0.76rem] font-bold uppercase tracking-wide text-white hover:bg-white hover:text-[var(--color-ink)] transition-colors">
+                  Repo <span aria-hidden="true">↗</span>
+                </a>
+                <a href="/projects" class="inline-flex items-center gap-1.5 border border-[var(--color-ink)] bg-white px-3 py-2 text-[0.76rem] font-bold uppercase tracking-wide hover:bg-[var(--color-surface-tint)] transition-colors">
+                  Detail
+                </a>
+              </div>
+            </div>
+          </ClippedPanel>
+        ))
+      }
+    </div>
+  </section>
+</BaseLayout>

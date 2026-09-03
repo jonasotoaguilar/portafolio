@@ -1,0 +1,46 @@
+{
+  "name": "persona3-portfolio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Persona 3 Reload-inspired game-menu portfolio for Jonathan Soto — static Astro foundation.",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "typecheck": "astro check",
+    "lint": "oxlint .",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "audit": "astro check && astro build"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "3.7.4",
+    "@tailwindcss/vite": "4.3.3",
+    "astro": "7.2.10",
+    "cookie": "2.0.1",
+    "gsap": "3.15.0",
+    "sharp": "0.33.5",
+    "tailwindcss": "4.3.3"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.62.1",
+    "@types/node": "26.4.1",
+    "axe-core": "4.13.0",
+    "lefthook": "2.1.12",
+    "oxfmt": "0.66.0",
+    "oxlint": "1.81.0",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "pnpm@11.25.0"
+}

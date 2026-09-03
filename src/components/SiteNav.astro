@@ -1,0 +1,238 @@
+---
+import { navItems } from "../data/navigation";
+
+interface Props {
+  currentPath: string;
+}
+const { currentPath } = Astro.props as Props;
+
+function isActive(href: string, current: string) {
+  if (href === "/") return current === "/";
+  return current === href || current.startsWith(href + "/");
+}
+---
+
+<header class="sticky top-0 z-40 w-full border-b-[3px] border-[var(--color-ink)] bg-white" style="will-change: auto;">
+  <div class="mx-auto flex max-w-[var(--content-max)] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+    <a
+      href="/"
+      class="group flex items-center gap-3 focus-visible:outline-none"
+      aria-label="Jonathan Soto — Home"
+    >
+      <span
+        class="inline-flex h-10 w-10 items-center justify-center border-[2px] border-[var(--color-ink)] bg-[var(--color-ink)] text-white leading-none shrink-0"
+        style="clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); box-shadow:4px 4px 0 0 var(--color-cyan);"
+        aria-hidden="true"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36" height="36" role="img" aria-hidden="true" focusable="false" class="h-10 w-10 block">
+          <g clip-path="url(#js-clip-header)">
+            <rect x="0" y="0" width="36" height="36" fill="#081021"/>
+            <path d="M26 2 L34 10 L34 14 L22 2 Z" fill="#0ea5e9" opacity="0.95"/>
+            <rect x="0" y="31" width="36" height="3" fill="#0ea5e9" opacity="0.9"/>
+          </g>
+          <g fill="white" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-weight="900">
+            <text x="7" y="25.5" font-size="16.5" letter-spacing="-0.06em">J</text>
+            <text x="16.5" y="25.5" font-size="16.5" letter-spacing="-0.06em">S</text>
+          </g>
+          <defs><clipPath id="js-clip-header"><path d="M0 0 L28 0 L36 8 L36 36 L8 36 L0 28 Z"/></clipPath></defs>
+        </svg>
+      </span>
+      <span class="hidden sm:inline-flex flex-col leading-none">
+        <span class="font-black tracking-tighter text-[0.95rem] uppercase">Jonathan Soto</span>
+        <span class="font-mono text-[0.68rem] tracking-[0.14em] uppercase text-[var(--color-muted)]">Backend Engineer</span>
+      </span>
+    </a>
+
+    {/* Desktop nav — keyboard roving with arrows */}
+    <nav aria-label="Primary" class="hidden md:block">
+      <ul
+        id="primary-nav"
+        role="menubar"
+        class="flex items-center gap-1.5"
+        data-nav="primary"
+      >
+        {
+          navItems.map((item) => {
+            const active = isActive(item.href, currentPath);
+            return (
+              <li role="none">
+                <a
+                  role="menuitem"
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  tabindex={active ? 0 : 0}
+                  data-nav-item
+                  class:list={[
+                    "group relative inline-flex items-center gap-1.5 border-[1.5px] px-3 py-2 text-[0.78rem] font-bold tracking-[0.08em] uppercase transition-colors",
+                    active
+                      ? "border-[var(--color-ink)] bg-[var(--color-ink)] text-white shadow-[4px_4px_0_0_var(--color-cyan)]"
+                      : "border-transparent bg-transparent text-[var(--color-ink)] hover:border-[var(--color-ink)] hover:bg-white",
+                  ]}
+                  style="clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));"
+                >
+                  <span class="font-mono text-[0.68rem] opacity-60" aria-hidden="true">
+                    {item.kicker}
+                  </span>
+                  {item.label}
+                </a>
+              </li>
+            );
+          })
+        }
+      </ul>
+    </nav>
+
+    {/* Mobile toggle */}
+    <button
+      id="menu-toggle"
+      type="button"
+      aria-expanded="false"
+      aria-controls="mobile-menu"
+      aria-label="Open menu"
+      class="inline-flex md:hidden items-center gap-2 border-[2px] border-[var(--color-ink)] bg-white px-3 py-2 font-bold text-[0.78rem] tracking-[0.08em] uppercase shadow-[4px_4px_0_0_var(--color-ink)]"
+      style="clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));"
+    >
+      <span id="menu-toggle-label">Menu</span>
+      <span aria-hidden="true" class="text-[1rem] leading-none">≡</span>
+    </button>
+  </div>
+
+  {/* Mobile menu */}
+  <div
+    id="mobile-menu"
+    hidden
+    class="md:hidden border-t-[2px] border-[var(--color-ink)] bg-[var(--color-surface)]"
+  >
+    <nav aria-label="Primary mobile" class="mx-auto max-w-[var(--content-max)] px-4 py-4 sm:px-6">
+      <ul role="menubar" class="grid grid-cols-2 gap-2" data-nav="mobile">
+        {
+          navItems.map((item) => {
+            const active = isActive(item.href, currentPath);
+            return (
+              <li role="none">
+                <a
+                  role="menuitem"
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  data-nav-item
+                  class:list={[
+                    "flex items-center gap-2 border-[1.5px] px-3 py-3 text-[0.82rem] font-bold tracking-[0.06em] uppercase",
+                    active
+                      ? "border-[var(--color-ink)] bg-[var(--color-ink)] text-white"
+                      : "border-[var(--color-ink)] bg-white text-[var(--color-ink)]",
+                  ]}
+                  style="clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));"
+                >
+                  <span class="font-mono text-[0.7rem] opacity-60">{item.kicker}</span>
+                  {item.label}
+                </a>
+              </li>
+            );
+          })
+        }
+      </ul>
+      <p class="mt-4 font-mono text-[0.7rem] tracking-wide text-[var(--color-muted)]">
+        Santiago, Chile — Open to remote · Backend focus
+      </p>
+    </nav>
+  </div>
+</header>
+
+<script>
+  // Vanilla menu + keyboard roving — re-inits on Astro navigation, cleans up
+  import { getNextIndex, toNavKey } from "../lib/nav-helpers";
+
+  let cleanup: (() => void) | null = null;
+
+  function initNav() {
+    if (cleanup) cleanup();
+
+    const toggle = document.getElementById("menu-toggle") as HTMLButtonElement | null;
+    const mobile = document.getElementById("mobile-menu") as HTMLElement | null;
+    const label = document.getElementById("menu-toggle-label");
+    const navs = Array.from(document.querySelectorAll<HTMLElement>("[data-nav]"));
+
+    const handlers: Array<() => void> = [];
+
+    function setExpanded(open: boolean) {
+      if (!toggle || !mobile) return;
+      toggle.setAttribute("aria-expanded", String(open));
+      toggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+      if (label) label.textContent = open ? "Close" : "Menu";
+      mobile.hidden = !open;
+      if (open) {
+        const first = mobile.querySelector<HTMLElement>("[data-nav-item]");
+        first?.focus();
+      }
+    }
+
+    function onToggleClick() {
+      const open = toggle?.getAttribute("aria-expanded") === "true";
+      setExpanded(!open);
+    }
+
+    function onDocumentKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        const open = toggle?.getAttribute("aria-expanded") === "true";
+        if (open) {
+          setExpanded(false);
+          toggle?.focus();
+          e.preventDefault();
+        }
+      }
+    }
+
+    function attachRoving(nav: HTMLElement) {
+      const items = Array.from(nav.querySelectorAll<HTMLElement>("[data-nav-item]"));
+      if (items.length === 0) return;
+
+      function onKeyDown(e: KeyboardEvent) {
+        const navKey = toNavKey(e.key);
+        if (!navKey) return;
+        const active = document.activeElement as HTMLElement | null;
+        const idx = items.indexOf(active as HTMLElement);
+        if (idx === -1) return;
+        // Horizontal for desktop, vertical-ish for mobile but both map
+        const next = getNextIndex(idx, items.length, navKey);
+        items[next]?.focus();
+        e.preventDefault();
+      }
+
+      nav.addEventListener("keydown", onKeyDown);
+      handlers.push(() => nav.removeEventListener("keydown", onKeyDown));
+    }
+
+    toggle?.addEventListener("click", onToggleClick);
+    if (toggle) handlers.push(() => toggle.removeEventListener("click", onToggleClick));
+
+    document.addEventListener("keydown", onDocumentKey);
+    handlers.push(() => document.removeEventListener("keydown", onDocumentKey));
+
+    for (const nav of navs) attachRoving(nav);
+
+    // Close on navigation (link click)
+    function onLinkClick() {
+      setExpanded(false);
+    }
+    const links = document.querySelectorAll<HTMLAnchorElement>("#mobile-menu [data-nav-item]");
+    for (const a of links) {
+      a.addEventListener("click", onLinkClick);
+      handlers.push(() => a.removeEventListener("click", onLinkClick));
+    }
+
+    cleanup = () => {
+      for (const off of handlers) off();
+      handlers.length = 0;
+    };
+  }
+
+  // Initial + Astro view transitions lifecycle
+  initNav();
+  document.addEventListener("astro:page-load", initNav);
+  document.addEventListener("astro:before-preparation", () => {
+    const t = document.getElementById("menu-toggle");
+    const m = document.getElementById("mobile-menu");
+    if (t) t.setAttribute("aria-expanded", "false");
+    if (m) m.hidden = true;
+  });
+</script>

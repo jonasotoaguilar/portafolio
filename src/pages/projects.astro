@@ -1,0 +1,70 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ClippedPanel from "../components/ClippedPanel.astro";
+import ProjectCard from "../components/ProjectCard.astro";
+import { projects } from "../data/projects";
+---
+
+<BaseLayout
+  title="Projects — 4 Shipped Builds"
+  description="Four featured projects by Jonathan Soto — opencode-tokenmeter, ServiceFlow, RAGuard, EventCommerce — with repos, stacks, and honest shipped status."
+  path="/projects"
+  waterVariant="dense"
+>
+  <section aria-labelledby="projects-heading" class="space-y-6">
+    {/* Header strip — distinct scene */}
+    <div class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+      <ClippedPanel clip="lg" tint>
+        <div class="p-6 sm:p-8" data-entrance>
+          <p class="font-mono text-[0.72rem] font-bold tracking-[0.16em] uppercase text-[var(--color-cyan-strong)]">Menu 01 · Projects</p>
+          <h1 id="projects-heading" class="mt-2 text-[2rem] sm:text-[2.6rem] font-black leading-none tracking-tighter uppercase italic" style="transform: skewX(-6deg);">
+            Shipped <span class="text-[var(--color-cyan-strong)]">Depth</span>
+          </h1>
+          <p class="mt-3 max-w-[60ch] text-[0.95rem] leading-relaxed text-[var(--color-ink-soft)]">
+            Exactly four featured builds. Each links to its public repo — no planning-only repo presented as shipped. ServiceFlow stack follows live PocketBase backend in Docker Compose (Appwrite noted as description legacy).
+          </p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <span class="chip">Evidence over claims</span>
+            <span class="chip">Repo links verified</span>
+            <span class="chip">Privacy-safe</span>
+          </div>
+        </div>
+      </ClippedPanel>
+
+      <ClippedPanel>
+        <div class="p-5 sm:p-6 flex h-full flex-col justify-between" data-entrance>
+          <div>
+            <h2 class="font-mono text-[0.72rem] font-bold tracking-[0.14em] uppercase text-[var(--color-muted)]">Inventory — 04 Entries</h2>
+            <ol class="mt-3 space-y-2 font-mono text-[0.8rem] leading-relaxed">
+              <li class="flex justify-between gap-3 border-b border-dashed border-[var(--color-border)] py-1"><span>01 opencode-tokenmeter</span><span class="text-[var(--color-cyan-strong)] font-bold">TUI Plugin</span></li>
+              <li class="flex justify-between gap-3 border-b border-dashed border-[var(--color-border)] py-1"><span>02 ServiceFlow</span><span class="text-[var(--color-cyan-strong)] font-bold">Full-stack</span></li>
+              <li class="flex justify-between gap-3 border-b border-dashed border-[var(--color-border)] py-1"><span>03 RAGuard</span><span class="text-[var(--color-cyan-strong)] font-bold">RAG</span></li>
+              <li class="flex justify-between gap-3 py-1"><span>04 EventCommerce</span><span class="text-[var(--color-cyan-strong)] font-bold">Event-driven</span></li>
+            </ol>
+          </div>
+          <p class="mt-4 font-mono text-[0.72rem] leading-relaxed text-[var(--color-muted)]">
+            Primary stack: Python · TypeScript · Java. Details trace to GitHub and repo evidence.
+          </p>
+        </div>
+      </ClippedPanel>
+    </div>
+
+    {/* Project dossier grid — distinct from home teasers */}
+    <div class="grid gap-5 lg:grid-cols-2">
+      {projects.map((p, i) => (
+        <ProjectCard project={p} index={i} />
+      ))}
+    </div>
+
+    <ClippedPanel ghost>
+      <div class="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3" data-entrance>
+        <p class="font-mono text-[0.74rem] leading-relaxed text-[var(--color-muted)]">
+          Four projects only — adding more requires a deliberate curation change, not silent inflation.
+        </p>
+        <a href="/skills" class="inline-flex items-center gap-2 border-[1.5px] border-[var(--color-ink)] bg-white px-4 py-2 text-[0.78rem] font-bold uppercase tracking-wide hover:bg-[var(--color-ink)] hover:text-white transition-colors">
+          View Skills Map <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </ClippedPanel>
+  </section>
+</BaseLayout>

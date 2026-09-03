@@ -1,0 +1,36 @@
+# Generated outputs
+dist/
+.astro/
+node_modules/
+.pnpm-store/
+
+# Tests & coverage
+coverage/
+playwright-report/
+test-results/
+.blob-report/
+junit.xml
+
+# Build cache
+.turbo/
+.vite/
+cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env — secrets are untracked; template may exist
+.env
+.env.*
+!.env.example
+# Local AI runtime state
+.atl/
+.codegraph
+.agents/*
+!.agents/skills
+!.agents/skills/*
+!.agents/skills/astro-framework
+!.agents/skills/astro-framework/**
+.sdd/
+skills-lock.json

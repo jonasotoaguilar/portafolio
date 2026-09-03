@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36" height="36" role="img" aria-hidden="true" focusable="false">
+  <!-- Original JS monogram — clipped ink panel with cyan offset, referencing Jonathan Soto / JavaScript initials. No Persona/ATLUS/JS-official geometry. -->
+  <defs>
+    <clipPath id="js-clip">
+      <path d="M0 0 L28 0 L36 8 L36 36 L8 36 L0 28 Z"/>
+    </clipPath>
+  </defs>
+  <!-- Shadow / ink offset -->
+  <g clip-path="url(#js-clip)">
+    <rect x="0" y="0" width="36" height="36" fill="#081021"/>
+    <!-- Cyan accent diagonal -->
+    <path d="M26 2 L34 10 L34 14 L22 2 Z" fill="#0ea5e9" opacity="0.95"/>
+    <!-- Cyan base line -->
+    <rect x="0" y="31" width="36" height="3" fill="#0ea5e9" opacity="0.9"/>
+  </g>
+  <!-- JS Letterforms — original geometric sans, not copied from JS official logo -->
+  <g clip-path="url(#js-clip)" fill="white" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-weight="900" >
+    <!-- J -->
+    <text x="7" y="25.5" font-size="17" letter-spacing="-0.06em" style="font-style:normal">J</text>
+    <!-- S - slightly offset, overlapping weight -->
+    <text x="16.5" y="25.5" font-size="17" letter-spacing="-0.06em" style="font-style:normal">S</text>
+  </g>
+  <!-- Outline stroke for crispness at 32-40px -->
+  <path d="M0 0 L28 0 L36 8 L36 36 L8 36 L0 28 Z" fill="none" stroke="#081021" stroke-width="1.8" opacity="0.95"/>
+</svg>

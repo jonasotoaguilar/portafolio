@@ -1,0 +1,24 @@
+---
+interface Props {
+  tint?: boolean;
+  ghost?: boolean;
+  clip?: "md" | "sm" | "lg";
+  id?: string;
+  class?: string;
+}
+const { tint = false, ghost = false, clip = "md", id, class: klass } = Astro.props as Props;
+
+const clipMap = {
+  sm: "var(--clip-size-sm)",
+  md: "var(--clip-size)",
+  lg: "var(--clip-size-lg)",
+};
+---
+
+<div
+  id={id}
+  class:list={["clip-panel", tint && "clip-panel--tint", ghost && "clip-panel--ghost", klass]}
+  style={`--clip-size:${clipMap[clip]}`}
+>
+  <slot />
+</div>

@@ -1,0 +1,149 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+      - "!v*-*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout exact tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Run release preflight
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_COMMIT: ${{ github.sha }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [[ ! -x ./scripts/release-preflight ]]; then
+            echo "::error::Missing executable scripts/release-preflight"
+            exit 1
+          fi
+          ./scripts/release-preflight
+
+      - name: Export SITE-aware metadata for verify
+        id: site-meta
+        run: |
+          set -euo pipefail
+          if [[ -n "${SITE:-}" ]]; then
+            echo "site_mode=with-site" >> "$GITHUB_OUTPUT"
+            echo "SITE present — verify will expect sitemap/canonical"
+          else
+            echo "site_mode=without-site" >> "$GITHUB_OUTPUT"
+            echo "SITE absent — verify will expect sitemap/canonical absent"
+          fi
+        env:
+          SITE: ${{ vars.SITE || '' }}
+
+      - name: Upload preflight metadata
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-preflight-meta
+          path: /tmp/release-preflight-meta.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Produce artifact for SITE verification
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/release-preflight-meta
+          cat > /tmp/release-preflight-meta.json <<EOF
+          {"tag":"${{ github.ref_name }}","site_mode":"${{ steps.site-meta.outputs.site_mode }}","site_value":"${{ vars.SITE || '' }}"}
+          EOF
+          cat /tmp/release-preflight-meta.json
+
+  publish:
+    needs: preflight
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: release
+    permissions:
+      contents: write
+    env:
+      GITHUB_TOKEN: ""
+    steps:
+      - name: Checkout exact tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Run release publisher
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_COMMIT: ${{ github.sha }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
+          SITE: ${{ vars.SITE || '' }}
+        run: |
+          set -euo pipefail
+          if [[ ! -x ./scripts/release-publish ]]; then
+            echo "::error::Missing executable scripts/release-publish"
+            exit 1
+          fi
+          ./scripts/release-publish
+
+      - name: Remove temporary release material
+        if: always()
+        run: |
+          rm -rf -- "$RUNNER_TEMP/release-material"
+          test ! -e "$RUNNER_TEMP/release-material"
+
+  verify:
+    needs: publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Download preflight metadata
+        uses: actions/download-artifact@fa0a91b85d5f404e444e00e005971372dc801d19 # v5.0.0
+        with:
+          name: release-preflight-meta
+          path: /tmp/release-meta
+        continue-on-error: true
+
+      - name: Verify published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_COMMIT: ${{ github.sha }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
+          SITE: ${{ vars.SITE || '' }}
+        run: |
+          set -euo pipefail
+          if [[ ! -x ./scripts/release-verify ]]; then
+            echo "::error::Missing executable scripts/release-verify"
+            exit 1
+          fi
+          # Pass SITE-aware expectation explicitly; script reads SITE env.
+          ./scripts/release-verify

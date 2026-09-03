@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# release-verify: read-only remote verification after publish.
+# Authority: read-only. No mutation, no blind retries.
+# Verifies exact tag/release identity, attached tarball and checksum, checksum integrity, archive content.
+# SITE-aware expectation via SITE env (explicit contract passed from workflow).
+
+tag="${RELEASE_TAG:-}"
+repo="${RELEASE_REPOSITORY:-}"
+token="${GH_TOKEN:-}"
+
+if [[ -z "$tag" ]]; then
+  echo "error: RELEASE_TAG is not set" >&2
+  exit 1
+fi
+if [[ -z "$repo" ]]; then
+  echo "error: RELEASE_REPOSITORY is not set" >&2
+  exit 1
+fi
+if [[ -z "$token" ]]; then
+  echo "error: GH_TOKEN is not set (required for read-only gh/API verification)" >&2
+  exit 1
+fi
+
+# Validate tag shape
+if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "error: invalid RELEASE_TAG shape" >&2
+  exit 1
+fi
+
+echo "Verifying release $tag in $repo"
+
+# Verify release exists and tag matches
+if ! gh release view "$tag" --repo "$repo" --json tagName,name,assets >/tmp/release-view.json 2>&1; then
+  echo "error: release $tag not found in $repo" >&2
+  cat /tmp/release-view.json >&2 || true
+  exit 1
+fi
+
+tag_name=$(python3 -c "import json; d=json.load(open('/tmp/release-view.json')); print(d.get('tagName',''))")
+if [[ "$tag_name" != "$tag" ]]; then
+  echo "error: release tagName '$tag_name' does not match expected '$tag'" >&2
+  exit 1
+fi
+echo "Verified release identity: $tag_name"
+
+# Check assets
+archive_name="dist-${tag}.tar.gz"
+checksum_name="${archive_name}.sha256"
+
+assets_json=$(python3 -c "import json; d=json.load(open('/tmp/release-view.json')); print('\n'.join([a['name'] for a in d.get('assets',[])]))")
+echo "Release assets:"
+echo "$assets_json"
+
+if ! echo "$assets_json" | grep -qx "$archive_name"; then
+  echo "error: expected asset $archive_name not found in release" >&2
+  exit 1
+fi
+if ! echo "$assets_json" | grep -qx "$checksum_name"; then
+  echo "error: expected checksum asset $checksum_name not found in release" >&2
+  exit 1
+fi
+echo "Verified attached tarball and checksum assets present"
+
+# Download to temporary dir and verify
+tmpdir=$(mktemp -d)
+trap 'rm -rf -- "$tmpdir"' EXIT
+
+echo "Downloading $archive_name to $tmpdir"
+gh release download "$tag" --repo "$repo" --pattern "$archive_name" --dir "$tmpdir"
+gh release download "$tag" --repo "$repo" --pattern "$checksum_name" --dir "$tmpdir"
+
+dl_archive="${tmpdir}/${archive_name}"
+dl_checksum="${tmpdir}/${checksum_name}"
+
+if [[ ! -f "$dl_archive" ]]; then
+  echo "error: downloaded archive not found" >&2
+  exit 1
+fi
+if [[ ! -f "$dl_checksum" ]]; then
+  echo "error: downloaded checksum not found" >&2
+  exit 1
+fi
+
+# Verify checksum
+echo "Verifying checksum"
+expected=$(awk '{print $1}' "$dl_checksum")
+actual=$(sha256sum "$dl_archive" | awk '{print $1}')
+if [[ "$expected" != "$actual" ]]; then
+  echo "error: checksum mismatch: expected $expected, got $actual" >&2
+  exit 1
+fi
+echo "Checksum verified: $actual"
+
+# Inspect archive for index.html
+echo "Inspecting archive contents"
+if ! tar -tzf "$dl_archive" | grep -q "dist/index.html"; then
+  echo "error: archive does not contain dist/index.html" >&2
+  tar -tzf "$dl_archive" | head -n 50 >&2 || true
+  exit 1
+fi
+echo "Verified archive contains dist/index.html"
+
+# Extract index.html to check SITE-aware expectation without full extract?
+tar -xzf "$dl_archive" -O dist/index.html > "$tmpdir/index.html" 2>/dev/null || {
+  # Fallback: list alternative path
+  tar -tzf "$dl_archive" | grep index.html >&2 || true
+  echo "error: failed to extract dist/index.html from archive" >&2
+  exit 1
+}
+
+# SITE-aware sitemap/canonical expectation via explicit artifact/metadata contract
+# Workflow passes SITE env; we respect it here.
+if [[ -n "${SITE:-}" ]]; then
+  echo "SITE is set (${SITE}) — expecting canonical and sitemap evidence in artifact"
+  if ! grep -q 'rel="canonical"' "$tmpdir/index.html"; then
+    echo "error: expected canonical in archived index.html when SITE is set" >&2
+    exit 1
+  fi
+  echo "Verified canonical present in archive"
+  # Check sitemap in archive
+  if ! tar -tzf "$dl_archive" | grep -q "dist/sitemap"; then
+    echo "error: expected sitemap in archive when SITE is set" >&2
+    tar -tzf "$dl_archive" | grep -i sitemap >&2 || true
+    exit 1
+  fi
+  echo "Verified sitemap present in archive"
+else
+  echo "SITE is absent — expecting sitemap/canonical absent in artifact"
+  if grep -q 'rel="canonical"' "$tmpdir/index.html"; then
+    echo "error: unexpected canonical in archived index.html when SITE is absent" >&2
+    grep -o 'rel="canonical" href="[^"]*"' "$tmpdir/index.html" >&2 || true
+    exit 1
+  fi
+  echo "Verified canonical absent in archive"
+  if tar -tzf "$dl_archive" | grep -q "dist/sitemap"; then
+    echo "error: unexpected sitemap in archive when SITE is absent" >&2
+    tar -tzf "$dl_archive" | grep -i sitemap >&2 || true
+    exit 1
+  fi
+  echo "Verified sitemap absent in archive"
+fi
+
+echo "Release verification passed for $tag"

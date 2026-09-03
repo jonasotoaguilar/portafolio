@@ -1,0 +1,60 @@
+---
+import "../styles/global.css";
+import { ClientRouter } from "astro:transitions";
+import Head from "../components/Head.astro";
+import SkipLink from "../components/SkipLink.astro";
+import SiteNav from "../components/SiteNav.astro";
+import WaterField from "../components/WaterField.astro";
+import Footer from "../components/Footer.astro";
+
+interface Props {
+  title: string;
+  description: string;
+  path?: string;
+  noindex?: boolean;
+  waterVariant?: "default" | "dense";
+}
+
+const { title, description, path, noindex, waterVariant = "default" } = Astro.props as Props;
+const currentPath = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <Head title={title} description={description} path={path ?? currentPath} noindex={noindex} />
+    <ClientRouter />
+    <script>
+      // Ensure JS flag early for entrance CSS
+      document.documentElement.classList.add("js");
+    </script>
+  </head>
+  <body class="flex min-h-screen flex-col">
+    <SkipLink />
+    <WaterField variant={waterVariant} />
+
+    {/* Background words — decorative, persisted across ClientRouter swaps */}
+    <div transition:persist="bg-words" aria-hidden="true" class="pointer-events-none fixed inset-0 overflow-hidden">
+      <span class="bg-word left-[-2%] top-[14%] text-[11vw] max-[768px]:text-[18vw]">Backend</span>
+      <span class="bg-word bg-word--cyan right-[-1%] top-[46%] text-[10vw] max-[768px]:text-[16vw]">Engineer</span>
+      <span class="bg-word left-[2%] bottom-[8%] text-[9vw] max-[768px]:hidden">Santiago</span>
+    </div>
+
+    <SiteNav currentPath={currentPath} />
+
+    <main
+      id="main"
+      tabindex="-1"
+      class="mx-auto flex w-full max-w-[var(--content-max)] flex-1 flex-col px-4 pb-10 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10"
+      style="outline:none"
+    >
+      <slot />
+    </main>
+
+    <Footer />
+
+    <script>
+      import "../scripts/motion.ts";
+    </script>
+  </body>
+</html>

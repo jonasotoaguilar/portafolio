@@ -1,0 +1,101 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ClippedPanel from "../components/ClippedPanel.astro";
+import { site } from "../data/site";
+---
+
+<BaseLayout
+  title="Contact — Direct Links Only"
+  description="Contact Jonathan Soto directly — email, GitHub, LinkedIn handle. No form, no phone, no backend; static links only."
+  path="/contact"
+>
+  <section aria-labelledby="contact-heading" class="mx-auto w-full max-w-[860px] space-y-6">
+    <ClippedPanel clip="lg" tint>
+      <div class="p-6 sm:p-8 text-center" data-entrance>
+        <p class="font-mono text-[0.72rem] font-bold tracking-[0.16em] uppercase text-[var(--color-cyan-strong)]">Menu 05 · Contact</p>
+        <h1 id="contact-heading" class="mt-2 text-[2.2rem] sm:text-[3rem] font-black leading-none tracking-tighter uppercase italic" style="transform: skewX(-6deg);">
+          Direct <span class="text-[var(--color-cyan-strong)]">Reach</span>
+        </h1>
+        <p class="mx-auto mt-3 max-w-[48ch] text-[0.95rem] leading-relaxed text-[var(--color-ink-soft)]">
+          No form. No tracker. No phone. Email and GitHub are the fastest paths — LinkedIn handle below is text-only until a verified public URL is confirmed.
+        </p>
+      </div>
+    </ClippedPanel>
+
+    <div class="grid gap-4 sm:grid-cols-3">
+      <ClippedPanel>
+        <div class="p-5 flex flex-col gap-3" data-entrance>
+          <span class="inline-flex h-9 w-9 items-center justify-center border-[2px] border-[var(--color-ink)] bg-[var(--color-ink)] text-white font-black" aria-hidden="true">✉</span>
+          <h2 class="font-black tracking-tight uppercase text-[0.95rem]">Email</h2>
+          <p class="font-mono text-[0.74rem] leading-relaxed text-[var(--color-muted)]">Preferred — direct, no middleman.</p>
+          <a
+            href={`mailto:${site.email}`}
+            class="mt-1 inline-flex items-center justify-center gap-2 border-[2px] border-[var(--color-ink)] bg-[var(--color-ink)] px-3 py-3 text-[0.8rem] font-black uppercase tracking-wide text-white hover:bg-white hover:text-[var(--color-ink)] transition-colors break-all"
+          >
+            {site.email}
+          </a>
+          <a href={`mailto:${site.email}`} class="font-mono text-[0.72rem] font-bold tracking-wide uppercase underline decoration-[var(--color-cyan-strong)] decoration-2 underline-offset-4">
+            Open mail client →
+          </a>
+        </div>
+      </ClippedPanel>
+
+      <ClippedPanel>
+        <div class="p-5 flex flex-col gap-3" data-entrance style="transition-delay:60ms">
+          <span class="inline-flex h-9 w-9 items-center justify-center border-[2px] border-[var(--color-ink)] bg-white font-black" aria-hidden="true">GH</span>
+          <h2 class="font-black tracking-tight uppercase text-[0.95rem]">GitHub</h2>
+          <p class="font-mono text-[0.74rem] leading-relaxed text-[var(--color-muted)]">Repos, issues, public evidence.</p>
+          <a
+            href={site.github}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="mt-1 inline-flex items-center justify-center gap-2 border-[2px] border-[var(--color-ink)] bg-white px-3 py-3 text-[0.8rem] font-black uppercase tracking-wide hover:bg-[var(--color-ink)] hover:text-white transition-colors break-all"
+          >
+            github.com/{site.githubHandle} ↗
+          </a>
+          <span class="font-mono text-[0.72rem] text-[var(--color-muted)]">{site.github}</span>
+        </div>
+      </ClippedPanel>
+
+      <ClippedPanel>
+        <div class="p-5 flex flex-col gap-3" data-entrance style="transition-delay:120ms">
+          <span class="inline-flex h-9 w-9 items-center justify-center border-[2px] border-[var(--color-ink)] bg-[var(--color-cyan-ghost)] font-black" aria-hidden="true">in</span>
+          <h2 class="font-black tracking-tight uppercase text-[0.95rem]">LinkedIn</h2>
+          <p class="font-mono text-[0.74rem] leading-relaxed text-[var(--color-muted)]">Handle only — URL not yet verified against a trusted fetch.</p>
+          <span
+            class="mt-1 inline-flex items-center justify-center border border-dashed border-[var(--color-border)] bg-[var(--color-surface-tint)] px-3 py-3 font-mono text-[0.84rem] font-bold tracking-wide break-all"
+            aria-label="LinkedIn handle jonathan-soto-dev"
+          >
+            {site.linkedinHandle}
+          </span>
+          <span class="font-mono text-[0.68rem] leading-relaxed text-[var(--color-muted)]">
+            No fabricated LinkedIn URL is shipped — handle is text only. Re-verify before linking.
+          </span>
+        </div>
+      </ClippedPanel>
+    </div>
+
+    <ClippedPanel ghost>
+      <div class="p-5 sm:p-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" data-entrance>
+        <div class="space-y-1">
+          <h2 class="font-mono text-[0.72rem] font-bold tracking-[0.12em] uppercase text-[var(--color-muted)]">What happens next</h2>
+          <p class="text-[0.88rem] leading-relaxed text-[var(--color-ink-soft)] max-w-[54ch]">
+            Email routes directly to Jonathan. No form provider, no storage, no backend for this page — view source to verify.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <a href={`mailto:${site.email}?subject=Hello%20Jonathan%20—%20from%20your%20portfolio`} class="inline-flex items-center gap-2 border-[1.5px] border-[var(--color-ink)] bg-[var(--color-ink)] px-4 py-2.5 text-[0.78rem] font-bold uppercase tracking-wide text-white">
+            Compose Email <span aria-hidden="true">→</span>
+          </a>
+          <a href="/" class="inline-flex items-center gap-2 border-[1.5px] border-[var(--color-ink)] bg-white px-4 py-2.5 text-[0.78rem] font-bold uppercase tracking-wide hover:bg-[var(--color-surface-tint)] transition-colors">
+            Back to Entry
+          </a>
+        </div>
+      </div>
+    </ClippedPanel>
+
+    <div class="text-center font-mono text-[0.7rem] leading-relaxed text-[var(--color-muted)]" data-entrance>
+      <p>No phone number exists in the DOM or JSON-LD. Privacy by omission — not by obfuscation.</p>
+    </div>
+  </section>
+</BaseLayout>
