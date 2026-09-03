@@ -8,7 +8,7 @@ Presents verifiable backend credibility — four shipped projects, skills, and e
 
 ## Quick Start
 
-Prerequisites: Node `>=22.12.0` and pnpm `11.25.0` (pinned via `packageManager` in `package.json`).
+Prerequisites: Node `>=22.13.0` and pnpm `11.25.0` (pinned via `packageManager` in `package.json`).
 
 ```bash
 pnpm install --frozen-lockfile

@@ -83,7 +83,7 @@ Hiring managers and recruiters need to confirm backend range and shipped judgmen
 
 ## Constraints
 
-- **Stack:** Astro `7.2.10`, Node `>=22.12.0`, `@astrojs/sitemap` `3.7.4`, Tailwind CSS + `@tailwindcss/vite` `4.3.3` with CSS-first `@theme` custom properties, GSAP `3.15.0`, Vitest `4.1.11`, `@playwright/test` `1.62.1`, `axe-core` and `@axe-core/playwright` `4.13.0`, oxlint `1.81.0`, oxfmt `0.66.0`, pnpm `11.25.0` pinned (`packageManager` in `package.json`), `astro:transitions` `ClientRouter` (no separate package), static output. Verified via `npm view` and lockfile; Node `>=22.12.0` per Astro 7 / Vitest 4.
+- **Stack:** Astro `7.2.10`, Node `>=22.13.0`, `@astrojs/sitemap` `3.7.4`, Tailwind CSS + `@tailwindcss/vite` `4.3.3` with CSS-first `@theme` custom properties, GSAP `3.15.0`, Vitest `4.1.11`, `@playwright/test` `1.62.1`, `axe-core` and `@axe-core/playwright` `4.13.0`, oxlint `1.81.0`, oxfmt `0.66.0`, pnpm `11.25.0` pinned (`packageManager` in `package.json`), `astro:transitions` `ClientRouter` (no separate package), static output. Verified via `npm view` and lockfile; Node `>=22.13.0` per Astro 7 / Vitest 4 / pnpm 11.25.
 - **Audit scope:** `astro check`, `astro build`, axe in Playwright. No Lighthouse or Unlighthouse.
 - **Content sources:** `https://github.com/jonasotoaguilar` (repos listed in R10 verified via `gh api`) and the owner-authorized CV (private source, not published). ServiceFlow current evidence is `https://github.com/jonasotoaguilar/serviceflow` (description Appwrite, README PocketBase, `package.json` Next.js/TypeScript).
 - **Privacy:** phone from CV source must not appear in public output including JSON-LD.

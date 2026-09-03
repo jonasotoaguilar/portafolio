@@ -19,7 +19,7 @@ What it does NOT own: user data storage, authentication, analytics dashboards, t
 | SEO         | Custom `Head.astro` + JSON-LD `Person` + conditional `@astrojs/sitemap` `3.7.4`                                    | Sitemap and canonical/OG only when `SITE` env is set; JSON-LD omits phone and unverified LinkedIn URL               |
 | Lint/format | oxlint `1.81.0` / oxfmt `0.66.0`                                                                                   | Not Biome                                                                                                           |
 | Packages    | pnpm `11.25.0` pinned via `packageManager`; `pnpm-workspace.yaml` `strictDepBuilds` allowlist (`esbuild`, `sharp`) | `cookie@2.0.1` pinned top-level to satisfy Astro prerenderer ESM import over a stray parent CommonJS `cookie@0.7.x` |
-| Node        | `>=22.12.0` (`engines` in `package.json`)                                                                          | Required by Astro 7 / Vitest 4                                                                                      |
+| Node        | `>=22.13.0` (`engines` in `package.json`)                                                                          | Required by Astro 7 / Vitest 4 / pnpm 11.25                                                                         |
 
 ## Route and layout flow
 
@@ -97,7 +97,7 @@ Test expectations: keep `projects` at exactly four, preserve keyboard roving and
 
 `.github/workflows/ci.yml` — two jobs, no deployment:
 
-- `verify` (needs checkout → `pnpm/action-setup@v6.0.10` pin `11.25.0` → `actions/setup-node@v7.0.0` node `22.12.0` pnpm cache → `pnpm install --frozen-lockfile` → `format:check` → `lint` → `check` → `test:unit` → `build`).
+- `verify` (needs checkout → `pnpm/action-setup@v6.0.10` pin `11.25.0` → `actions/setup-node@v7.0.0` node `22.13.0` pnpm cache → `pnpm install --frozen-lockfile` → `format:check` → `lint` → `check` → `test:unit` → `build`).
 - `e2e` (`needs: verify`, same setup + `actions/cache@v6.1.0` for `~/.cache/ms-playwright` keyed by `pnpm-lock.yaml` → `playwright install --with-deps chromium` → `test:e2e` → upload `playwright-report/` + `test-results/` on failure, 7-day retention).
 
 Both run on `push`/`pull_request` to `main` and `workflow_dispatch`; `contents: read`, `concurrency: ci-${{ github.ref }}` cancel-in-progress. Run `pnpm run format:check && pnpm run lint && pnpm run check && pnpm run test:unit && pnpm run build` locally to mirror `verify`.
@@ -126,7 +126,7 @@ Both run on `push`/`pull_request` to `main` and `workflow_dispatch`; `contents: 
 | SEO/site URL                             | `src/components/Head.astro` + `src/lib/site-helpers.ts` + `astro.config.mjs`                                                                                                  | No phone or `linkedin.com` in JSON-LD or DOM; `linkedinHandle` stays text-only; canonical/OG/sitemap only when `SITE` env is set                                                                          |
 | Images                                   | `src/assets/visuals/*` + `src/components/WaterField.astro` / `src/pages/*.astro` `<Image>`                                                                                    | Keep originals under `src/assets/visuals/` via `astro:assets`/`sharp`; `alt` present or `""` for decoration, `srcset`/`sizes`/`width`/`height` emitted; no string-path local images                       |
 | Tests                                    | `vitest.config.ts` / `playwright.config.ts` / `src/**/*.{test,spec}.ts` / `e2e/*`                                                                                             | Node env for unit (`getNextIndex`/`canonicalUrl` pure), Playwright chromium for E2E + axe on all six pages + 404; do not claim coverage before CI passes                                                  |
-| Tooling                                  | `package.json` scripts + `tsconfig.json` + `.oxlintrc.json` / `.oxfmtrc.json` + `pnpm-workspace.yaml`                                                                         | Keep oxlint/oxfmt, pnpm exact + strict, Node `>=22.12.0`; do not add Biome or unlisted dep builds                                                                                                         |
+| Tooling                                  | `package.json` scripts + `tsconfig.json` + `.oxlintrc.json` / `.oxfmtrc.json` + `pnpm-workspace.yaml`                                                                         | Keep oxlint/oxfmt, pnpm exact + strict, Node `>=22.13.0`; do not add Biome or unlisted dep builds                                                                                                         |
 
 ## Project-local Astro skill
 
