@@ -68,7 +68,6 @@
 /* Base */
 html {
   color-scheme: light;
-  scroll-behavior: smooth;
   overflow-x: clip;
 }
 
@@ -201,7 +200,6 @@ body {
   object-fit: cover;
   opacity: 0.42;
   /* Removed mix-blend-mode + filter (paint cost) — keep compositor-safe opacity/transform only */
-  will-change: transform;
   transform: translateZ(0);
 }
 
@@ -221,7 +219,6 @@ body {
     radial-gradient(ellipse 500px 280px at 78% 68%, rgba(186, 230, 253, 0.55) 0%, transparent 68%);
   opacity: 0.9;
   animation: water-drift 22s linear infinite alternate;
-  will-change: transform;
 }
 
 .bubble {
@@ -273,7 +270,6 @@ body {
 .js [data-entrance] {
   opacity: 0;
   transform: translateY(14px);
-  will-change: transform, opacity;
 }
 
 .js [data-entrance].is-entrance-visible {

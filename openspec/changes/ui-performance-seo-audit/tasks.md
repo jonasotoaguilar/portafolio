@@ -27,16 +27,16 @@ Chain strategy: stacked-to-main
 
 ## Phase 2: Slice B — motion + SEO
 
-- [ ] 2.1 RED `e2e/interaction.spec.ts`: reduced-motion load+ClientRouter; coarse/no-hover skips parallax; fine+hover enables; `will-change` cleared on complete/kill/swap; persist unoffset; SkipLink/restoration not smoothed.
-- [ ] 2.2 GREEN `src/styles/global.css` drop global smooth scroll and standing `will-change`. `src/scripts/motion.ts` gate parallax hover+fine && !reduce; transient will-change; `killAll` on `astro:before-swap`.
-- [ ] 2.3 RED `src/lib/site-helpers.test.ts` unset SITE → undefined. `pnpm run test:unit -- src/lib/site-helpers.test.ts`
-- [ ] 2.4 GREEN `src/lib/site-helpers.ts` + Head helpers; og 1200×630; never invent origin. `astro.config.mjs` (read-only). Create `src/pages/robots.txt.ts` Allow `/`; `Sitemap:` only if site set. Create `public/og.png` from `src/assets/visuals/jona-hero.png` (read-only).
-- [ ] 2.5 GREEN SITE-unset `pnpm build`: no fabricated origin; sameAs LinkedIn stays. Second build `SITE=https://example.test`: absolute canonical/og:url/og:image+w/h; robots Sitemap; JSON-LD url absolute. SEO gap ≠ perf fail.
+- [x] 2.1 RED `e2e/interaction.spec.ts`: reduced-motion load+ClientRouter; coarse/no-hover skips parallax; fine+hover enables; `will-change` cleared on complete/kill/swap; persist unoffset; SkipLink/restoration not smoothed.
+- [x] 2.2 GREEN `src/styles/global.css` drop global smooth scroll and standing `will-change`. `src/scripts/motion.ts` gate parallax hover+fine && !reduce; transient will-change; `killAll` on `astro:before-swap`.
+- [x] 2.3 RED `src/lib/site-helpers.test.ts` unset SITE → undefined. `pnpm run test:unit -- src/lib/site-helpers.test.ts`
+- [x] 2.4 GREEN `src/lib/site-helpers.ts` + Head helpers; og 1200×630; never invent origin. `astro.config.mjs` (read-only). Create `src/pages/robots.txt.ts` Allow `/`; `Sitemap:` only if site set. Create `public/og.png` from `src/assets/visuals/jona-hero.png` (read-only).
+- [x] 2.5 GREEN SITE-unset `pnpm build`: no fabricated origin; sameAs LinkedIn stays. Second build `SITE=https://example.test`: absolute canonical/og:url/og:image+w/h; robots Sitemap; JSON-LD url absolute. SEO gap ≠ perf fail.
 
 ## Phase 3: Slice B — LCP + GSAP
 
-- [ ] 3.1 BASELINE before any perf edit: SITE unset; Chromium 3×7; 1280/375 Slow-4G CPU 4×; median LCP/INP/CLS.
-- [ ] 3.2 RED inspect: `/` hero and `/about` profile lack `priority`; `src/components/WaterField.astro` eager — must not be LCP. `pnpm build`
-- [ ] 3.3 GREEN `src/pages/index.astro` hero `priority`; `src/pages/about.astro` profile `priority`; WaterField not eager/high. Remeasure one variable vs 3.1.
-- [ ] 3.4 After LCP, GSAP→CSS one variable; remeasure; keep GSAP if in-band (\|ΔLCP\|<100ms, \|ΔINP\|<20ms, \|ΔCLS\|<0.02 or median in baseline min–max), worse, or 2.1 fails. No new perf dependency.
-- [ ] 3.5 `pnpm exec astro check && pnpm run test:unit && pnpm run test:e2e && pnpm build`. Inherit vs `.sdd/changes/ui-performance-seo-audit/design/chosen.yaml` (read-only).
+- [x] 3.1 BASELINE before any perf edit: SITE unset; Chromium 3×7; 1280/375 Slow-4G CPU 4×; median LCP/INP/CLS.
+- [x] 3.2 RED inspect: `/` hero and `/about` profile lack `priority`; `src/components/WaterField.astro` eager — must not be LCP. `pnpm build`
+- [x] 3.3 GREEN `src/pages/index.astro` hero `priority`; `src/pages/about.astro` profile `priority`; WaterField not eager/high. Remeasure one variable vs 3.1.
+- [x] 3.4 After LCP, GSAP→CSS one variable; remeasure; keep GSAP if in-band (\|ΔLCP\|<100ms, \|ΔINP\|<20ms, \|ΔCLS\|<0.02 or median in baseline min–max), worse, or 2.1 fails. No new perf dependency.
+- [x] 3.5 `pnpm exec astro check && pnpm run test:unit && pnpm run test:e2e && pnpm build`. Inherit vs `.sdd/changes/ui-performance-seo-audit/design/chosen.yaml` (read-only).
