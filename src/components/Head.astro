@@ -1,0 +1,63 @@
+---
+import { site as siteData } from "../data/site";
+
+interface Props {
+  title: string;
+  description: string;
+  path?: string;
+  noindex?: boolean;
+}
+
+const { title, description, path = Astro.url.pathname, noindex = false } = Astro.props as Props;
+
+// Astro.site is set only when SITE env is present (astro.config conditional)
+const siteUrl = Astro.site?.toString().replace(/\/$/, "");
+const canonical = siteUrl ? `${siteUrl}${path}` : undefined;
+
+const fullTitle = title.includes("Jonathan Soto") ? title : `${title} — Jonathan Soto`;
+
+// Safe JSON-LD — Person only, no telephone, no unverified LinkedIn URL
+const personLd = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: "Jonathan Soto",
+  alternateName: siteData.githubHandle,
+  jobTitle: "Backend Engineer",
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: "Santiago",
+    addressCountry: "CL",
+  },
+  email: `mailto:${siteData.email}`,
+  url: siteUrl ?? siteData.github,
+  sameAs: [siteData.github],
+  knowsAbout: ["Python", "TypeScript", "Java", "Backend Engineering"],
+};
+
+const ogImage = siteUrl ? `${siteUrl}/og.png` : undefined;
+---
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+{canonical && <link rel="canonical" href={canonical} />}
+{noindex && <meta name="robots" content="noindex, nofollow" />}
+<meta name="author" content="Jonathan Soto" />
+<meta name="color-scheme" content="light" />
+
+<!-- Open Graph basics — only when site is known; otherwise minimal -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+{canonical && <meta property="og:url" content={canonical} />}
+{ogImage && <meta property="og:image" content={ogImage} />}
+<meta property="og:site_name" content="Jonathan Soto — Backend Engineer" />
+<meta property="og:locale" content="en_US" />
+<meta name="twitter:card" content={ogImage ? "summary_large_image" : "summary"} />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+{ogImage && <meta name="twitter:image" content={ogImage} />}
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<script type="application/ld+json" set:html={JSON.stringify(personLd)} is:inline />

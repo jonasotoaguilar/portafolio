@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# release-publish: create deterministic tarball and GitHub Release.
+# Authority: write (contents: write) in protected environment.
+# Fails closed outside GitHub stable-tag context; refuses to mutate existing release/tag.
+
+tag="${RELEASE_TAG:-}"
+repo="${RELEASE_REPOSITORY:-}"
+commit="${RELEASE_COMMIT:-}"
+token="${GH_TOKEN:-}"
+
+if [[ -z "$tag" ]]; then
+  echo "error: RELEASE_TAG is not set" >&2
+  exit 1
+fi
+if [[ -z "$repo" ]]; then
+  echo "error: RELEASE_REPOSITORY is not set" >&2
+  exit 1
+fi
+if [[ -z "$token" ]]; then
+  echo "error: GH_TOKEN is not set" >&2
+  exit 1
+fi
+
+# Validate stable tag shape
+if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "error: RELEASE_TAG '$tag' is not stable (expected vX.Y.Z)" >&2
+  exit 1
+fi
+if [[ "$tag" == *"-"* ]]; then
+  echo "error: prerelease tag not allowed" >&2
+  exit 1
+fi
+
+# Fail closed outside GitHub Actions stable-tag context
+if [[ -z "${GITHUB_ACTIONS:-}" ]]; then
+  echo "error: release-publish must run in GitHub Actions (GITHUB_ACTIONS not set) — refusing locally" >&2
+  exit 1
+fi
+if [[ "${GITHUB_REF:-}" != "refs/tags/$tag" ]] && [[ -n "${GITHUB_REF:-}" ]]; then
+  echo "error: GITHUB_REF '${GITHUB_REF:-}' does not match RELEASE_TAG '$tag'" >&2
+  exit 1
+fi
+
+# Prevent mutation: fail if release or tag already exists
+echo "Checking if release $tag already exists..."
+if gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
+  echo "error: release $tag already exists in $repo — refusing to mutate immutable release" >&2
+  exit 1
+fi
+if git rev-parse --verify "refs/tags/$tag" >/dev/null 2>&1; then
+  # Tag exists locally; check remote existence strictly via gh
+  echo "Local tag $tag exists — verifying remote release does not exist (already checked)"
+fi
+
+# Ensure gh auth is via GH_TOKEN only
+if ! gh auth status >/dev/null 2>&1; then
+  echo "gh not authenticated — GH_TOKEN should provide auth" >&2
+fi
+
+# Rerun/consume preflight safely: if dist not ready, run preflight
+if [[ ! -f "dist/index.html" ]]; then
+  echo "dist/index.html not found — running preflight"
+  if [[ ! -x "./scripts/release-preflight" ]]; then
+    echo "error: missing scripts/release-preflight" >&2
+    exit 1
+  fi
+  ./scripts/release-preflight
+fi
+
+if [[ ! -f "dist/index.html" ]]; then
+  echo "error: dist/index.html still missing after preflight" >&2
+  exit 1
+fi
+
+# Create deterministic tarball under RUNNER_TEMP
+runner_tmp="${RUNNER_TEMP:-/tmp}"
+material_dir="${runner_tmp}/release-material"
+rm -rf -- "$material_dir"
+mkdir -p -- "$material_dir"
+
+archive_name="dist-${tag}.tar.gz"
+archive_path="${material_dir}/${archive_name}"
+checksum_path="${material_dir}/${archive_name}.sha256"
+
+echo "Creating deterministic tarball $archive_path from dist/"
+# Deterministic tar: sort, fixed mtime, owner/group 0, pax not needed
+tar --sort-name --mtime='2020-01-01' --owner=0 --group=0 -czf "$archive_path" dist
+
+# Calculate SHA-256
+sha256sum "$archive_path" | awk '{print $1}' > "$checksum_path"
+checksum=$(cat "$checksum_path")
+echo "SHA256: $checksum  $archive_name"
+# Write checksum file in sha256sum format
+echo "${checksum}  ${archive_name}" > "$checksum_path"
+
+# Create curated notes (generated-safe, not raw commit log)
+notes_file="${material_dir}/notes.md"
+cat > "$notes_file" <<EOF
+## ${tag}
+
+Static portfolio release for ${repo} at \`${commit:-unknown}\`.
+
+- Artifact: \`${archive_name}\` (static \`dist/\` tarball)
+- Checksum (SHA-256): \`${checksum}\`
+- SITE: ${SITE:-"(not set — canonical/sitemap intentionally absent)"}
+
+This is an automated stable release carrying the static site artifact. Verify with \`scripts/release-verify\`.
+EOF
+
+echo "Creating GitHub Release $tag"
+# Use --generate-notes as supporting input, but prefer curated notes as body
+# --notes-file takes precedence; pass --generate-notes false to avoid mixing if needed
+# Use curated notes plus generated notes appended? Keep curated as primary.
+gh release create "$tag" \
+  --repo "$repo" \
+  --target "$commit" \
+  --title "$tag" \
+  --notes-file "$notes_file" \
+  --generate-notes \
+  "$archive_path" "$checksum_path"
+
+echo "Release $tag published with $archive_name and checksum"

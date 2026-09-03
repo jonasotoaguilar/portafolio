@@ -1,0 +1,104 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ClippedPanel from "../components/ClippedPanel.astro";
+import { experiences, education } from "../data/experience";
+---
+
+<BaseLayout
+  title="Experience — Verified Roles & Dates"
+  description="Professional experience for Jonathan Soto — Productos Barber Chile and Policomp with CV-verified roles and dates; USACH education and WealthQuest thesis context."
+  path="/experience"
+>
+  <section aria-labelledby="exp-heading" class="space-y-6">
+    <ClippedPanel clip="lg" tint>
+      <div class="p-6 sm:p-8" data-entrance>
+        <p class="font-mono text-[0.72rem] font-bold tracking-[0.16em] uppercase text-[var(--color-cyan-strong)]">Menu 03 · Experience</p>
+        <h1 id="exp-heading" class="mt-2 text-[2rem] sm:text-[2.6rem] font-black leading-none tracking-tighter uppercase italic" style="transform: skewX(-6deg);">
+          Verified <span class="text-[var(--color-cyan-strong)]">History</span>
+        </h1>
+        <p class="mt-3 max-w-[62ch] text-[0.95rem] leading-relaxed text-[var(--color-ink-soft)]">
+          Roles and dates as verified from the owner-authorized CV. No invented titles. Only Productos Barber Chile and Policomp are named — with continuity through studies.
+        </p>
+      </div>
+    </ClippedPanel>
+
+    {/* Timeline — distinct from card grid */}
+    <div class="relative">
+      <div class="hidden lg:block absolute left-[calc(50%-1px)] top-0 bottom-0 w-[3px] bg-[var(--color-ink)]" aria-hidden="true"></div>
+      <div class="lg:hidden absolute left-4 top-0 bottom-0 w-[3px] bg-[var(--color-ink)]" aria-hidden="true"></div>
+
+      <ol class="space-y-6">
+        {experiences.map((e, i) => (
+          <li
+            class:list={["relative grid gap-4", i % 2 === 0 ? "lg:grid-cols-[1fr_40px_1fr]" : "lg:grid-cols-[1fr_40px_1fr]"]}
+            data-entrance
+            style={`transition-delay:${i * 70}ms`}
+          >
+            {/* Left spacer for alternation */}
+            <div class:list={["hidden lg:block", i % 2 === 1 ? "lg:order-3" : ""]}></div>
+
+            {/* Center node */}
+            <div class="hidden lg:flex items-start justify-center pt-6 lg:order-2">
+              <span class="h-4 w-4 rotate-45 border-[3px] border-[var(--color-ink)] bg-[var(--color-cyan)] shadow-[3px_3px_0_0_var(--color-ink)]" aria-hidden="true"></span>
+            </div>
+            <div class="lg:hidden absolute left-[9px] top-6 h-4 w-4 rotate-45 border-[3px] border-[var(--color-ink)] bg-[var(--color-cyan)]" aria-hidden="true"></div>
+
+            <ClippedPanel clip="md" class={i % 2 === 1 ? "lg:order-1" : "lg:order-3"}>
+              <div class="p-5 sm:p-6 pl-8 lg:pl-6">
+                <div class="flex flex-wrap items-baseline justify-between gap-2">
+                  <h2 class="font-black tracking-tight text-[1.05rem]">{e.org}</h2>
+                  <span class="font-mono text-[0.72rem] font-bold tracking-[0.08em] uppercase bg-[var(--color-ink)] px-2 py-1 text-white">{e.period}</span>
+                </div>
+                <p class="mt-1 font-mono text-[0.78rem] font-bold tracking-wide text-[var(--color-cyan-strong)] uppercase">{e.role} · {e.location}</p>
+                <p class="mt-3 text-[0.9rem] leading-relaxed text-[var(--color-ink-soft)]">{e.detail}</p>
+                <ul class="mt-3 list-disc space-y-1 pl-5 text-[0.84rem] leading-relaxed text-[var(--color-muted)] marker:text-[var(--color-cyan-strong)]">
+                  {e.bullets.map((b) => (
+                    <li>{b}</li>
+                  ))}
+                </ul>
+              </div>
+            </ClippedPanel>
+          </li>
+        ))}
+      </ol>
+    </div>
+
+    {/* Education band */}
+    <div class="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]" data-entrance>
+      <ClippedPanel tint>
+        <div class="p-5 sm:p-6">
+          <h2 class="font-mono text-[0.72rem] font-bold tracking-[0.14em] uppercase text-[var(--color-muted)]">Education</h2>
+          <h3 class="mt-2 font-black tracking-tight text-[1.1rem]">{education.school}</h3>
+          <p class="mt-1 font-mono text-[0.78rem] font-bold uppercase tracking-wide text-[var(--color-cyan-strong)]">{education.program}</p>
+          <p class="mt-1 font-mono text-[0.74rem] tracking-wide text-[var(--color-muted)]">{education.period}</p>
+          <div class="mt-4 border-l-[4px] border-[var(--color-ink)] bg-white px-3 py-3">
+            <p class="font-mono text-[0.68rem] font-bold tracking-[0.12em] uppercase text-[var(--color-muted)]">Thesis & Publication</p>
+            <p class="mt-1 font-bold text-[0.92rem] leading-snug">{education.thesis.title}</p>
+            <p class="mt-1 text-[0.84rem] leading-relaxed text-[var(--color-muted)]">{education.thesis.note} — May 2025.</p>
+          </div>
+        </div>
+      </ClippedPanel>
+
+      <ClippedPanel>
+        <div class="p-5 sm:p-6">
+          <h2 class="font-mono text-[0.72rem] font-bold tracking-[0.14em] uppercase text-[var(--color-muted)]">Languages & Availability</h2>
+          <ul class="mt-3 space-y-2">
+            {education.languages.map((l) => (
+              <li class="flex items-center justify-between border border-[var(--color-border)] bg-[var(--color-surface-tint)] px-3 py-2">
+                <span class="font-bold text-[0.9rem]">{l.name}</span>
+                <span class="font-mono text-[0.74rem] tracking-wide text-[var(--color-muted)]">{l.level}</span>
+              </li>
+            ))}
+          </ul>
+          <div class="mt-4 flex items-center gap-2 border-[1.5px] border-[var(--color-ink)] bg-[var(--color-cyan-ghost)] px-3 py-2">
+            <span class="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true"></span>
+            <span class="font-mono text-[0.76rem] font-bold tracking-wide uppercase">Open to remote — Santiago base</span>
+          </div>
+          <a href="/about" class="mt-4 inline-flex w-full items-center justify-center gap-2 border-[1.5px] border-[var(--color-ink)] bg-white px-4 py-2.5 text-[0.78rem] font-bold uppercase tracking-wide hover:bg-[var(--color-surface-tint)] transition-colors">
+            More Human Context <span aria-hidden="true">→</span>
+          </a>
+        </div>
+      </ClippedPanel>
+    </div>
+  </section>
+</BaseLayout>

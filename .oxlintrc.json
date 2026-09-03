@@ -1,0 +1,55 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "pedantic": "off",
+    "perf": "off",
+    "style": "off",
+    "restriction": "off"
+  },
+  "rules": {
+    "complexity": ["warn", { "max": 10 }]
+  },
+  "env": {
+    "browser": true
+  },
+  "ignorePatterns": [
+    "dist/**",
+    ".astro/**",
+    "node_modules/**",
+    "coverage/**",
+    "playwright-report/**",
+    "test-results/**",
+    ".codegraph/**",
+    ".atl/**"
+  ],
+  "overrides": [
+    {
+      "files": ["**/*.astro"],
+      "env": {
+        "browser": true,
+        "astro": true
+      }
+    },
+    {
+      "files": [
+        "astro.config.mjs",
+        "vitest.config.ts",
+        "playwright.config.ts",
+        "scripts/**/*",
+        "e2e/**/*.{ts,js,mjs}"
+      ],
+      "env": {
+        "node": true
+      }
+    },
+    {
+      "files": ["**/*.test.ts", "**/*.spec.ts", "e2e/**/*"],
+      "env": {
+        "node": true,
+        "vitest": true
+      }
+    }
+  ]
+}

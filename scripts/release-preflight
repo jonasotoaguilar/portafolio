@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# release-preflight: read-only validation before publish.
+# Authority: read-only. Exits non-zero on any failure.
+# SITE is optional: when set, sitemap/canonical must be present; when absent, they must be absent.
+
+tag="${RELEASE_TAG:-}"
+if [[ -z "$tag" ]]; then
+  echo "error: RELEASE_TAG is not set" >&2
+  exit 1
+fi
+
+# Validate stable tag shape: vMAJOR.MINOR.PATCH (SemVer core), no prerelease hyphen, allow leading v only
+if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "error: RELEASE_TAG '$tag' is not a stable tag (expected vX.Y.Z without hyphen)" >&2
+  exit 1
+fi
+
+# Guard: reject prerelease tags containing '-'
+if [[ "$tag" == *"-"* ]]; then
+  echo "error: prerelease tag '$tag' is not allowed for stable release" >&2
+  exit 1
+fi
+
+echo "Preflight for tag $tag"
+
+# Frozen install
+echo "==> pnpm install --frozen-lockfile"
+pnpm install --frozen-lockfile
+
+echo "==> format:check"
+pnpm run format:check
+
+echo "==> lint"
+pnpm run lint
+
+echo "==> astro check"
+pnpm run check
+
+echo "==> unit tests"
+pnpm run test:unit
+
+echo "==> static build"
+# Preserve SITE from environment; do not fabricate if absent
+if [[ -n "${SITE:-}" ]]; then
+  echo "SITE is set — building with SITE=$SITE"
+else
+  echo "SITE is absent — building without SITE (canonical/sitemap intentionally absent)"
+fi
+pnpm run build
+
+# Ensure dist/index.html exists
+if [[ ! -f "dist/index.html" ]]; then
+  echo "error: dist/index.html not found after build" >&2
+  exit 1
+fi
+echo "Verified dist/index.html exists"
+
+# SITE-aware validation
+if [[ -n "${SITE:-}" ]]; then
+  echo "==> SITE-aware checks (SITE is set)"
+  # Expect sitemap present
+  if [[ ! -f "dist/sitemap-index.xml" ]] && [[ ! -f "dist/sitemap.xml" ]] && [[ ! -f "dist/sitemap-0.xml" ]]; then
+    # Astro sitemap plugin may emit sitemap-index.xml or sitemap.xml
+    if ! ls dist/sitemap*.xml >/dev/null 2>&1; then
+      echo "error: expected sitemap artifact in dist/ when SITE is set, but none found" >&2
+      ls -la dist/ >&2 || true
+      exit 1
+    fi
+  fi
+  echo "Verified sitemap present"
+  # Expect canonical present in built HTML
+  if ! grep -q 'rel="canonical"' dist/index.html; then
+    echo "error: expected canonical link in dist/index.html when SITE is set" >&2
+    exit 1
+  fi
+  echo "Verified canonical present"
+  # Verify canonical matches SITE prefix (trim trailing slash)
+  site_trimmed="${SITE%/}"
+  if ! grep -q "href=\"${site_trimmed}" dist/index.html; then
+    echo "warning: canonical does not contain SITE prefix $site_trimmed (checking raw canonical)" >&2
+    grep -o 'rel="canonical" href="[^"]*"' dist/index.html >&2 || true
+  fi
+else
+  echo "==> SITE-absent checks (SITE not set)"
+  # Expect sitemap absent
+  if ls dist/sitemap*.xml >/dev/null 2>&1; then
+    echo "error: unexpected sitemap found in dist/ when SITE is absent" >&2
+    ls -la dist/sitemap*.xml >&2 || true
+    exit 1
+  fi
+  echo "Verified sitemap absent (as expected when SITE not set)"
+  # Expect canonical absent
+  if grep -q 'rel="canonical"' dist/index.html; then
+    echo "error: unexpected canonical link in dist/index.html when SITE is absent" >&2
+    grep -o 'rel="canonical" href="[^"]*"' dist/index.html >&2 || true
+    exit 1
+  fi
+  echo "Verified canonical absent (as expected when SITE not set)"
+  # Also check og:url absent when SITE not set (Head.astro conditional)
+  if grep -q 'property="og:url"' dist/index.html; then
+    echo "error: unexpected og:url in dist/index.html when SITE is absent" >&2
+    exit 1
+  fi
+  echo "Verified og:url absent"
+fi
+
+echo "Preflight passed for $tag"

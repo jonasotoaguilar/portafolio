@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="JS monogram">
+  <rect width="32" height="32" rx="3" fill="#081021"/>
+  <rect x="3" y="3" width="26" height="26" fill="none" stroke="#0ea5e9" stroke-width="1.2"/>
+  <text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-weight="900" font-size="14" fill="white" letter-spacing="-0.04em">JS</text>
+</svg>

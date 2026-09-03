@@ -1,0 +1,25 @@
+# pnpm workspace — secure lifecycle-script policy for v11.25.0
+# Only explicitly reviewed builds are allowed; unlisted scripts fail install with strictDepBuilds.
+# esbuild@0.28.2: required by vite/astro for bundling (downloads native binary via postinstall).
+# Reviewed: esbuild is a trusted, widely-used build tool; version pinned via lockfile.
+# Direct cookie@2.0.1 (exact): ensures Astro 7.2.10's generated prerender
+# (dist entry → import { parseCookie } from 'cookie' at
+# astro/dist/core/build/default-prerenderer.js:17:30) resolves to project
+# top-level ESM cookie@2.0.1 before Node parent-scope traversal finds a stray
+# parent-scope CommonJS cookie@0.7.x (CJS parse, not ESM parseCookie) that
+# can shadow Astro's ESM dependency during generated prerender resolution.
+# Build evidence 2026-09-02 without direct (parent-scope CJS present):
+#   Named export 'parseCookie' not found. The requested module 'cookie' is a
+#   CommonJS module… Location: default-prerenderer.js:17:30 — removing this
+#   pin makes `npx pnpm run build` fail; keeping it is the smallest
+#   pnpm-documented fix (top-level hoist via direct dependency).
+# lefthook@2.1.12: postinstall downloads platform binary via node postinstall.js; reviewed binary manager, pinned via lockfile.
+strictDepBuilds: true
+allowBuilds:
+  esbuild: true
+  lefthook: true
+  sharp: true
+# Defaults preserved:
+# blockExoticSubdeps: true (transitive git/tarball blocked)
+# trustLockfile: false (re-validate lockfile on install)
+# minimumReleaseAge: 1440 (1 day, non-strict by default) — project uses pnpm default.

@@ -1,0 +1,30 @@
+---
+import { site } from "../data/site";
+import { navItems } from "../data/navigation";
+---
+
+<footer class="mt-12 border-t-[3px] border-[var(--color-ink)] bg-white">
+  <div class="mx-auto max-w-[var(--content-max)] px-4 py-6 sm:px-6 lg:px-8">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div class="space-y-2">
+        <p class="font-mono text-[0.72rem] font-bold tracking-[0.12em] uppercase text-[var(--color-muted)]">
+          Jonathan Soto — Backend Engineer · {site.location}
+        </p>
+        <p class="text-[0.84rem] leading-relaxed text-[var(--color-ink-soft)] max-w-[62ch]">
+          <a href={`mailto:${site.email}`} class="underline decoration-[var(--color-cyan-strong)] decoration-2 underline-offset-4 hover:bg-[var(--color-cyan-ghost)]">{site.email}</a>
+          · <a href={site.github} target="_blank" rel="noopener noreferrer" class="underline decoration-[var(--color-cyan-strong)] decoration-2 underline-offset-4 hover:bg-[var(--color-cyan-ghost)]">GitHub</a>
+          · <span class="font-mono">LinkedIn: {site.linkedinHandle}</span>
+        </p>
+        <nav aria-label="Footer" class="flex flex-wrap gap-2 pt-1">
+          {navItems.map((item) => (
+            <a href={item.href} class="font-mono text-[0.68rem] font-bold tracking-wide uppercase text-[var(--color-muted)] underline decoration-[var(--color-border)] underline-offset-4 hover:text-[var(--color-ink)] hover:decoration-[var(--color-cyan)]">{item.label}</a>
+          ))}
+        </nav>
+      </div>
+      <div class="shrink-0 space-y-1 text-right sm:text-left">
+        <p class="font-mono text-[0.72rem] leading-relaxed text-[var(--color-muted)]">© 2026 Jonathan Soto · MIT License</p>
+        <p class="font-mono text-[0.68rem] font-bold tracking-wide text-[var(--color-muted)]">Not affiliated with ATLUS / SEGA — Persona-inspired original</p>
+      </div>
+    </div>
+  </div>
+</footer>
