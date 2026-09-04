@@ -27,11 +27,7 @@ Thumbs.db
 # Local AI runtime state
 .atl/
 .codegraph
-.agents/*
-!.agents/skills
-!.agents/skills/*
-!.agents/skills/astro-framework
-!.agents/skills/astro-framework/**
+.agents/
 .sdd/
 skills-lock.json
 

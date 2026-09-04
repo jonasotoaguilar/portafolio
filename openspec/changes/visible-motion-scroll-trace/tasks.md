@@ -53,6 +53,6 @@ Motion+trace ~460–700; paint 0 or 20–80. Hygiene untracks 26 `.agents/skills
 
 ## Phase 5: Hygiene (no spec)
 
-- [ ] 5.1 Before: `git ls-files .agents` = 26; `.gitignore` (read-only) whitelist.
-- [ ] 5.2 `.gitignore` blanket `.agents/`; `git rm -r --cached .agents` (files stay). Remove `AGENTS.md` skill row; drop `docs/CODEBASE-GUIDE.md` portable-skill claim.
-- [ ] 5.3 After: zero index `.agents`; `test -f .agents/skills/astro-framework/SKILL.md`. Rollback: whitelist + tracked tree + docs.
+- [x] 5.1 Before: `git ls-files .agents` = 26; `.gitignore` (read-only) whitelist.
+- [x] 5.2 `.gitignore` blanket `.agents/`; `git rm -r --cached .agents` (files stay). Remove `AGENTS.md` skill row; drop `docs/CODEBASE-GUIDE.md` portable-skill claim.
+- [x] 5.3 After: zero index `.agents`; `test -f .agents/skills/astro-framework/SKILL.md`. Rollback: whitelist + tracked tree + docs.

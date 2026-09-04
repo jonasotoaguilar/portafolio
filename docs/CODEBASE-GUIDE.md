@@ -128,10 +128,6 @@ Both run on `push`/`pull_request` to `main` and `workflow_dispatch`; `contents: 
 | Tests                                    | `vitest.config.ts` / `playwright.config.ts` / `src/**/*.{test,spec}.ts` / `e2e/*`                                                                                             | Node env for unit (`getNextIndex`/`canonicalUrl` pure), Playwright chromium for E2E + axe on all six pages + 404; do not claim coverage before CI passes                                                  |
 | Tooling                                  | `package.json` scripts + `tsconfig.json` + `.oxlintrc.json` / `.oxfmtrc.json` + `pnpm-workspace.yaml`                                                                         | Keep oxlint/oxfmt, pnpm exact + strict, Node `>=22.13.0`; do not add Biome or unlisted dep builds                                                                                                         |
 
-## Project-local Astro skill
-
-Portable skill: `.agents/skills/astro-framework/SKILL.md` — islands, hydration directives, content layer, view transitions. Treat `SKILL.md` as source of truth; this guide does not duplicate its runtime instructions.
-
 ## Relevant docs
 
 - `README.md` — setup, verified stack, routes, unresolved `SITE`/LinkedIn URL, links to this guide.
