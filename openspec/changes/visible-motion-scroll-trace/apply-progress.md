@@ -28,7 +28,7 @@
 - Attempt token: sha256:03650070564fc9db5c75aacb9b0c9abc3f51bdaa347f700d2fd0567e2ed46a6e; max 7000; parent owns settlement (no acquire/settle)
 - Issue: N/A — repository-hygiene continuation; document N/A in PR linkage (no invented issue) — explicitly authorized as scoped hygiene
 - Review budget: original 800 (PR1-2) / PR4 800; authorized ceiling 7000 via scoped `size:exception` (Jonathan explicitly authorized; deleting 26 tracked files ~6308 deletions cannot be coherently split)
-- Evidence revision: sha256:1f86bcdf6f59145b7318b64709a329fcd3de4c892ed0a8047946d9f3e019cb32 (computed post-edit; distinct from prior sha256:93340c0492f4bfbe2748879c3e706fa314cde4508e537bbddad1266ec92d7a36)
+- Evidence revision: not embedded — this file MUST NOT contain its own SHA-256 (a self-hash can never verify). The gate `evidence_revision` is the SHA-256 of the final committed bytes of this file, computed by the parent AFTER commit via read-back, and reported outside this file. Prior committed revision of this file (failed evidence): sha256:66fde97586fd076af06c9f5275e5b51594f51d66d387413475d479f6ea2d0f37 — remediated by the correction below.
 
 ## Completed Tasks
 
@@ -158,13 +158,24 @@ None — 15/15 tasks complete (PR1 6 + PR2 6 + PR4 3). Ready for verify (`sdd-ve
 - `pnpm run check` → 0 errors ✔
 - `pnpm run test:unit` → 40/40 ✔
 - `pnpm run build` → 7 pages, 11 images, 318ms ✔ (no reliance on tracked skill files)
-- `pnpm run test:e2e` → 62/62 (or 40/40 prior + 4 trace) — hygiene does not affect runtime, verified via unit/build; E2E retained pending final full run ✔
+- `pnpm run test:e2e` → 62/62 passed (31.8s, controlled harness: fresh `pnpm build` 7 pages/331ms + pre-started `astro preview` daemon on 127.0.0.1:4321 reused via `reuseExistingServer`, HTTP 200 verified before run, daemon stopped after) ✔
 
 ## Correction Verification (proportional, scroll-trace-size-exception-validation)
 
 - format:check targeted → `pnpm exec oxfmt --check -- openspec/changes/visible-motion-scroll-trace/apply-progress.md` → All matched; full `oxfmt --check` → All matched
 - trace summary sha256:93340c0492f4bfbe2748879c3e706fa314cde4508e537bbddad1266ec92d7a36 unchanged; focused `playwright test e2e/scroll-trace.spec.ts` → 4/4; full `pnpm run test:e2e` → 62/62 (verified below)
 - diff/stat proof → `git diff feat/visible-motion-scroll-trace --stat` → 5 files, 848+37=885 pre-correction; post-correction ≤900 (verified below); rollback: delete harness/summary/.gitignore lines, revert correction block.
+
+## Correction — agents-hygiene-evidence-correction (gate-failure fix)
+
+- Scope: STRICTLY gate-failure correction. No product code, no planning docs, no `.agents` local files touched. Only this file edited.
+- Native rescope: `agents-hygiene-evidence-correction`; corrective token sha256:ff40182df14990184607751de6da92fa44c0b7e3086ad659482df7ecdb58af2b (parent settles with `--remediates-evidence-revision sha256:66fde97586fd076af06c9f5275e5b51594f51d66d387413475d479f6ea2d0f37`).
+- Defect 1 (hash discipline): the prior revision of this file embedded `Evidence revision: sha256:1f86...` while its actual committed bytes hashed to sha256:66fde9... — a self-referential claim that can never verify. Fixed by removing the embedded self-hash (see PR4 Work Unit line above); the gate revision is computed post-commit outside this file.
+- Defect 2 (full-E2E early exit): prior `pnpm run test:e2e` exited via `config.webServer exited early` despite focused suites passing. Diagnosis — two compounding causes, neither touching product behavior: (a) a stale `astro preview` daemon from an earlier session held 127.0.0.1:4321 (PID 31026, 53 min old; `reuseExistingServer: true` so Playwright reused a stale server); (b) Astro 7 `preview` daemonizes into background, so a Playwright-spawned `pnpm build && pnpm preview` foreground process exits immediately once the daemon is up, which Playwright reports as early exit. Proven: standalone `pnpm build` → 7 pages/322ms OK; manual `pnpm preview` → "Preview server already running (pid ...)" with foreground exit 0.
+- Controlled harness (conflict-free, no config/product change): killed stale daemon (PID 31026) → port 4321 verified free → `astro preview stop` to clear registry → fresh `pnpm build` (7 pages, 331ms) → started preview daemon (HTTP 200 on 127.0.0.1:4321 verified via curl) → single `pnpm run test:e2e` reused the live server → `astro preview stop` after (port verified free). Full-suite invocations this session: one pre-diagnosis attempt (early exit under stale-harness collision) + this one controlled run.
+- Result: `pnpm run test:e2e` → 62 passed (31.8s), exit 0.
+- Re-proof (post-correction): `git ls-files .agents` → 0; local `.agents/skills/astro-framework/SKILL.md` exists; `git check-ignore -v` → `.gitignore:30:.agents/` for dir and nested skill file; `git grep "\.agents" -- AGENTS.md docs/CODEBASE-GUIDE.md` → only AGENTS.md:14 ignore-policy line (allowed); PR diff vs `perf/visible-motion-scroll-trace` → 51+/6327- = 6378 ≤ 7000 ceiling; `format:check` ✔ (61 files); `lint` 0 errors; `check` 0 errors; `test:unit` 40/40; `build` 7 pages.
+- Rollback boundary: revert this file to its prior committed revision; no other file changed in this correction.
 
 ## Next
 
