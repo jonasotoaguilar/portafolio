@@ -1,0 +1,97 @@
+# Exploration: ui-performance-seo-audit
+
+## Current State
+
+Astro 7.2.10 static site (`output: "static"`) with Tailwind 4.3.3 (`@tailwindcss/vite` + `@theme` tokens in `src/styles/global.css`), GSAP 3.15.0 vanilla (`src/scripts/motion.ts`), Astro `ClientRouter` (`astro:transitions`), conditional `@astrojs/sitemap` 3.7.4 (only when `process.env.SITE` is set), `astro:assets` + `sharp` 0.33.5 for images, and Vitest/Playwright/axe. Layout is `src/layouts/BaseLayout.astro` composing `Head`, `ClientRouter`, early `documentElement.classList.add("js")`, `SkipLink`, `WaterField`, decorative `.bg-word` spans (`transition:persist="bg-words"`), `SiteNav`, `<main id="main">`, `Footer`, and `motion.ts`. Build emits 7 static entries (`/`, `/projects`, `/skills`, `/experience`, `/about`, `/contact`, `404`) with hashed `_astro/*.webp`.
+
+**Rendered evidence collected this phase (no invention):** built `dist/` on 2026-09-03 without `SITE`: 32 KB `index.html`, 25 KB `about/index.html`, 23 KB `contact/index.html`; `_astro/BaseLayout.*.js` 71 KB, `_astro/ClientRouter.*.js` 16 KB, `_astro/ClippedPanel.*.css` 35 KB; 11 optimized images (water-field 10–35 KB, hero 37–141 KB, profile 22–103 KB). `dist/` contains zero `linkedin.com` links, zero `tel:` links, zero `canonical`/`og:url`/`og:image`, zero `sitemap.xml`/`robots.txt`, and correct `application/ld+json` Person (no `telephone`, `sameAs` is GitHub only). `src/data/site.ts` is the single source of truth (`email: jonathansoto.dev@gmail.com`, `githubHandle: jonasotoaguilar`, `linkedinHandle: jonathan-soto-dev`; comment explicitly forbids fabricating href). Entrance state hallucinated as missing is confirmed present: `[data-entrance]` baseline and GSAP `y:18→0 duration 0.55 stagger 0.06` + water scale `1.04→1 0.9s` + caustic drift 22s + bubble 11–23s.
+
+### Symptom-by-symptom findings
+
+1. **Slow/janky + barely perceptible motion** — Root causes identified from static source + dist inspection (runtime trace not yet run, reported as gap):
+   - `global.css:71 html { scroll-behavior: smooth }` — competes with `ClientRouter` view-transition swaps and `SkipLink` focus moves; known to stall scroll and cause jank on navigation. Reduced-motion block `304` resets to `auto !important` but the default smooth remains on every route.
+   - `global.css:204,224 .water-field__image/.water-field__caustic { will-change: transform }` is **persistent**, not short-lived. `motion.ts:162,167` also sets `will-change` eagerly in `setupParallax` and clears only in `killAll()` on navigation. Persistent layers waste GPU memory and can worsen jank on low-end devices.
+   - `motion.ts` parallax: `mousemove` listener (passive) drives `gsap.quickTo` with `duration 0.9/1.0` + RAF batching via `pendingX/Y`. Correctly gated by `prefersReduced()` per frame but still fires on every mouse move on desktop, even when the water field is `transition:persist` and `shouldAnimateAmbient` is false on back-navigation (ambient is finalized to static opacity, yet parallax remains active until `killAll` on next swap).
+   - Animations **are implemented but intentionally subtle**: `y:18px` over `0.55s power3.out` with `0.06s` stagger is borderline imperceptible on fast scroll; `water-drift 22s linear infinite alternate` and `bubble-drift 11–23s` are ambient-only; `motion.ts` entrance is the only motion conveyance (no scroll-triggered or state-feedback motion). No `transition:animate` directives on routes — `ClientRouter` defaults to a 180 ms `astroFadeIn/Out` (`cubic-bezier(0.76,0,0.24,1)`) per dist `<style>`, which is barely perceptible and has no shared-element continuity beyond `hero-image` (`transition:name="hero-image"` only on home).
+   - Bundle: `BaseLayout.*.js 71 KB` includes full `gsap` import (`import { gsap } from "gsap"` pulls the 60 KB+ core). That cost is disproportionate for a y+opacity stagger; a CSS-only or `gsap` subset would be lighter. `ClippedPanel` CSS 35 KB is the entire Tailwind + global bundle (no code splitting — Astro ships one CSS per page here).
+   - No scroll handling beyond native; no `content-visibility` or virtualization needed (small DOM), but `global.css` `clip-path` panels and layered fixed fields (`WaterField` `z-index:-2` + `.bg-word` fixed) create large composited paint layers on scroll.
+
+2. **SEO vs Performance conflated** — Distinguished:
+   - **SEO correctness/discoverability** gaps (static inspection): without `SITE`, pages emit no `<link rel="canonical">`, no `og:url`, no `og:image`, no `sitemap.xml`, no `robots.txt`, and JSON-LD `url` falls back to `site.github` (`Head.astro:32`). That matches the documented `SITE` contract but means the shipped product is **not index-ready** if deployed without env. `Head.astro` correctly emits `title`/`description` per page (verified distinct per route in `e2e/content.spec.ts`), `meta viewport`, `og:type/title/description/site_name/locale`, `twitter:card` fallback, and `Person` JSON-LD without `telephone`/`linkedin.com`. No `hreflang`, no `preconnect`, no `og:image:width/height`, no breadcrumb/Organization JSON-LD, no per-page JSON-LD variation.
+   - **Performance/Core Web Vitals** gaps (static + dist sizes; no Lighthouse/INP/LCP trace yet — reported as gap): `WaterField` image `eager` with `widths [640,1024,1672] sizes 100vw` is LCP candidate on every route (rendered behind veil at `opacity:0.42`); hero/profile also `eager` (correct for above-fold on their routes but duplicates `widths` entries generate 11 webp variants). GSAP + ClientRouter JS is render-blocking module (`script type="module"`); no `preload` for LCP image, no `fetchpriority="high"`, no explicit font swap needed (system stack — good). CSS `backdrop-filter: blur(8px)` on `.clip-panel--ghost` is paint-costly on scroll.
+
+3. **About next action** — `src/pages/about.astro:101–105`: card text `See verified roles and dates on the next menu.` + CTA `<a href="/experience">Experience Timeline →</a>`. Navigation order is `Home 00 → Projects 01 → Skills 02 → Experience 03 → About 04 → Contact 05`; About is **after** Experience, so linking back to Experience is a backward step. Correct forward step per spec is to `Contact`. `desire: Contact` is the intended next menu, not a reopening of the previous.
+
+4. **LinkedIn clickable** — `src/data/site.ts:10 linkedinHandle: "jonathan-soto-dev"` is text-only by contract (comment: `do not fabricate href`). `src/pages/contact.astro:65–70` renders `<span>` with `aria-label`, not `<a>`; `src/pages/index.astro:139–141` and `Footer.astro:16` also render text `LinkedIn: jonathan-soto-dev`. Dist confirms `0` `linkedin.com` links (intentional). Authorized handle is verified (`jonathan-soto-dev`), so the normal LinkedIn profile shape `https://www.linkedin.com/in/jonathan-soto-dev` is **authorized to construct** and evidence status must be flagged as `constructed from authorized handle; not verified by live LinkedIn fetch (LinkedIn returns 999/auth-wall per PRODUCT.md Unresolved Facts)`. E2E currently asserts zero `linkedin.com` links — will need update.
+
+5. **Privacy invariant** — Verified clean: `Head.astro` Person has no `telephone`, `sameAs` is `[github]` only; `site.ts` has no phone; `grep` across `src/` and `dist/` for `8894|2050|+56` returned zero; `dist` has zero `tel:` and `telephone` in JSON-LD; `e2e/content.spec.ts:202–208` asserts body text has no phone patterns. `dist` `contact/index.html` and all routes contain no phone. Maintained by omission.
+
+6. **Development/provenance copy shipped** — Four direct strings found in `src/` (all public-facing, not doc-only):
+   - `src/pages/contact.astro:20` `No form. No tracker. No phone. Email and GitHub are the fastest paths — LinkedIn handle below is text-only until a verified public URL is confirmed.`
+   - `src/pages/contact.astro:72` `No fabricated LinkedIn URL is shipped — handle is text only. Re-verify before linking.`
+   - `src/pages/contact.astro:83` `Email routes directly to Jonathan. No form provider, no storage, no backend for this page — view source to verify.`
+   - `src/pages/contact.astro:98` `No phone number exists in the DOM or JSON-LD. Privacy by omission — not by obfuscation.`
+   - `src/pages/experience.astro:20` `Roles and dates as verified from the owner-authorized CV. No invented titles. Only Productos Barber Chile and Policomp are named — with continuity through studies.`
+   - `src/pages/about.astro:101` `See verified roles and dates on the next menu.` (provenance-teaching copy + misdirection per #3)
+     Additional pattern hits in public copy that read as meta/provenance: `src/pages/projects.astro:24` `ServiceFlow stack follows live PocketBase backend in Docker Compose (Appwrite noted as description legacy).` and `src/pages/about.astro:59` `This portfolio is facts-only from public GitHub and the owner-authorized CV.` and `src/pages/about.astro:92–93` `Thesis and publication facts trace to the CV; co-authors include Soto Aguilar. No private store is published.` — all are inventory/provenance voice that should become finished product copy. Full copy search also flags `Evidence over claims`, `Repo links verified`, `Privacy-safe` chips and similar meta-phrasing.
+
+7. **CV/GitHub as internal source only** — Currently violated by public-facing provenance sentences (see #6). Public copy must read as product (“Backend Engineer, Santiago · Open to remote. Available for collaborations on…” rather than “Facts from CV…”). No `CV` string should ship in public DOM.
+
+8. **CV facts supplied** — Authorized: backend developer; Santiago, Chile; `jonathansoto.dev@gmail.com`; `jonathan-soto-dev`; `jonasotoaguilar`; skills/projects/experience/education/publication as in `src/data/*` (matches August 2026 CV). Phone `9 8894 2050` is **not** in repo (verified).
+
+9. **Screenshot evidence** — Confirmed in source: About card `See verified roles…` + `EXPERIENCE TIMELINE →` to `/experience`; Contact card email (`mailto:` anchor) + GitHub (`target _blank`) are clickable, LinkedIn is `<span>` text-only. Matches reported screenshots.
+
+## Affected Areas
+
+- `src/pages/about.astro` — misdirected CTA to `/experience`, provenance sentence `See verified roles...`, `Facts-only...` bio phrasing
+- `src/pages/contact.astro` — three dev/provenance paragraphs + LinkedIn `<span>` that must become `<a href="https://www.linkedin.com/in/jonathan-soto-dev">`, text-only guard string `No fabricated LinkedIn URL…`
+- `src/pages/experience.astro` — provenance sentence `Roles and dates as verified...` (remove or rewrite as product copy)
+- `src/pages/index.astro` — `LinkedIn: {site.linkedinHandle}` text-only on home contact panel (make clickable), `hero` transition name + eager image LCP
+- `src/components/Footer.astro` — `LinkedIn: {site.linkedinHandle}` text-only
+- `src/data/site.ts` — add derived `linkedinUrl` (`https://www.linkedin.com/in/${handle}`) or export helper; document evidence status `constructed from authorized handle`
+- `src/components/Head.astro` — SEO gaps: no canonical/sitemap/robots when SITE unset; add `og:image:width/height`, conditional `sameAs` inclusion for LinkedIn, breadcrumb/Organization JSON-LD consideration
+- `src/layouts/BaseLayout.astro` — `ClientRouter` with no `transition:animate` policy; `transition:persist` on `bg-words` + `WaterField` may cause stale ambient parallax after back-navigation
+- `src/scripts/motion.ts` — persistent `will-change`, `mousemove` parallax always on, entrance imperceptibility (`y:18 duration 0.55`), reduced-motion teardown + `killAll` clearing, `shouldAnimateAmbient` guard
+- `src/styles/global.css` — `html scroll-behavior smooth`, persistent `will-change` on water/caustic, `animation: none` + `transition-duration 0.01ms` global reset under reduced-motion, `backdrop-filter: blur` cost, `--duration-*` tokens unused for motion
+- `src/components/WaterField.astro` — `eager` water-field image on every route (LCP leader), bubble count 9/14 continuous `animation`, no lazy/defer
+- `astro.config.mjs` — sitemap gated on `SITE`, no `robots.txt` generation, no `site` fallback for local SEO verification
+- `e2e/content.spec.ts` + `e2e/interaction.spec.ts` — assertions for zero `linkedin.com`, zero `canonical` when SITE absent, entrance final-state checks, reduced-motion — will need narrow updates for authorized LinkedIn link and new copy
+- `public/` — only `favicon.svg`; missing `robots.txt` template
+
+## Approaches
+
+1. **Surgical minimal — fix correctness, keep motion system**
+   - Pros: Lowest risk, stays within `Design` tokens and existing GSAP lifecycle; preserves `motion.ts` `prefers-reduced-motion` teardown; fixes all correctness blockers (About→Contact, LinkedIn link, provenance copy, phone invariant) without re-architecture; E2E delta is small and focused.
+   - Cons: Leaves subtle motion imperceptibility and bundle weight (full GSAP) unaddressed; scroll jank from `smooth` + `will-change` only partially mitigated; SEO stays gated on `SITE` (still not index-ready without env); does not advance motion quality toward a distinct product voice.
+   - Effort: Low (single PR, <200 lines, no dependency change)
+
+2. **Layered motion + SEO hardening — correctness plus measurable performance/SEO**
+   - Pros: Fixes correctness plus adds causal performance work: make `scroll-behavior: smooth` scoped (remove global, keep only on `SkipLink`/hash), short-lived `will-change` (set before timeline, clear on complete), guard `mousemove` parallax to `pointer: fine` + `!prefersReduced` + `matchMedia('(hover:hover)')`, lazy `GSAP` or replace entrance with CSS `transform/opacity` + `prefers-reduced-motion` media, promote LinkedIn to constructed URL with `rel me` and update `Head.astro` `sameAs` to include LinkedIn; generate `robots.txt` + sitemap even when `SITE` absent for local verification or document why absence persists; add `preload`/`fetchpriority high` for per-route LCP image (hero on `/`, profile on `/about`, water-field on others) and `og:image` dimensions; removes all provenance copy and rewrites to finished product voice.
+   - Cons: Requires measuring before/after (LCP/INP/CLS via Lighthouse + Playwright trace) to keep the “performance” claim honest; touches motion lifecycle and Head, so needs cross-route verification (reduced-motion, ClientRouter back/forward, parallax teardown).
+   - Effort: Medium (1–2 PR slices: slice A correctness, slice B motion/SEO/perf with measurements)
+
+3. **Re-voice + token-driven motion system — correctness + brand polish**
+   - Pros: Treats motion as product: promote `--duration-*`/`--ease-*` tokens to authored entrance/ambient presets, replace generic `power3.out 0.55s y:18` with distinct staged entrances per scene (panel cascade vs hero vs timeline) with interruptibility and reduced-motion opacity fallbacks; wire `transition:animate="fade|slide"` on `ClientRouter` with `view-transition` names per scene; unify LinkedIn presence and prettify SEO with Organization/Breadcrumb JSON-LD and `SITE`-absent dev warning.
+   - Cons: Higher design risk and review load; needs `ui-design` admission and rendered verification on 3 viewports + reduced-motion; easy to overshoot into decoration on a facts-only portfolio.
+   - Effort: High (design proposal + verification, 400-line budget risk)
+
+## Recommendation
+
+Adopt **Approach 2 (Layered)** delivered in two chained slices:
+
+- **Slice A — Correctness & privacy tone (this change):** reroute About CTA to `/contact` (“Start a conversation →” or “Get in touch →”), promote LinkedIn handle to `https://www.linkedin.com/in/jonathan-soto-dev` everywhere it appears (`contact.astro` card, `index.astro` panel, `Footer.astro`) with `target _blank rel me noopener noreferrer`, export `linkedinUrl` from `site.ts` and update `Head.astro` `sameAs` to `[github, linkedinUrl]` (flagged as `constructed from authorized handle, not 999-verified`), strip all provenance sentences listed in #6 and rewrite to finished product voice (e.g., Contact header: “Direct channels. Fastest response is email — also on GitHub and LinkedIn.”; Experience header: “Experience. Two organizations, continuous work through studies.”; About header: keep USACH/WealthQuest facts without citing CV). Verify no phone/CV/provenance strings remain via `grep` over `dist/`.
+- **Slice B — Motion quality + SEO/perf hardening:** remove global `html scroll-behavior smooth` (or scope to `html:has(:target)`), make `will-change` short-lived (add before GSAP timeline, `clearProps`/`willChange: ""` on complete), gate `setupParallax` on `(hover:hover) and (pointer:fine)` + early return when `prefersReduced`, consider lazy-loading GSAP or replacing entrance with CSS `@starting-style` + `view-transitions`, add `robots.txt` (allow + sitemap hint) and keep sitemap gated but document local verification via `SITE` demo build, add per-route LCP `preload` and `fetchpriority high` on the above-fold image, and add `og:image` `1200×630` with declared dimensions.
+
+This keeps reviewer load under 400 lines per slice, preserves the “privacy by omission, not obfuscation” invariant without ever naming it in public, and satisfies the dispatched product decisions verbatim.
+
+## Risks
+
+- **SEO truth vs deploy truth:** Making LinkedIn a link before a live 999-verified fetch technically fabricates a URL from a handle. Mitigation: mark URL as `constructed from owner-authorized handle` in `site.ts` comment and PR notes; treat `e2e/content.spec.ts` `linkedin.com` zero assertion as needing a narrow carve-out for this handle only; consider `rel="me"` without claiming verification.
+- **Motion regression on ClientRouter back/forward:** `transition:persist` on `WaterField`/`bg-words` plus `killAll` timing can leave stale `will-change` or missed entrance on `astro:page-load` if listener order changes. Mitigation: test `astro:page-load`/`astro:before-swap` lifecycle on all six routes + mobile + reduced-motion in Playwright.
+- **Copy tone regression:** Stripping provenance lines removes needed context (e.g., “why text-only”). Mitigation: rewrite to affirmative product copy rather than deleting and leaving a gap; keep email/GitHub/LinkedIn affordances equally prominent.
+- **Performance claims without trace:** Bundle and LCP hypotheses (GSAP 71 KB, eager water-field) are static sizes; no Core Web Vitals trace exists yet. Mitigation: run Lighthouse/Playwright trace before claiming improvement; report evidence gap if trace unavailable.
+- **E2E churn:** Updating provenance expectations and canonical/sitemap guards will fail until tests are intentionally narrowed; avoid widening the net to “any linkedin.com is ok”.
+
+## Ready for Proposal
+
+Yes. Product decisions are explicit and require no further interview: About→Contact, LinkedIn becomes link from `jonathan-soto-dev` via `https://www.linkedin.com/in/jonathan-soto-dev` (flag constructed status), phone stays absent, provenance/development copy is removed ship-wide, CV/GitHub stay internal. The proposal should slice as above and include a measurement plan (baseline build sizes recorded here, Lighthouse/web-vitals trace as next motion, and `dist` grep guards for phone/CV/provenance). If CodeGraph fresh indexing re-ranks symbols, run `gentle-ai codegraph sync` before spec.

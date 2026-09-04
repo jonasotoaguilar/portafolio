@@ -29,7 +29,7 @@ Give hiring managers and engineering leads a fast, credible read on backend rang
 - Featured projects (exactly four): **opencode-tokenmeter**, **ServiceFlow**, **RAGuard**, **EventCommerce**. ServiceFlow described from current repository evidence (Next.js, TypeScript, PocketBase/Appwrite, Docker).
 - Skills, experience, about, and contact pages grounded in public GitHub and CV facts only.
 - Static SEO: custom Head, JSON-LD (no phone), `@astrojs/sitemap`.
-- Direct contact links only (email, LinkedIn handle, GitHub). Remote availability stated.
+- Direct contact links only (email `jonathansoto.dev@gmail.com`, LinkedIn `https://www.linkedin.com/in/jonathan-soto-dev`, GitHub `https://github.com/jonasotoaguilar`). Remote availability stated.
 
 ### Out
 
@@ -42,7 +42,7 @@ Give hiring managers and engineering leads a fast, credible read on backend rang
 ## Content Truth and Privacy
 
 - **Authorized sources only:** public GitHub (`https://github.com/jonasotoaguilar` and listed repos) and the owner-authorized CV (private source, not published). No other private store is in scope.
-- **Privacy-safe summarization:** summarize experience/education/thesis from verified facts; omit phone everywhere including JSON-LD. Public contact approved: `jonathansoto.dev@gmail.com`, LinkedIn handle `jonathan-soto-dev`, GitHub `https://github.com/jonasotoaguilar`. LinkedIn public URL is **unresolved** — see Unresolved Facts — handle only until verified.
+- **Privacy-safe summarization:** summarize experience/education/thesis from verified facts; omit phone everywhere including DOM, built HTML, metadata, and JSON-LD (no `tel:`/`telephone`/`8894`/`2050`/`+56`). Public contact approved: `jonathansoto.dev@gmail.com`, `https://www.linkedin.com/in/jonathan-soto-dev` (constructed from authorized handle `jonathan-soto-dev`; not 999-verified, `rel="me noopener noreferrer"`, `sameAs` includes GitHub + LinkedIn), and `https://github.com/jonasotoaguilar`.
 - **Facts-only positioning:** primary stack is Python, TypeScript, Java. Do not inflate seniority, scope, or shipped status. ServiceFlow stack follows repository evidence, not stale CV wording.
 - **Experience naming:** Productos Barber Chile and Policomp may be named with CV-verified roles/dates. Education and thesis (USACH, WealthQuest) may be included when verified against CV.
 
@@ -56,14 +56,14 @@ Give hiring managers and engineering leads a fast, credible read on backend rang
 
 ## Success Criteria (observable, no invented analytics targets)
 
-| Signal                                                                                         | How to verify                                       |
-| ---------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| A first-time hiring manager can reach a featured project repo in one click from `/projects`    | Manual navigation + link check                      |
-| All six routes render distinct scenes with shared grammar and no section-scroll dependency     | Route audit in `astro build` output + visual review |
-| Keyboard can reach every interactive element with visible focus and semantic routes/deep links | Keyboard walkthrough + axe in Playwright            |
-| Contact page offers static direct links only and exposes no form or phone in DOM or JSON-LD    | DOM + JSON-LD inspection                            |
-| Site passes `astro check` and `astro build`; axe checks pass in Playwright                     | CI-equivalent local runs (see PRD.md)               |
-| Content stays within authorized sources; no phone or unverified LinkedIn URL ships             | Content review against CV/GitHub (see PRD.md)       |
+| Signal                                                                                                                                                         | How to verify                                       |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| A first-time hiring manager can reach a featured project repo in one click from `/projects`                                                                    | Manual navigation + link check                      |
+| All six routes render distinct scenes with shared grammar and no section-scroll dependency                                                                     | Route audit in `astro build` output + visual review |
+| Keyboard can reach every interactive element with visible focus and semantic routes/deep links                                                                 | Keyboard walkthrough + axe in Playwright            |
+| Contact page offers static direct links only and exposes no form or phone in DOM or JSON-LD                                                                    | DOM + JSON-LD inspection                            |
+| Site passes `astro check` and `astro build`; axe checks pass in Playwright                                                                                     | CI-equivalent local runs (see PRD.md)               |
+| Content stays within authorized sources; no phone ships; LinkedIn ships only as the authorized constructed URL `https://www.linkedin.com/in/jonathan-soto-dev` | Content review against CV/GitHub (see PRD.md)       |
 
 ## Routes
 
@@ -75,6 +75,6 @@ Persona 3 Reload direction is inspiration only. This portfolio is an original wo
 
 ## Unresolved Facts
 
-- LinkedIn public profile URL for handle `jonathan-soto-dev` could not be verified against an authoritative fetch (LinkedIn returns 999/auth-wall). Record handle only; do not fabricate a URL from the handle. Pages render it as text-only; E2E asserts zero `linkedin.com` links.
+- LinkedIn handle `jonathan-soto-dev` is owner-authorized; public URL `https://www.linkedin.com/in/jonathan-soto-dev` is constructed from that handle and shipped as a clickable link (Footer, `/`, `/contact`) with `rel="me noopener noreferrer"` and `sameAs` including `https://github.com/jonasotoaguilar` + `https://www.linkedin.com/in/jonathan-soto-dev`. The URL is marked in `src/data/site.ts` as constructed, not 999-verified (LinkedIn returns 999/auth-wall); no verification claim is made. Provenance copy and phone remain absent by design.
 - pnpm `packageManager` is now pinned at `11.25.0` (`package.json`), verified via lockfile and CI setup (`pnpm/action-setup` `11.25.0`).
 - `SITE` domain remains unresolved — `astro.config.mjs` enables `@astrojs/sitemap` and canonical/OG only when `SITE` env is set; without it those tags are intentionally absent.
