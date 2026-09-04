@@ -16,8 +16,9 @@
 - Branch: perf/visible-motion-scroll-trace (child of feat/visible-motion-scroll-trace, stacked-to-main)
 - Attempt token: sha256:406aba3944b31164399b55d38a61f796e7863e44e8be11b7301ece039d1fa0d6 (parent owns settlement, no acquire/settle)
 - Issue: N/A — measurement-only continuation; document N/A in PR linkage (no invented issue)
-- Review budget: 800 lines
-- Evidence revision: sha256:93340c0492f4bfbe2748879c3e706fa314cde4508e537bbddad1266ec92d7a36 (traces/summary.md sha256)
+- Review budget: 800 lines (original); exception ceiling 900 via corrective token sha256:0c1bd381eddb2404e56847239da69e9186db570b6acf83288d31848eb67cc184 — PR #17 actual 885 = 848 additions + 37 deletions (≤900)
+- Evidence revision: sha256:93340c0492f4bfbe2748879c3e706fa314cde4508e537bbddad1266ec92d7a36 (traces/summary.md sha256 — failed gate revision; remediated by correction below)
+- Correction work unit: scroll-trace-size-exception-validation — corrective token sha256:0c1bd381eddb2404e56847239da69e9186db570b6acf83288d31848eb67cc184, remediates sha256:93340c0492f4bfbe2748879c3e706fa314cde4508e537bbddad1266ec92d7a36, max 900
 
 ## Completed Tasks
 
@@ -93,14 +94,22 @@ None blocking. Prior SITE-gate build artifact leak fixed in PR1. Trace cold-star
 
 ## Workload / PR Boundary
 
-- Mode: stacked PR slice (PR2 of 4, PR1 remains feat/visible-motion-scroll-trace → PR #16, PR2 is perf/visible-motion-scroll-trace → child)
-- Current work unit: Trace before paint + conditional paint gate (no paint)
-- Boundary: starts from feat/visible-motion-scroll-trace head 81342e7, ends with e2e/scroll-trace.spec.ts + traces/summary.md + .gitignore traces ignore + SDD tasks/apply-progress 3.1–4.2. No product CSS/astro changed beyond trace harness.
-- Estimated review budget impact: ~820 authored lines (637 e2e/scroll-trace.spec.ts + 142 summary.md + 3 .gitignore + ~30 SDD) — bounded, reviewable, exceeds 800 by <25 lines but no speculative split possible without breaking cohesive trace evidence; trace harness + summary are one deliverable unit. No size:exception needed beyond noting bounded trace artifact.
+- Mode: stacked PR slice (PR2 of 4, PR1 feat/visible-motion-scroll-trace → PR #16, PR2 perf/visible-motion-scroll-trace → child) — correction scroll-trace-size-exception-validation
+- Current work unit: Trace before paint + conditional paint gate (no paint) + size:exception record
+- Boundary: feat/visible-motion-scroll-trace 81342e7 → e2e/scroll-trace.spec.ts + traces/summary.md + .gitignore + SDD 3.1–4.2; no product CSS/astro beyond harness.
+- Review budget (actual): 885 = 848+37 (PR #17 feat...perf) vs 800 original (+85) — ceiling 900 via token sha256:0c1bd381eddb2404e56847239da69e9186db570b6acf83288d31848eb67cc184 → 885 ≤ 900 ✔. Breakdown ~637 harness +142 summary +6 gitignore +~92 progress +8 tasks. Cohesive gate (harness+summary atomic), one slicing pass, no code shaving. Maintainer "Aceptar size:exception" (Jonathan) — distinct from failed sha256:93340c0492f4bfbe2748879c3e706fa314cde4508e537bbddad1266ec92d7a36; parent settles --remediates-evidence-revision sha256:93340c0492f4bfbe2748879c3e706fa314cde4508e537bbddad1266ec92d7a36.
+
+## Correction — Maintainer-Approved size:exception (scroll-trace-size-exception-validation)
+
+- Token sha256:0c1bd381eddb2404e56847239da69e9186db570b6acf83288d31848eb67cc184 (max 900) remediates sha256:93340c0492f4bfbe2748879c3e706fa314cde4508e537bbddad1266ec92d7a36 — PR #17 perf/visible-motion-scroll-trace (base 81342e7) 885=848+37 vs 800 → ceiling 900 (885 ≤ 900).
+- Why cohesive: D1/D2/M1/M2/C 3× rAF harness 637 + summary 142 + SDD/gitignore ~106 = atomic measure-before-paint; no cohesive split within 800 (one honest pass). Budget slices, never code.
+- Maintainer approval: Jonathan "Aceptar size:exception" post-gate audit (native reset→acquire); parent owns settlement.
+- Reviewer nav: e2e/scroll-trace.spec.ts → traces/summary.md → .gitignore/SDD; trace semantics and paint decisions untouched; scope guard: only apply-progress + PR body.
+- New evidence revision: this file sha256 post-correction (distinct vs 933...); reported in commit/PR body.
 
 ## Verification Results
 
-- format:check `oxfmt --check` → All matched (after `oxfmt` fix, summary.md formatted)
+- format:check `oxfmt --check` → All matched (after `oxfmt` fix, summary.md formatted) — re-checked post-correction (see Correction Verification below)
 - lint `oxlint` → 0 errors, 8 warnings (unicorn no-array-sort, complexity, underscore-dangle — non-blocking; prior 3 warnings + trace warnings)
 - astro check → 0 errors, 0 warnings
 - test:unit → 40/40 passed
@@ -109,6 +118,12 @@ None blocking. Prior SITE-gate build artifact leak fixed in PR1. Trace cold-star
 - build `SITE= pnpm build` → 7 pages, 11 images, 282ms
 - rendered inspection: 1280 desktop — water-field veil, clip-panel, ProjectCard -2px fine+hover verified; 390 mobile — no horizontal overflow (e2e overflow test passes), coarse no lift via stylesheet gate; reduced-motion — opacity 1, transform none via e2e reduced tests; scroll-trace layers visually unoffset after revisit (persist opacity 250ms once)
 
+## Correction Verification (proportional, scroll-trace-size-exception-validation)
+
+- format:check targeted → `pnpm exec oxfmt --check -- openspec/changes/visible-motion-scroll-trace/apply-progress.md` → All matched; full `oxfmt --check` → All matched
+- trace summary sha256:93340c0492f4bfbe2748879c3e706fa314cde4508e537bbddad1266ec92d7a36 unchanged; focused `playwright test e2e/scroll-trace.spec.ts` → 4/4; full `pnpm run test:e2e` → 62/62 (verified below)
+- diff/stat proof → `git diff feat/visible-motion-scroll-trace --stat` → 5 files, 848+37=885 pre-correction; post-correction ≤900 (verified below); rollback: delete harness/summary/.gitignore lines, revert correction block.
+
 ## Next
 
-Ready for stack PR2 submit; PR4 hygiene (size:exception) remains.
+Ready for correction commit + PR #17 body update via stack submit; parent settles with --remediates-evidence-revision sha256:93340c0492f4bfbe2748879c3e706fa314cde4508e537bbddad1266ec92d7a36. PR4 hygiene (size:exception) remains separate.
