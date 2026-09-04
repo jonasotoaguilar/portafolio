@@ -33,7 +33,7 @@ Astro 7.2.10 static site (`output: "static"`) with Tailwind 4.3.3 (`@tailwindcss
    - `src/pages/contact.astro:98` `No phone number exists in the DOM or JSON-LD. Privacy by omission — not by obfuscation.`
    - `src/pages/experience.astro:20` `Roles and dates as verified from the owner-authorized CV. No invented titles. Only Productos Barber Chile and Policomp are named — with continuity through studies.`
    - `src/pages/about.astro:101` `See verified roles and dates on the next menu.` (provenance-teaching copy + misdirection per #3)
-     Additional pattern hits in public copy that read as meta/provenance: `src/pages/projects.astro:24` `ServiceFlow stack follows live PocketBase backend in Docker Compose (Appwrite noted as description legacy).` and `src/pages/about.astro:59` `This portfolio is facts-only from public GitHub and the owner-authorized CV.` and `src/pages/about.astro:92–93` `Thesis and publication facts trace to the CV; co-authors include Soto Aguilar. No private store is published.` — all are inventory/provenance voice that should become finished product copy. Full copy search also flags `Evidence over claims`, `Repo links verified`, `Privacy-safe` chips and similar meta-phrasing.
+   Additional pattern hits in public copy that read as meta/provenance: `src/pages/projects.astro:24` `ServiceFlow stack follows live PocketBase backend in Docker Compose (Appwrite noted as description legacy).` and `src/pages/about.astro:59` `This portfolio is facts-only from public GitHub and the owner-authorized CV.` and `src/pages/about.astro:92–93` `Thesis and publication facts trace to the CV; co-authors include Soto Aguilar. No private store is published.` — all are inventory/provenance voice that should become finished product copy. Full copy search also flags `Evidence over claims`, `Repo links verified`, `Privacy-safe` chips and similar meta-phrasing.
 
 7. **CV/GitHub as internal source only** — Currently violated by public-facing provenance sentences (see #6). Public copy must read as product (“Backend Engineer, Santiago · Open to remote. Available for collaborations on…” rather than “Facts from CV…”). No `CV` string should ship in public DOM.
 
@@ -42,7 +42,6 @@ Astro 7.2.10 static site (`output: "static"`) with Tailwind 4.3.3 (`@tailwindcss
 9. **Screenshot evidence** — Confirmed in source: About card `See verified roles…` + `EXPERIENCE TIMELINE →` to `/experience`; Contact card email (`mailto:` anchor) + GitHub (`target _blank`) are clickable, LinkedIn is `<span>` text-only. Matches reported screenshots.
 
 ## Affected Areas
-
 - `src/pages/about.astro` — misdirected CTA to `/experience`, provenance sentence `See verified roles...`, `Facts-only...` bio phrasing
 - `src/pages/contact.astro` — three dev/provenance paragraphs + LinkedIn `<span>` that must become `<a href="https://www.linkedin.com/in/jonathan-soto-dev">`, text-only guard string `No fabricated LinkedIn URL…`
 - `src/pages/experience.astro` — provenance sentence `Roles and dates as verified...` (remove or rewrite as product copy)
@@ -59,7 +58,6 @@ Astro 7.2.10 static site (`output: "static"`) with Tailwind 4.3.3 (`@tailwindcss
 - `public/` — only `favicon.svg`; missing `robots.txt` template
 
 ## Approaches
-
 1. **Surgical minimal — fix correctness, keep motion system**
    - Pros: Lowest risk, stays within `Design` tokens and existing GSAP lifecycle; preserves `motion.ts` `prefers-reduced-motion` teardown; fixes all correctness blockers (About→Contact, LinkedIn link, provenance copy, phone invariant) without re-architecture; E2E delta is small and focused.
    - Cons: Leaves subtle motion imperceptibility and bundle weight (full GSAP) unaddressed; scroll jank from `smooth` + `will-change` only partially mitigated; SEO stays gated on `SITE` (still not index-ready without env); does not advance motion quality toward a distinct product voice.
@@ -76,7 +74,6 @@ Astro 7.2.10 static site (`output: "static"`) with Tailwind 4.3.3 (`@tailwindcss
    - Effort: High (design proposal + verification, 400-line budget risk)
 
 ## Recommendation
-
 Adopt **Approach 2 (Layered)** delivered in two chained slices:
 
 - **Slice A — Correctness & privacy tone (this change):** reroute About CTA to `/contact` (“Start a conversation →” or “Get in touch →”), promote LinkedIn handle to `https://www.linkedin.com/in/jonathan-soto-dev` everywhere it appears (`contact.astro` card, `index.astro` panel, `Footer.astro`) with `target _blank rel me noopener noreferrer`, export `linkedinUrl` from `site.ts` and update `Head.astro` `sameAs` to `[github, linkedinUrl]` (flagged as `constructed from authorized handle, not 999-verified`), strip all provenance sentences listed in #6 and rewrite to finished product voice (e.g., Contact header: “Direct channels. Fastest response is email — also on GitHub and LinkedIn.”; Experience header: “Experience. Two organizations, continuous work through studies.”; About header: keep USACH/WealthQuest facts without citing CV). Verify no phone/CV/provenance strings remain via `grep` over `dist/`.
@@ -85,7 +82,6 @@ Adopt **Approach 2 (Layered)** delivered in two chained slices:
 This keeps reviewer load under 400 lines per slice, preserves the “privacy by omission, not obfuscation” invariant without ever naming it in public, and satisfies the dispatched product decisions verbatim.
 
 ## Risks
-
 - **SEO truth vs deploy truth:** Making LinkedIn a link before a live 999-verified fetch technically fabricates a URL from a handle. Mitigation: mark URL as `constructed from owner-authorized handle` in `site.ts` comment and PR notes; treat `e2e/content.spec.ts` `linkedin.com` zero assertion as needing a narrow carve-out for this handle only; consider `rel="me"` without claiming verification.
 - **Motion regression on ClientRouter back/forward:** `transition:persist` on `WaterField`/`bg-words` plus `killAll` timing can leave stale `will-change` or missed entrance on `astro:page-load` if listener order changes. Mitigation: test `astro:page-load`/`astro:before-swap` lifecycle on all six routes + mobile + reduced-motion in Playwright.
 - **Copy tone regression:** Stripping provenance lines removes needed context (e.g., “why text-only”). Mitigation: rewrite to affirmative product copy rather than deleting and leaving a gap; keep email/GitHub/LinkedIn affordances equally prominent.
@@ -93,5 +89,5 @@ This keeps reviewer load under 400 lines per slice, preserves the “privacy by 
 - **E2E churn:** Updating provenance expectations and canonical/sitemap guards will fail until tests are intentionally narrowed; avoid widening the net to “any linkedin.com is ok”.
 
 ## Ready for Proposal
-
 Yes. Product decisions are explicit and require no further interview: About→Contact, LinkedIn becomes link from `jonathan-soto-dev` via `https://www.linkedin.com/in/jonathan-soto-dev` (flag constructed status), phone stays absent, provenance/development copy is removed ship-wide, CV/GitHub stay internal. The proposal should slice as above and include a measurement plan (baseline build sizes recorded here, Lighthouse/web-vitals trace as next motion, and `dist` grep guards for phone/CV/provenance). If CodeGraph fresh indexing re-ranks symbols, run `gentle-ai codegraph sync` before spec.
+

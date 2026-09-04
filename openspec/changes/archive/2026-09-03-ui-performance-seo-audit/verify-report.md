@@ -140,23 +140,23 @@ Production `src/scripts/motion.ts` `allowsParallax()` remains `(hover: hover) an
 
 ### Correctness (Static Evidence)
 
-| Requirement                          | Status         | Notes                                                                            |
-| ------------------------------------ | -------------- | -------------------------------------------------------------------------------- |
-| About CTA Advances to Contact        | ✅ Implemented | `/about` primary control `GET IN CONTACT` `href="/contact"`                      |
-| Authorized LinkedIn URL              | ✅ Implemented | `site.linkedinUrl` exact URL; Footer/home/contact `rel="me noopener noreferrer"` |
-| Phone Number Omitted                 | ✅ Implemented | No tel/telephone/8894/2050/+56 in product pages or either dist                   |
-| Public Voice Is Finished Product     | ✅ Implemented | Contact/About/Experience product language; copy-deny is test-only                |
-| No Public Proof / Provenance         | ✅ Implemented | No public `CV`; GitHub is a channel                                              |
-| Absolute SEO When Site Is Set        | ✅ Implemented | Head helpers + robots Sitemap + sitemap integration gated on SITE                |
-| Missing Site Does Not Fabricate URLs | ✅ Implemented | `astro.config.mjs` does not invent `site`; helpers return undefined              |
-| SEO Independent of Performance       | ✅ Implemented | Performance tests do not require canonical/OG                                    |
-| Reduced Motion                       | ✅ Implemented | `prefersReduced()` short-circuits entrance/parallax; CSS reduce media            |
-| Pointer Parallax Gated               | ✅ Implemented | `allowsParallax()` hover+fine && !reduce; e2e now proves enable and skip         |
-| Will-Change Transient                | ✅ Implemented | JS `setTransientWillChange` / `clearWillChange`; no standing CSS will-change     |
-| Persist Teardown                     | ✅ Implemented | `astro:before-swap` → `destroyMotion`/`killAll` resets transform                 |
-| Smooth Scroll                        | ✅ Implemented | global `html { scroll-behavior: smooth }` removed; reduce media sets auto        |
-| LCP Hints                            | ✅ Implemented | `/` hero and `/about` profile `priority`; WaterField `loading="lazy"`            |
-| Claims Require Evidence              | ✅ Implemented | No performance-win claim; GSAP retained                                          |
+| Requirement                          | Status             | Notes                                                                            |
+| ------------------------------------ | ------------------ | -------------------------------------------------------------------------------- |
+| About CTA Advances to Contact        | ✅ Implemented     | `/about` primary control `GET IN CONTACT` `href="/contact"`                      |
+| Authorized LinkedIn URL              | ✅ Implemented     | `site.linkedinUrl` exact URL; Footer/home/contact `rel="me noopener noreferrer"` |
+| Phone Number Omitted                 | ✅ Implemented     | No tel/telephone/8894/2050/+56 in product pages or either dist                   |
+| Public Voice Is Finished Product     | ✅ Implemented     | Contact/About/Experience product language; copy-deny is test-only                |
+| No Public Proof / Provenance         | ✅ Implemented     | No public `CV`; GitHub is a channel                                              |
+| Absolute SEO When Site Is Set        | ✅ Implemented     | Head helpers + robots Sitemap + sitemap integration gated on SITE                |
+| Missing Site Does Not Fabricate URLs | ✅ Implemented     | `astro.config.mjs` does not invent `site`; helpers return undefined              |
+| SEO Independent of Performance       | ✅ Implemented     | Performance tests do not require canonical/OG                                    |
+| Reduced Motion                       | ✅ Implemented     | `prefersReduced()` short-circuits entrance/parallax; CSS reduce media            |
+| Pointer Parallax Gated               | ✅ Implemented     | `allowsParallax()` hover+fine && !reduce; e2e now proves enable and skip         |
+| Will-Change Transient                | ✅ Implemented     | JS `setTransientWillChange` / `clearWillChange`; no standing CSS will-change     |
+| Persist Teardown                     | ✅ Implemented     | `astro:before-swap` → `destroyMotion`/`killAll` resets transform                 |
+| Smooth Scroll                        | ✅ Implemented     | global `html { scroll-behavior: smooth }` removed; reduce media sets auto        |
+| LCP Hints                            | ✅ Implemented     | `/` hero and `/about` profile `priority`; WaterField `loading="lazy"`            |
+| Claims Require Evidence              | ✅ Implemented     | No performance-win claim; GSAP retained                                          |
 
 ### Coherence (Design)
 

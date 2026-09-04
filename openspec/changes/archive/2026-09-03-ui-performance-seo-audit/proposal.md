@@ -7,7 +7,6 @@ Public routes ship provenance copy, a backward About CTA, and a non-clickable Li
 ## Scope
 
 ### In Scope
-
 - About CTA advances to `/contact`. LinkedIn `jonathan-soto-dev` becomes https://www.linkedin.com/in/jonathan-soto-dev on contact, home, Footer (`rel="me noopener noreferrer"`); JSON-LD `sameAs`; constructed-from-handle, not 999-verified.
 - Phone omitted from DOM, built HTML, metadata, JSON-LD. Rewrite public development/provenance/source-verification copy as finished-product copy; no public `CV`; CV/GitHub internal inputs only.
 - SEO when `site`/`SITE` set: canonical, sitemap, robots hint, absolute OG URL/image dimensions; never fabricate `site`.
@@ -15,13 +14,11 @@ Public routes ship provenance copy, a backward About CTA, and a non-clickable Li
 - Runtime performance: LCP hints on true LCP images; GSAP vs CSS only as measured tradeoff.
 
 ### Out of Scope
-
 Live LinkedIn fetch; fabricating `SITE`; Approach 3 re-voice; phone/forms/trackers; unmeasured performance claims.
 
 ## Capabilities
 
 ### New Capabilities
-
 - `public-contact-channels`: About→Contact; constructed LinkedIn link; phone omitted
 - `finished-product-copy`: finished-product public voice; CV/GitHub internal only
 - `seo-discoverability`: canonical, sitemap, robots, OG, sameAs when site set; independent of runtime performance
@@ -29,7 +26,6 @@ Live LinkedIn fetch; fabricating `SITE`; Approach 3 re-voice; phone/forms/tracke
 - `runtime-performance`: LCP/bundle work; no claim without before/after evidence
 
 ### Modified Capabilities
-
 None
 
 ## Approach

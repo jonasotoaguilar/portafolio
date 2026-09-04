@@ -78,3 +78,4 @@ Selected research lane is **done**. Every admitted question (Q1..Q6) is supporte
 Gate per `research-lifecycle.md`: selected research is ready only when evidence is valid and `done`, decisions are `confirmed`, references valid, and selected store mode ready. All true → `proposal_ready: true`.
 
 Next: `sdd-propose` may run; it must receive this confirmed pre-proposal handoff and MUST NOT re-interview or infer consent. If any future evidence revision contradicts, bump `revision` and re-validate.
+
