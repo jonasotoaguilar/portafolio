@@ -43,13 +43,13 @@ Motion+trace ~460–700; paint 0 or 20–80. Hygiene untracks 26 `.agents/skills
 
 ## Phase 3: Trace before paint
 
-- [ ] 3.1 RED `e2e/scroll-trace.spec.ts`: D1/D2/M1/M2/C, 3×. Before blur/fixed-layer edits.
-- [ ] 3.2 GREEN `.gitignore` ignore traces except `openspec/changes/visible-motion-scroll-trace/traces/summary.md`. Pass → **no paint change**. Fail → one candidate.
+- [x] 3.1 RED `e2e/scroll-trace.spec.ts`: D1/D2/M1/M2/C, 3×. Before blur/fixed-layer edits.
+- [x] 3.2 GREEN `.gitignore` ignore traces except `openspec/changes/visible-motion-scroll-trace/traces/summary.md`. Pass → **no paint change**. Fail → one candidate.
 
 ## Phase 4: Paint iff fail
 
-- [ ] 4.1 RED same matrix. Missing attribution → do not ship.
-- [ ] 4.2 GREEN one variable: ghost blur isolation **or** `.water-field` `contain: paint` **or** `.bg-word` isolation. Variance → revert.
+- [x] 4.1 RED same matrix. Missing attribution → do not ship.
+- [x] 4.2 GREEN one variable: ghost blur isolation **or** `.water-field` `contain: paint` **or** `.bg-word` isolation. Variance → revert.
 
 ## Phase 5: Hygiene (no spec)
 

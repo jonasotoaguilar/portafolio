@@ -34,3 +34,7 @@ Thumbs.db
 !.agents/skills/astro-framework/**
 .sdd/
 skills-lock.json
+
+# Scroll trace raw artifacts (keep summary)
+openspec/changes/visible-motion-scroll-trace/traces/*
+!openspec/changes/visible-motion-scroll-trace/traces/summary.md
