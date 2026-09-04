@@ -9,7 +9,7 @@ const { project, index } = Astro.props as Props;
 const kicker = String(index + 1).padStart(2, "0");
 ---
 
-<article class="clip-panel flex flex-col p-5 sm:p-6" data-entrance style={`transition-delay:${index * 60}ms`}>
+<article class="clip-panel project-card flex flex-col p-5 sm:p-6" data-entrance>
   <div class="flex items-start justify-between gap-4">
     <div class="flex items-center gap-2">
       <span class="inline-flex h-7 min-w-7 items-center justify-center border border-[var(--color-ink)] bg-[var(--color-ink)] px-2 font-mono text-[0.7rem] font-bold tracking-widest text-white">

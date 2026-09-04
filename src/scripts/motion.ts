@@ -4,6 +4,7 @@
  * transient will-change only while motion in flight, cleans up before swap.
  */
 import { gsap } from "gsap";
+import { MOTION } from "./motion-tokens";
 
 let ctx: gsap.Context | null = null;
 let onMove: ((e: MouseEvent) => void) | null = null;
@@ -139,7 +140,7 @@ function createEntranceTimeline(entrances: NodeListOf<HTMLElement>, ambient: Amb
   setTransientWillChange(entrances, ambient);
   ctx = gsap.context(() => {
     const tl = gsap.timeline({
-      defaults: { ease: "power3.out" },
+      defaults: { ease: MOTION.ease },
       onComplete: () => {
         clearWillChange();
         // ensure entrance final state is clean
@@ -156,12 +157,12 @@ function createEntranceTimeline(entrances: NodeListOf<HTMLElement>, ambient: Amb
     if (entrances.length) {
       tl.fromTo(
         entrances,
-        { y: 18, opacity: 0 },
+        { y: MOTION.entranceY, opacity: 0 },
         {
           y: 0,
           opacity: 1,
-          duration: 0.55,
-          stagger: 0.06,
+          duration: MOTION.entranceDuration,
+          stagger: MOTION.entranceStagger,
           overwrite: "auto",
         },
         0,
@@ -180,6 +181,8 @@ function createEntranceTimeline(entrances: NodeListOf<HTMLElement>, ambient: Amb
     }
     if (ambient.shouldAnimateAmbient) {
       animateAmbientVisible(tl, ambient);
+    } else if (!hasReenteredPersisted && ambient.isPersisted && !prefersReduced()) {
+      animatePersistedReentry(tl, ambient);
     } else {
       finalizePersistedAmbient(ambient);
     }
@@ -275,6 +278,59 @@ function watchReducedMotion(): void {
 }
 
 let isRunning = false;
+let hasReenteredPersisted = false;
+
+function animatePersistedReentry(tl: gsap.core.Timeline, ambient: AmbientNodes): void {
+  // opacity-only 250ms re-entry exactly once after teardown, no transform/scale
+  if (prefersReduced()) {
+    finalizePersistedAmbient(ambient);
+    return;
+  }
+  // set transient will-change for opacity only
+  if (ambient.waterImg) ambient.waterImg.style.willChange = "opacity";
+  if (ambient.caustic) ambient.caustic.style.willChange = "opacity";
+  for (const w of ambient.bgWords) w.style.willChange = "opacity";
+  if (ambient.waterImg) {
+    tl.fromTo(
+      ambient.waterImg,
+      { opacity: 0 },
+      { opacity: 0.42, duration: MOTION.ambientReentry, overwrite: "auto" },
+      0,
+    );
+  }
+  if (ambient.caustic) {
+    tl.fromTo(
+      ambient.caustic,
+      { opacity: 0 },
+      { opacity: 0.9, duration: MOTION.ambientReentry, overwrite: "auto" },
+      0,
+    );
+  }
+  if (ambient.bgWords.length) {
+    const normal = Array.from(ambient.bgWords).filter(
+      (w) => !w.classList.contains("bg-word--cyan"),
+    );
+    const cyan = Array.from(ambient.bgWords).filter((w) => w.classList.contains("bg-word--cyan"));
+    if (normal.length) {
+      tl.fromTo(
+        normal,
+        { opacity: 0 },
+        { opacity: 0.045, duration: MOTION.ambientReentry, stagger: 0.02, overwrite: "auto" },
+        0,
+      );
+    }
+    if (cyan.length) {
+      tl.fromTo(
+        cyan,
+        { opacity: 0 },
+        { opacity: 0.07, duration: MOTION.ambientReentry, overwrite: "auto" },
+        0,
+      );
+    }
+  }
+  hasReenteredPersisted = true;
+}
+
 function runEntrance() {
   if (isRunning) killAll();
   isRunning = true;
@@ -304,6 +360,7 @@ export function initMotion(): void {
 export function destroyMotion(): void {
   killAll();
   isRunning = false;
+  hasReenteredPersisted = false;
 }
 
 // Astro lifecycle — initialize exactly once on page-load, teardown before swap

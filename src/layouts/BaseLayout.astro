@@ -1,6 +1,7 @@
 ---
 import "../styles/global.css";
 import { ClientRouter } from "astro:transitions";
+import { fade } from "astro:transitions";
 import Head from "../components/Head.astro";
 import SkipLink from "../components/SkipLink.astro";
 import SiteNav from "../components/SiteNav.astro";
@@ -20,7 +21,7 @@ const currentPath = Astro.url.pathname;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" transition:animate={fade({ duration: "250ms" })}>
   <head>
     <Head title={title} description={description} path={path ?? currentPath} noindex={noindex} />
     <ClientRouter />
