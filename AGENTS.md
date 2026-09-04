@@ -11,9 +11,7 @@ When working on this project, load the relevant skill(s) BEFORE doing the work t
 
 ## Skills
 
-| Skill           | Trigger                                                                                  | Path                                                                                 |
-| --------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| astro-framework | Astro component, routing, `astro:assets`, `ClientRouter` view transitions, static output | [`.agents/skills/astro-framework/SKILL.md`](.agents/skills/astro-framework/SKILL.md) |
+No tracked skills are published in this repository. Local skills under `.agents/` are ignored via `.gitignore` and remain local-only.
 
 ## Relevant Documentation
 

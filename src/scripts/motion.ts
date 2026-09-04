@@ -1,8 +1,10 @@
 /**
  * Bounded GSAP entrance + subtle water parallax.
- * Respects prefers-reduced-motion, reinits after Astro navigation, cleans up timelines/listeners.
+ * Respects prefers-reduced-motion, gates parallax on hover+fine pointer,
+ * transient will-change only while motion in flight, cleans up before swap.
  */
 import { gsap } from "gsap";
+import { MOTION } from "./motion-tokens";
 
 let ctx: gsap.Context | null = null;
 let onMove: ((e: MouseEvent) => void) | null = null;
@@ -13,6 +15,12 @@ function prefersReduced(): boolean {
   return (
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
+}
+
+function allowsParallax(): boolean {
+  if (prefersReduced()) return false;
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 }
 
 let quickX: ((v: number) => void) | null = null;
@@ -31,10 +39,25 @@ type AmbientNodes = {
   shouldAnimateAmbient: boolean;
 };
 
+function clearWillChange() {
+  for (const el of document.querySelectorAll<HTMLElement>(
+    "[data-entrance], .water-field__image, .water-field__caustic, .bg-word",
+  )) {
+    el.style.willChange = "";
+  }
+}
+
 function killAll() {
+  // revert GSAP context (kills tweens, timelines)
   if (ctx) {
     ctx.revert();
     ctx = null;
+  }
+  // kill any remaining tweens on persisted nodes (gsap revert may not clear quickTo)
+  for (const el of document.querySelectorAll<HTMLElement>(
+    ".water-field__image, .water-field__caustic, .bg-word, [data-entrance]",
+  )) {
+    gsap.killTweensOf(el);
   }
   if (onMove) {
     window.removeEventListener("mousemove", onMove);
@@ -48,12 +71,27 @@ function killAll() {
   quickY = null;
   quickXVeil = null;
   quickYVeil = null;
-  // Reset ambient parallax state to avoid stale transforms across navigations
+
+  // Clear transient will-change and reset persisted transforms to avoid stale offset
+  clearWillChange();
   for (const el of document.querySelectorAll<HTMLElement>(
     ".water-field__image, .water-field__caustic",
   )) {
+    // gsap quickTo sets transform via inline x/y; reset via gsap to ensure no stale
+    gsap.set(el, { x: 0, y: 0, clearProps: "transform" });
+    el.style.transform = "none";
+    // ensure willChange already cleared
+  }
+  for (const el of document.querySelectorAll<HTMLElement>(".bg-word")) {
+    el.style.transform = "";
+    // opacity stays via CSS, but ensure no stale inline transform
+  }
+  // Also clear entrance transient will-change and reset if needed (opacity handled elsewhere)
+  for (const el of document.querySelectorAll<HTMLElement>("[data-entrance]")) {
+    // keep is-entrance-visible state but ensure no stale willChange
     el.style.willChange = "";
   }
+
   if (reduceMql && reduceHandler) {
     reduceMql.removeEventListener("change", reduceHandler);
     reduceMql = null;
@@ -67,11 +105,17 @@ function applyReducedMotionState(): void {
     el.classList.add("is-entrance-visible");
     el.style.opacity = "";
     el.style.transform = "";
+    el.style.willChange = "";
   }
   for (const el of document.querySelectorAll<HTMLElement>(
     ".water-field__image, .water-field__caustic",
   )) {
     el.style.transform = "none";
+    el.style.willChange = "";
+  }
+  for (const el of document.querySelectorAll<HTMLElement>(".bg-word")) {
+    el.style.transform = "";
+    el.style.willChange = "";
   }
 }
 
@@ -85,18 +129,40 @@ function collectAmbient(): AmbientNodes {
   return { waterImg, caustic, bgWords, isPersisted, shouldAnimateAmbient };
 }
 
+function setTransientWillChange(entrances: NodeListOf<HTMLElement>, ambient: AmbientNodes) {
+  for (const el of entrances) el.style.willChange = "transform, opacity";
+  if (ambient.waterImg) ambient.waterImg.style.willChange = "transform";
+  if (ambient.caustic) ambient.caustic.style.willChange = "transform";
+  for (const w of ambient.bgWords) w.style.willChange = "transform, opacity";
+}
+
 function createEntranceTimeline(entrances: NodeListOf<HTMLElement>, ambient: AmbientNodes): void {
+  setTransientWillChange(entrances, ambient);
   ctx = gsap.context(() => {
-    const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+    const tl = gsap.timeline({
+      defaults: { ease: MOTION.ease },
+      onComplete: () => {
+        clearWillChange();
+        // ensure entrance final state is clean
+        for (const el of entrances) {
+          el.classList.add("is-entrance-visible");
+          el.style.transform = "";
+          el.style.opacity = "";
+        }
+      },
+      onInterrupt: () => {
+        clearWillChange();
+      },
+    });
     if (entrances.length) {
       tl.fromTo(
         entrances,
-        { y: 18, opacity: 0 },
+        { y: MOTION.entranceY, opacity: 0 },
         {
           y: 0,
           opacity: 1,
-          duration: 0.55,
-          stagger: 0.06,
+          duration: MOTION.entranceDuration,
+          stagger: MOTION.entranceStagger,
           overwrite: "auto",
         },
         0,
@@ -115,9 +181,13 @@ function createEntranceTimeline(entrances: NodeListOf<HTMLElement>, ambient: Amb
     }
     if (ambient.shouldAnimateAmbient) {
       animateAmbientVisible(tl, ambient);
+    } else if (!hasReenteredPersisted && ambient.isPersisted && !prefersReduced()) {
+      animatePersistedReentry(tl, ambient);
     } else {
       finalizePersistedAmbient(ambient);
     }
+    // Ensure will-change cleared even if timeline completes without onComplete (also killAll covers)
+    tl.call(() => clearWillChange(), undefined, ">");
   });
 }
 
@@ -147,14 +217,23 @@ function finalizePersistedAmbient(ambient: AmbientNodes): void {
   if (ambient.waterImg) {
     ambient.waterImg.style.opacity = "0.42";
     ambient.waterImg.style.transform = "none";
+    ambient.waterImg.style.willChange = "";
   }
-  if (ambient.caustic) ambient.caustic.style.opacity = "0.9";
+  if (ambient.caustic) {
+    ambient.caustic.style.opacity = "0.9";
+    ambient.caustic.style.willChange = "";
+  }
   for (const w of ambient.bgWords) {
     w.style.opacity = w.classList.contains("bg-word--cyan") ? "0.07" : "0.045";
+    w.style.willChange = "";
+    w.style.transform = "";
   }
+  // persisted ambient should not retain will-change
+  clearWillChange();
 }
 
 function setupParallax(ambient: AmbientNodes): void {
+  if (!allowsParallax()) return;
   const img = ambient.waterImg;
   const veil = ambient.caustic;
   if (!img && !veil) return;
@@ -169,7 +248,7 @@ function setupParallax(ambient: AmbientNodes): void {
     quickYVeil = gsap.quickTo(veil, "y", { duration: 1, ease: "power2.out" });
   }
   onMove = (e: MouseEvent) => {
-    if (prefersReduced()) return;
+    if (!allowsParallax()) return;
     pendingX = (e.clientX / window.innerWidth - 0.5) * 10;
     pendingY = (e.clientY / window.innerHeight - 0.5) * 8;
     if (parallaxRaf) return;
@@ -185,6 +264,7 @@ function setupParallax(ambient: AmbientNodes): void {
 }
 
 function watchReducedMotion(): void {
+  // avoid duplicate listeners: killAll already cleared previous
   reduceMql = window.matchMedia("(prefers-reduced-motion: reduce)");
   reduceHandler = () => {
     if (reduceMql?.matches) {
@@ -197,10 +277,67 @@ function watchReducedMotion(): void {
   reduceMql.addEventListener("change", reduceHandler);
 }
 
+let isRunning = false;
+let hasReenteredPersisted = false;
+
+function animatePersistedReentry(tl: gsap.core.Timeline, ambient: AmbientNodes): void {
+  // opacity-only 250ms re-entry exactly once after teardown, no transform/scale
+  if (prefersReduced()) {
+    finalizePersistedAmbient(ambient);
+    return;
+  }
+  // set transient will-change for opacity only
+  if (ambient.waterImg) ambient.waterImg.style.willChange = "opacity";
+  if (ambient.caustic) ambient.caustic.style.willChange = "opacity";
+  for (const w of ambient.bgWords) w.style.willChange = "opacity";
+  if (ambient.waterImg) {
+    tl.fromTo(
+      ambient.waterImg,
+      { opacity: 0 },
+      { opacity: 0.42, duration: MOTION.ambientReentry, overwrite: "auto" },
+      0,
+    );
+  }
+  if (ambient.caustic) {
+    tl.fromTo(
+      ambient.caustic,
+      { opacity: 0 },
+      { opacity: 0.9, duration: MOTION.ambientReentry, overwrite: "auto" },
+      0,
+    );
+  }
+  if (ambient.bgWords.length) {
+    const normal = Array.from(ambient.bgWords).filter(
+      (w) => !w.classList.contains("bg-word--cyan"),
+    );
+    const cyan = Array.from(ambient.bgWords).filter((w) => w.classList.contains("bg-word--cyan"));
+    if (normal.length) {
+      tl.fromTo(
+        normal,
+        { opacity: 0 },
+        { opacity: 0.045, duration: MOTION.ambientReentry, stagger: 0.02, overwrite: "auto" },
+        0,
+      );
+    }
+    if (cyan.length) {
+      tl.fromTo(
+        cyan,
+        { opacity: 0 },
+        { opacity: 0.07, duration: MOTION.ambientReentry, overwrite: "auto" },
+        0,
+      );
+    }
+  }
+  hasReenteredPersisted = true;
+}
+
 function runEntrance() {
+  if (isRunning) killAll();
+  isRunning = true;
   killAll();
   if (prefersReduced()) {
     applyReducedMotionState();
+    isRunning = false;
     return;
   }
   const entrances = document.querySelectorAll<HTMLElement>("[data-entrance]");
@@ -209,6 +346,10 @@ function runEntrance() {
   createEntranceTimeline(entrances, ambient);
   setupParallax(ambient);
   watchReducedMotion();
+  // mark complete after timeline duration ~1s, will-change already cleared via onComplete
+  setTimeout(() => {
+    isRunning = false;
+  }, 1200);
 }
 
 export function initMotion(): void {
@@ -218,11 +359,20 @@ export function initMotion(): void {
 
 export function destroyMotion(): void {
   killAll();
+  isRunning = false;
+  hasReenteredPersisted = false;
 }
 
-// Astro lifecycle
-if (typeof document !== "undefined") {
-  initMotion();
+// Astro lifecycle — initialize exactly once on page-load, teardown before swap
+let hasBound = false;
+function bindLifecycle() {
+  if (hasBound) return;
+  hasBound = true;
   document.addEventListener("astro:page-load", initMotion);
   document.addEventListener("astro:before-swap", destroyMotion);
+}
+
+if (typeof document !== "undefined") {
+  bindLifecycle();
+  initMotion();
 }

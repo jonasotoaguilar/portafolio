@@ -27,10 +27,10 @@ Thumbs.db
 # Local AI runtime state
 .atl/
 .codegraph
-.agents/*
-!.agents/skills
-!.agents/skills/*
-!.agents/skills/astro-framework
-!.agents/skills/astro-framework/**
+.agents/
 .sdd/
 skills-lock.json
+
+# Scroll trace raw artifacts (keep summary)
+openspec/changes/visible-motion-scroll-trace/traces/*
+!openspec/changes/visible-motion-scroll-trace/traces/summary.md

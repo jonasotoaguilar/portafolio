@@ -13,7 +13,7 @@ import { navItems } from "../data/navigation";
         <p class="text-[0.84rem] leading-relaxed text-[var(--color-ink-soft)] max-w-[62ch]">
           <a href={`mailto:${site.email}`} class="underline decoration-[var(--color-cyan-strong)] decoration-2 underline-offset-4 hover:bg-[var(--color-cyan-ghost)]">{site.email}</a>
           · <a href={site.github} target="_blank" rel="noopener noreferrer" class="underline decoration-[var(--color-cyan-strong)] decoration-2 underline-offset-4 hover:bg-[var(--color-cyan-ghost)]">GitHub</a>
-          · <span class="font-mono">LinkedIn: {site.linkedinHandle}</span>
+          · <a href={site.linkedinUrl} target="_blank" rel="me noopener noreferrer" class="underline decoration-[var(--color-cyan-strong)] decoration-2 underline-offset-4 hover:bg-[var(--color-cyan-ghost)]">LinkedIn</a>
         </p>
         <nav aria-label="Footer" class="flex flex-wrap gap-2 pt-1">
           {navItems.map((item) => (

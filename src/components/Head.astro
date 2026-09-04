@@ -1,5 +1,6 @@
 ---
 import { site as siteData } from "../data/site";
+import { canonicalUrl, ogImageUrl, OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from "../lib/site-helpers";
 
 interface Props {
   title: string;
@@ -10,13 +11,14 @@ interface Props {
 
 const { title, description, path = Astro.url.pathname, noindex = false } = Astro.props as Props;
 
-// Astro.site is set only when SITE env is present (astro.config conditional)
-const siteUrl = Astro.site?.toString().replace(/\/$/, "");
-const canonical = siteUrl ? `${siteUrl}${path}` : undefined;
+// Astro.site is set only when SITE env is present (astro.config conditional) — never fabricate
+const siteOrigin = Astro.site?.toString();
+const canonical = canonicalUrl(siteOrigin, path);
+const ogImage = ogImageUrl(siteOrigin);
 
 const fullTitle = title.includes("Jonathan Soto") ? title : `${title} — Jonathan Soto`;
 
-// Safe JSON-LD — Person only, no telephone, no unverified LinkedIn URL
+// Safe JSON-LD — Person only, no telephone; sameAs includes constructed LinkedIn URL
 const personLd = {
   "@context": "https://schema.org",
   "@type": "Person",
@@ -29,12 +31,11 @@ const personLd = {
     addressCountry: "CL",
   },
   email: `mailto:${siteData.email}`,
-  url: siteUrl ?? siteData.github,
-  sameAs: [siteData.github],
+  url: siteOrigin ? canonicalUrl(siteOrigin, "/") ?? siteData.github : siteData.github,
+  sameAs: [siteData.github, siteData.linkedinUrl],
   knowsAbout: ["Python", "TypeScript", "Java", "Backend Engineering"],
 };
 
-const ogImage = siteUrl ? `${siteUrl}/og.png` : undefined;
 ---
 
 <meta charset="utf-8" />
@@ -52,6 +53,8 @@ const ogImage = siteUrl ? `${siteUrl}/og.png` : undefined;
 <meta property="og:description" content={description} />
 {canonical && <meta property="og:url" content={canonical} />}
 {ogImage && <meta property="og:image" content={ogImage} />}
+{ogImage && <meta property="og:image:width" content={String(OG_IMAGE_WIDTH)} />}
+{ogImage && <meta property="og:image:height" content={String(OG_IMAGE_HEIGHT)} />}
 <meta property="og:site_name" content="Jonathan Soto — Backend Engineer" />
 <meta property="og:locale" content="en_US" />
 <meta name="twitter:card" content={ogImage ? "summary_large_image" : "summary"} />
