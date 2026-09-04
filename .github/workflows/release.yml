@@ -74,7 +74,7 @@ jobs:
           cat /tmp/release-preflight-meta.json
 
   publish:
-    needs: preflight
+    needs: [preflight, image]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     environment: release
@@ -97,6 +97,8 @@ jobs:
           RELEASE_COMMIT: ${{ github.sha }}
           RELEASE_REPOSITORY: ${{ github.repository }}
           SITE: ${{ vars.SITE || '' }}
+          IMAGE_REF: ${{ needs.image.outputs.ref }}
+          IMAGE_DIGEST: ${{ needs.image.outputs.digest }}
         run: |
           set -euo pipefail
           if [[ ! -x ./scripts/release-publish ]]; then
@@ -111,12 +113,16 @@ jobs:
           rm -rf -- "$RUNNER_TEMP/release-material"
           test ! -e "$RUNNER_TEMP/release-material"
 
-  verify:
-    needs: publish
+  image:
+    needs: preflight
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     permissions:
       contents: read
+      packages: write
+    outputs:
+      ref: ${{ steps.record.outputs.ref }}
+      digest: ${{ steps.record.outputs.digest }}
     steps:
       - name: Checkout exact tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -124,6 +130,114 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
           persist-credentials: false
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ghcr.io/${{ github.repository }}
+          # Single immutable version tag only — no latest or other aliases.
+          tags: type=raw,value=${{ github.ref_name }}
+          labels: |
+            org.opencontainers.image.title=Portafolio
+            org.opencontainers.image.description=Static Astro portfolio for Jonathan Soto
+
+      - name: Build and push release image
+        id: build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Production origin is baked explicitly — the Dockerfile fails
+          # closed when SITE is absent.
+          build-args: SITE=https://portafolio.jonasotoaguilar.space
+
+      - name: Record image digest
+        id: record
+        run: |
+          set -euo pipefail
+          ref="ghcr.io/${{ github.repository }}:${{ github.ref_name }}"
+          digest="${{ steps.build.outputs.digest }}"
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Unexpected image digest shape: $digest"
+            exit 1
+          fi
+          mkdir -p /tmp/image-meta
+          printf '{"ref": "%s", "digest": "%s", "tag": "%s"}\n' \
+            "$ref" "$digest" "${{ github.ref_name }}" > /tmp/image-meta/image-digest.json
+          cat /tmp/image-meta/image-digest.json
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Release image"
+            echo ""
+            echo "\`$ref@$digest\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload image metadata
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: image-digest
+          path: /tmp/image-meta/image-digest.json
+          if-no-files-found: error
+          retention-days: 90
+
+  verify:
+    needs: publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout exact tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Download image metadata
+        uses: actions/download-artifact@fa0a91b85d5f404e444e00e005971372dc801d19 # v5.0.0
+        with:
+          name: image-digest
+          path: /tmp/image-meta
+
+      - name: Load image metadata
+        id: image-meta
+        run: |
+          set -euo pipefail
+          ref=$(python3 -c "import json; print(json.load(open('/tmp/image-meta/image-digest.json'))['ref'])")
+          digest=$(python3 -c "import json; print(json.load(open('/tmp/image-meta/image-digest.json'))['digest'])")
+          if [[ -z "$ref" || -z "$digest" ]]; then
+            echo "::error::image-digest.json is missing ref or digest"
+            exit 1
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
 
       - name: Download preflight metadata
         uses: actions/download-artifact@fa0a91b85d5f404e444e00e005971372dc801d19 # v5.0.0
@@ -139,6 +253,8 @@ jobs:
           RELEASE_COMMIT: ${{ github.sha }}
           RELEASE_REPOSITORY: ${{ github.repository }}
           SITE: ${{ vars.SITE || '' }}
+          IMAGE_REF: ${{ steps.image-meta.outputs.ref }}
+          IMAGE_DIGEST: ${{ steps.image-meta.outputs.digest }}
         run: |
           set -euo pipefail
           if [[ ! -x ./scripts/release-verify ]]; then
