@@ -142,4 +142,50 @@ else
   echo "Verified sitemap absent in archive"
 fi
 
+# Immutable image evidence: when the workflow passes IMAGE_REF and
+# IMAGE_DIGEST (GHCR login is provided by the workflow), prove the pushed tag
+# resolves to that exact digest and the release notes carry it. When both are
+# absent, image verification is skipped and tarball checks above stand alone.
+if [[ -n "${IMAGE_REF:-}" || -n "${IMAGE_DIGEST:-}" ]]; then
+  if [[ -z "${IMAGE_REF:-}" || -z "${IMAGE_DIGEST:-}" ]]; then
+    echo "error: IMAGE_REF and IMAGE_DIGEST must be set together" >&2
+    exit 1
+  fi
+  if [[ ! "$IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+    echo "error: IMAGE_DIGEST '$IMAGE_DIGEST' is not a sha256 digest" >&2
+    exit 1
+  fi
+  expected_ref="ghcr.io/${repo}:${tag}"
+  if [[ "$IMAGE_REF" != "$expected_ref" ]]; then
+    echo "error: IMAGE_REF '$IMAGE_REF' must equal '$expected_ref'" >&2
+    exit 1
+  fi
+  echo "Inspecting pushed image $IMAGE_REF"
+  inspected=$(docker buildx imagetools inspect "$IMAGE_REF" 2>&1) || {
+    echo "error: failed to inspect $IMAGE_REF" >&2
+    echo "$inspected" >&2
+    exit 1
+  }
+  pushed_digest=$(echo "$inspected" | awk '/^Digest:/ {print $2; exit}')
+  if [[ -z "$pushed_digest" ]]; then
+    echo "error: could not parse digest from imagetools inspect output" >&2
+    echo "$inspected" >&2
+    exit 1
+  fi
+  if [[ "$pushed_digest" != "$IMAGE_DIGEST" ]]; then
+    echo "error: pushed digest '$pushed_digest' does not match expected '$IMAGE_DIGEST'" >&2
+    exit 1
+  fi
+  echo "Verified pushed image digest: $pushed_digest"
+  echo "Checking release notes carry the image digest"
+  body=$(gh release view "$tag" --repo "$repo" --json body --jq '.body')
+  if ! grep -Fq "$IMAGE_DIGEST" <<<"$body"; then
+    echo "error: release $tag notes do not contain image digest $IMAGE_DIGEST" >&2
+    exit 1
+  fi
+  echo "Verified release notes carry the image digest"
+else
+  echo "IMAGE_REF/IMAGE_DIGEST not set — skipping image verification"
+fi
+
 echo "Release verification passed for $tag"

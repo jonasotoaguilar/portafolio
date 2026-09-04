@@ -95,6 +95,29 @@ echo "SHA256: $checksum  $archive_name"
 # Write checksum file in sha256sum format
 echo "${checksum}  ${archive_name}" > "$checksum_path"
 
+# Optional immutable image evidence (GHCR). The release workflow sets
+# IMAGE_REF/IMAGE_DIGEST from the image job; when present they are validated
+# and carried in the release notes as the Dokploy handoff. When absent (for
+# example a source-only flow), the tarball release behavior is unchanged.
+image_notes=""
+if [[ -n "${IMAGE_REF:-}" || -n "${IMAGE_DIGEST:-}" ]]; then
+  if [[ -z "${IMAGE_REF:-}" || -z "${IMAGE_DIGEST:-}" ]]; then
+    echo "error: IMAGE_REF and IMAGE_DIGEST must be set together" >&2
+    exit 1
+  fi
+  if [[ ! "$IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+    echo "error: IMAGE_DIGEST '$IMAGE_DIGEST' is not a sha256 digest" >&2
+    exit 1
+  fi
+  expected_ref="ghcr.io/${repo}:${tag}"
+  if [[ "$IMAGE_REF" != "$expected_ref" ]]; then
+    echo "error: IMAGE_REF '$IMAGE_REF' must equal '$expected_ref'" >&2
+    exit 1
+  fi
+  image_notes="- Image: \`${IMAGE_REF}@${IMAGE_DIGEST}\`"
+  echo "Carrying image evidence: ${IMAGE_REF}@${IMAGE_DIGEST}"
+fi
+
 # Create curated notes (generated-safe, not raw commit log)
 notes_file="${material_dir}/notes.md"
 cat > "$notes_file" <<EOF
@@ -105,6 +128,7 @@ Static portfolio release for ${repo} at \`${commit:-unknown}\`.
 - Artifact: \`${archive_name}\` (static \`dist/\` tarball)
 - Checksum (SHA-256): \`${checksum}\`
 - SITE: ${SITE:-"(not set — canonical/sitemap intentionally absent)"}
+${image_notes:-"(no container image attached)"}
 
 This is an automated stable release carrying the static site artifact. Verify with \`scripts/release-verify\`.
 EOF
