@@ -605,18 +605,42 @@ test.describe("runtime-motion — Slice B contracts", () => {
     });
     await page.reload();
     await page.waitForTimeout(600);
+    const beforeFine = await page.evaluate(() => {
+      const el = document.querySelector<HTMLElement>(".water-field__image");
+      return el ? el.style.transform : "";
+    });
     await page.mouse.move(100, 100);
     await page.waitForTimeout(300);
     await page.mouse.move(900, 600);
-    await page.waitForTimeout(600);
+    // wait for gsap quickTo (0.9s) + rAF to produce a real offset
+    await page.waitForFunction(
+      ({ before }: { before: string }) => {
+        const el = document.querySelector<HTMLElement>(".water-field__image");
+        const t = el ? el.style.transform : "";
+        return t !== "" && t !== "none" && t !== before;
+      },
+      { before: beforeFine },
+    );
+    await page.waitForTimeout(200);
     const afterFine = await page.evaluate(() => {
       const el = document.querySelector<HTMLElement>(".water-field__image");
       return el ? el.style.transform : "";
     });
-    // fine+hover should have some transform offset after parallax (gsap quickTo sets x/y)
-    // We check that transform is not empty/none after gated parallax
-    // This asserts the positive case — if gating were broken, coarse would have already failed
-    expect(afterFine !== "" || afterFine !== "none").toBeTruthy();
+    // NEGATIVE CONTROL: old `afterFine !== "" || afterFine !== "none"` is a tautology — always true
+    // even for "" (true via second clause) and "none" (true via first clause). Fixed to conjunction.
+    expect(afterFine, "fine+hover beforeFine must not be the parallax result").not.toBe(beforeFine);
+    expect(
+      afterFine,
+      `parallax must produce non-empty transform, got ${JSON.stringify(afterFine)} before ${JSON.stringify(beforeFine)}`,
+    ).not.toBe("");
+    expect(afterFine, `parallax must not be "none", got ${JSON.stringify(afterFine)}`).not.toBe(
+      "none",
+    );
+    expect(afterFine !== "" && afterFine !== "none").toBeTruthy();
+    // stronger numeric proof: gsap quickTo sets translate via transform
+    expect(afterFine, `transform must contain translate/matrix, got ${afterFine}`).toMatch(
+      /translate|matrix/,
+    );
   });
 
   test("persist swap clears motion hints and resets offset, no duplicated RAF/listeners", async ({

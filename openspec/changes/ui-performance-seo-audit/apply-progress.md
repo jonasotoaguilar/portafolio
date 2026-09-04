@@ -94,3 +94,57 @@ ui-performance-seo-audit — Slice B — motion, SEO, LCP, GSAP
 ## Status
 
 16 / 16 tasks complete. Ready for verify (parent owns settlement). Slice B evidence merged, Slice A preserved. No fabricated origin, no phone, no provenance, sameAs LinkedIn preserved, reduced-motion honored, will-change transient, parallax gated, LCP priority ownership correct, GSAP kept per variance band.
+
+## Remediation — fine-hover tautology fix (evidence distinct from failed sha256:970cb134bcf75fde80052567568df6b31000aef1a9f230b1e7ed6f284c91bcc6)
+
+Binding: 100-line budget, production untouched. Blocker `e2e/interaction.spec.ts:619` `afterFine !== "" || afterFine !== "none"` tautology leaves `Fine pointer with hover enables parallax` UNTESTED.
+
+### Negative Control
+
+Old OR always true: `(""!==""||""!=="none")===true`, `("none"!==""||"none"!=="none")===true` — passes for empty and `none`. Fixed AND correctly fails: `(""!==""&&""!=="none")===false`, same for `"none"`. See `node` proof: tautology_OR true for "", "none", matrix; fixed_AND false for ""/"none", true for matrix/translate.
+
+### Corrected Semantics
+
+File `e2e/interaction.spec.ts:606-639`. Coarse path keeps `afterCoarse===""||afterCoarse==="none"` (correct disjunction). Fine path replaces tautology with conjunction + delta + numeric proof:
+
+```
+expect(afterFine).not.toBe(beforeFine)
+expect(afterFine).not.toBe("")
+expect(afterFine).not.toBe("none")
+expect(afterFine!=="" && afterFine!=="none").toBeTruthy()
+expect(afterFine).toMatch(/translate|matrix/)
+```
+
+Movement: `beforeFine` captured post-reload pre-move; `page.mouse.move(100,100)→900,600` then `waitForFunction(t!==""&&t!=="none"&&t!==beforeFine)` waits for `requestAnimationFrame`+`gsap.quickTo` 0.9s to set translate/matrix. Proves WaterField transform changes from pre-movement and is neither empty nor none. Coarse still proves no transform after 200,200→600,400 with `matchMedia` `matches:false`.
+
+No production edit — `src/scripts/motion.ts` `allowsParallax()` already `(hover:hover and pointer:fine)&&!reduce` with `quickTo`+rAF; no defect exposed per binding.
+
+### Evidence
+
+- Focused: `pnpm run test:e2e -- e2e/interaction.spec.ts -g "coarse/no-hover skips parallax, fine+hover enables parallax"` **PASS** 1/1 (2.5s); full **PASS** 54/54 (28s) runtime-motion 6/6
+- Unit: `pnpm run test:unit` **PASS** 5 files 35 tests
+- E2E: `pnpm run test:e2e` **PASS** 54
+- Check: `pnpm exec astro check` **PASS** 34 files 0 errors
+- Build SITE-unset: `pnpm build` **PASS** 7 pages 321ms canonical 0 og 0 robots Allow only
+- Build SITE-set verified prior: 7 pages canonical https://example.test/ og.png 1200×630 Sitemap
+- Format: `pnpm run format` + `format:check` **PASS** All matched 83 files before verification, none after
+- Lint: 0 errors
+
+### Changed-Line Count
+
+Budget 100. `e2e/interaction.spec.ts` 29+/5- (34 touched). `apply-progress.md` +~48 lines (Slice A/B preserved). Total ~82 within budget.
+
+### Files Changed
+
+| File                                                          | Action   | Lines                                           |
+| ------------------------------------------------------------- | -------- | ----------------------------------------------- |
+| `e2e/interaction.spec.ts`                                     | Modified | 34 touched — tautology→conjunction+delta+matrix |
+| `openspec/changes/ui-performance-seo-audit/apply-progress.md` | Modified | +48 remediation, prior preserved                |
+
+### Rollback Boundary
+
+Revert `e2e/interaction.spec.ts:606-639` to OR tautology and remove this remediation block. No production files. Revertible without unrelated work.
+
+### Status
+
+Remediation complete. Tasks remain 16/16. evidence_revision: sha256:66bdd27470fffe384b183b1d2f0c06785cf455fdb1da8fe3957e540df2df056e distinct from failed sha256:970cb134bcf75fde80052567568df6b31000aef1a9f230b1e7ed6f284c91bcc6. Awaiting parent settlement token sha256:d667957736abed61dfa9a85cb7d7bddeab10cadc44c2e753169b8259a9e292d0 (not settled here).
