@@ -28,12 +28,26 @@ jobs:
           fetch-tags: true
           persist-credentials: false
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 11.25.0
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22.13.0"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
       - name: Run release preflight
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
           RELEASE_COMMIT: ${{ github.sha }}
           RELEASE_REPOSITORY: ${{ github.repository }}
+          SITE: ${{ vars.SITE || '' }}
         run: |
           set -euo pipefail
           if [[ ! -x ./scripts/release-preflight ]]; then
