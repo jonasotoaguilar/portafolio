@@ -1077,31 +1077,93 @@ test.describe("visible-motion — in-flight salience and token matrix", () => {
     await page.waitForTimeout(700);
     await page.goBack();
     await expect(page).toHaveURL(/\/$/);
-    // immediately after back, sample animations for persisted nodes
-    const reentry = await page.evaluate(() => {
-      const anims = (document as unknown as { getAnimations?: () => Animation[] }).getAnimations
-        ? (document as unknown as { getAnimations: () => Animation[] }).getAnimations()
-        : [];
-      const relevant = anims.filter((a) => {
-        const target = (a as unknown as { effect?: { target?: Element } }).effect?.target as
-          | Element
-          | undefined;
-        if (!target) return false;
-        return (
-          target.classList?.contains("water-field__image") ||
-          target.classList?.contains("water-field__caustic") ||
-          target.classList?.contains("bg-word")
-        );
-      });
-      return relevant.map((a) => ({
-        duration: a.effect?.getTiming().duration,
-        playState: a.playState,
-      }));
-    });
-    // before fix, no relevant anims; after fix, at least one opacity anim ~250ms running or finished
-    const has250Reentry = reentry.some(
-      (a) => typeof a.duration === "number" && Math.abs((a.duration as number) - 250) < 40,
-    );
+    // Generation sync: the swapped-out DOM still shows the previous settled
+    // state until the new entrance starts (runEntrance removes
+    // is-entrance-visible synchronously on page-load). Sampling before the new
+    // generation starts reads leftover state; sampling at its start reads the
+    // fresh tween start values (bg-word x:-18) as stale. Wait for the new
+    // generation first, then for its settle — both deterministic browser
+    // state, no fixed sleeps.
+    await page
+      .waitForFunction(
+        () => {
+          const els = Array.from(document.querySelectorAll<HTMLElement>("[data-entrance]"));
+          return els.some((el) => !el.classList.contains("is-entrance-visible"));
+        },
+        undefined,
+        { timeout: 8000 },
+      )
+      .catch(() => {});
+    // Poll the 250ms animation lifecycle in-flight: the route fade runs on the
+    // document element, the persisted ambient re-entry on the persisted nodes.
+    // A single-shot sample races animation start and finish; polling observes
+    // the lifecycle. Falls back to settled opacity below when the animation
+    // already finished.
+    const reentryHandle = await page
+      .waitForFunction(
+        (): Array<{ duration: number; playState: string }> | null => {
+          const anims = (document as unknown as { getAnimations?: () => Animation[] }).getAnimations
+            ? (document as unknown as { getAnimations: () => Animation[] }).getAnimations()
+            : [];
+          const mapped = anims
+            .filter((a) => {
+              const target = (a as unknown as { effect?: { target?: Element } }).effect?.target as
+                | Element
+                | undefined;
+              if (!target) return false;
+              return (
+                target === document.documentElement ||
+                target.classList?.contains("water-field__image") ||
+                target.classList?.contains("water-field__caustic") ||
+                target.classList?.contains("bg-word")
+              );
+            })
+            .map((a) => ({
+              duration: Number(a.effect?.getTiming().duration),
+              playState: a.playState,
+            }));
+          const seen250 = mapped.some((a) => Math.abs(a.duration - 250) < 40);
+          const els = Array.from(document.querySelectorAll<HTMLElement>("[data-entrance]"));
+          const settled = els.length > 0 && els.every((el) => getComputedStyle(el).opacity === "1");
+          return seen250 || settled ? mapped : null;
+        },
+        undefined,
+        { timeout: 8000 },
+      )
+      .catch(() => null);
+    const reentry: Array<{ duration: number; playState: string }> =
+      reentryHandle == null
+        ? []
+        : ((await reentryHandle.jsonValue()) as Array<{
+            duration: number;
+            playState: string;
+          }>);
+    // at least one 250ms animation running or finished on the route/persisted layers
+    const has250Reentry = reentry.some((a) => Math.abs(a.duration - 250) < 40);
+    // Settle before sampling final state: entrance opacity 1 plus cleared
+    // transient will-change (product clears it on timeline complete).
+    await page
+      .waitForFunction(
+        () => {
+          const els = Array.from(document.querySelectorAll<HTMLElement>("[data-entrance]"));
+          return els.length > 0 && els.every((el) => getComputedStyle(el).opacity === "1");
+        },
+        undefined,
+        { timeout: 8000 },
+      )
+      .catch(() => {});
+    await page
+      .waitForFunction(
+        () =>
+          Array.from(
+            document.querySelectorAll<HTMLElement>(
+              ".water-field__image, .water-field__caustic, .bg-word",
+            ),
+          ).every((el) => el.style.willChange === ""),
+        undefined,
+        { timeout: 8000 },
+      )
+      .catch(() => {});
     // also check that persisted nodes are not offset from stale transform
     const stale = await page.evaluate(() =>
       Array.from(
@@ -1116,8 +1178,8 @@ test.describe("visible-motion — in-flight salience and token matrix", () => {
         `persisted must not have stale parallax ${tr}`,
       ).toBeFalsy();
     }
-    // allow either animation present or at least opacity correct after 300ms if animation finished quickly
-    await page.waitForTimeout(400);
+    // allow either animation observed in-flight or settled opacity when the
+    // 250ms animation finished before the poll ran
     const opacityOk = await page.evaluate(() => {
       const img = document.querySelector<HTMLElement>(".water-field__image");
       const caustic = document.querySelector<HTMLElement>(".water-field__caustic");
@@ -1129,8 +1191,7 @@ test.describe("visible-motion — in-flight salience and token matrix", () => {
       has250Reentry || opacityOk,
       `persist re-entry must be opacity-only 250ms, anims ${JSON.stringify(reentry)}`,
     ).toBeTruthy();
-    // ensure no duplicate ambient timeline — will-change cleared after complete (wait for 620ms entrance + 250ms re-entry)
-    await page.waitForTimeout(1100);
+    // ensure no duplicate ambient timeline — will-change cleared after complete
     const wc = await page.evaluate(() =>
       Array.from(
         document.querySelectorAll<HTMLElement>(".water-field__image, .water-field__caustic"),

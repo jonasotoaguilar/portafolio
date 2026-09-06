@@ -11,6 +11,20 @@ export default defineConfig({
     baseURL: "http://localhost:4321",
     trace: "on-first-retry",
   },
+  projects: [
+    {
+      name: "functional",
+      testIgnore: /scroll-trace\.spec\.ts/,
+    },
+    {
+      // Perf trace runs alone after functional completes so rAF FPS is not
+      // measured under concurrent worker load. Narrowest project scheduling;
+      // fullyParallel and every threshold stay unchanged.
+      name: "perf",
+      testMatch: /scroll-trace\.spec\.ts/,
+      dependencies: ["functional"],
+    },
+  ],
   webServer: {
     command: "pnpm build && pnpm preview --port 4321 --host 127.0.0.1",
     url: "http://localhost:4321",
