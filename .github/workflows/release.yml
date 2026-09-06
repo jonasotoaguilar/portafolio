@@ -173,8 +173,10 @@ jobs:
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ghcr.io/${{ github.repository }}
-          # Single immutable version tag only — no latest or other aliases.
-          tags: type=raw,value=${{ github.ref_name }}
+          # Versioned tag is the immutable deploy reference; latest is only an alias (same digest).
+          tags: |
+            type=raw,value=${{ github.ref_name }}
+            type=raw,value=latest
           labels: |
             org.opencontainers.image.title=Portafolio
             org.opencontainers.image.description=Static Astro portfolio for Jonathan Soto
