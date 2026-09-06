@@ -94,10 +94,14 @@ fi
 echo "Checksum verified: $actual"
 
 # Inspect archive for index.html
+# Materialize the listing once: piping tar into grep -q closes the pipe early,
+# so tar exits 141 (SIGPIPE) and pipefail falsely fails on correct archives.
+# A corrupt archive fails here via set -e; later greps only test for matches.
+tar -tzf "$dl_archive" > "$tmpdir/tar-list.txt"
 echo "Inspecting archive contents"
-if ! tar -tzf "$dl_archive" | grep -q "dist/index.html"; then
+if ! grep -q "dist/index.html" "$tmpdir/tar-list.txt"; then
   echo "error: archive does not contain dist/index.html" >&2
-  tar -tzf "$dl_archive" | head -n 50 >&2 || true
+  head -n 50 "$tmpdir/tar-list.txt" >&2 || true
   exit 1
 fi
 echo "Verified archive contains dist/index.html"
@@ -105,7 +109,7 @@ echo "Verified archive contains dist/index.html"
 # Extract index.html to check SITE-aware expectation without full extract?
 tar -xzf "$dl_archive" -O dist/index.html > "$tmpdir/index.html" 2>/dev/null || {
   # Fallback: list alternative path
-  tar -tzf "$dl_archive" | grep index.html >&2 || true
+  grep index.html "$tmpdir/tar-list.txt" >&2 || true
   echo "error: failed to extract dist/index.html from archive" >&2
   exit 1
 }
@@ -120,9 +124,9 @@ if [[ -n "${SITE:-}" ]]; then
   fi
   echo "Verified canonical present in archive"
   # Check sitemap in archive
-  if ! tar -tzf "$dl_archive" | grep -q "dist/sitemap"; then
+  if ! grep -q "dist/sitemap" "$tmpdir/tar-list.txt"; then
     echo "error: expected sitemap in archive when SITE is set" >&2
-    tar -tzf "$dl_archive" | grep -i sitemap >&2 || true
+    grep -i sitemap "$tmpdir/tar-list.txt" >&2 || true
     exit 1
   fi
   echo "Verified sitemap present in archive"
@@ -134,9 +138,9 @@ else
     exit 1
   fi
   echo "Verified canonical absent in archive"
-  if tar -tzf "$dl_archive" | grep -q "dist/sitemap"; then
+  if grep -q "dist/sitemap" "$tmpdir/tar-list.txt"; then
     echo "error: unexpected sitemap in archive when SITE is absent" >&2
-    tar -tzf "$dl_archive" | grep -i sitemap >&2 || true
+    grep -i sitemap "$tmpdir/tar-list.txt" >&2 || true
     exit 1
   fi
   echo "Verified sitemap absent in archive"
