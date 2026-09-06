@@ -238,7 +238,7 @@ jobs:
           persist-credentials: false
 
       - name: Download image metadata
-        uses: actions/download-artifact@fa0a91b85d5f404e444e00e005971372dc801d19 # v5.0.0
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           name: image-digest
           path: /tmp/image-meta
@@ -264,7 +264,7 @@ jobs:
           password: ${{ github.token }}
 
       - name: Download preflight metadata
-        uses: actions/download-artifact@fa0a91b85d5f404e444e00e005971372dc801d19 # v5.0.0
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           name: release-preflight-meta
           path: /tmp/release-meta
