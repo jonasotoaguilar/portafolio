@@ -86,7 +86,7 @@ checksum_path="${material_dir}/${archive_name}.sha256"
 
 echo "Creating deterministic tarball $archive_path from dist/"
 # Deterministic tar: sort, fixed mtime, owner/group 0, pax not needed
-tar --sort-name --mtime='2020-01-01' --owner=0 --group=0 -czf "$archive_path" dist
+tar --sort=name --mtime='2020-01-01' --owner=0 --group=0 -czf "$archive_path" dist
 
 # Calculate SHA-256
 sha256sum "$archive_path" | awk '{print $1}' > "$checksum_path"
