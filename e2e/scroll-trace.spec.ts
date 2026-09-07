@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { execFileSync } from "node:child_process";
 
 const summaryPath = path.resolve("openspec/changes/visible-motion-scroll-trace/traces/summary.md");
 
@@ -303,6 +304,18 @@ async function measureOne(
   };
 }
 
+function writeFormattedSummary(filePath: string, content: string): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, content, "utf8");
+  // The generator emits unpadded Markdown tables; normalize with the repo's
+  // canonical formatter so `pnpm run format:check` stays green.
+  try {
+    execFileSync(path.resolve("node_modules/.bin/oxfmt"), [filePath], { stdio: "ignore" });
+  } catch {
+    // Formatter unavailable — leave raw output; format:check will surface it.
+  }
+}
+
 function formatSummary(params: {
   env: Record<string, string>;
   runs: RawRun[];
@@ -559,8 +572,7 @@ test.describe.serial("scroll-trace — deterministic before paint", () => {
 
       const endIso = nowIso();
       const summary = formatSummary({ env, runs, browserVersion, startIso, endIso });
-      fs.mkdirSync(path.dirname(summaryPath), { recursive: true });
-      fs.writeFileSync(summaryPath, summary, "utf8");
+      writeFormattedSummary(summaryPath, summary);
     }
 
     // Now validate — must exist and report PASS with attribution

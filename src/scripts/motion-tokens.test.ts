@@ -70,3 +70,90 @@ describe("MOTION token seam — balanced visible motion package", () => {
     );
   });
 });
+
+describe("transition remediation — navigation has one owner (Astro 250ms fade)", () => {
+  const motionPath = path.resolve("src/scripts/motion.ts");
+  const content = fs.readFileSync(motionPath, "utf8");
+
+  it("branches page-load on a client-navigation flag set at after-swap", () => {
+    expect(content, "must listen for astro:after-swap (pre-paint finalize)").toMatch(
+      /astro:after-swap/,
+    );
+    expect(content, "must keep a pending navigation flag").toMatch(/pendingClientNav/);
+    expect(content, "after-swap handler must set the flag").toMatch(
+      /function handleAfterSwap[\s\S]*?pendingClientNav = true/,
+    );
+    expect(content, "page-load entry must consume the flag").toMatch(/if \(pendingClientNav\)/);
+  });
+
+  it("finalizes incoming entrances visible with no post-paint GSAP on navigation", () => {
+    expect(content, "navigated path must finalize entrances visible").toMatch(
+      /function finalizeEntrancesVisible[\s\S]*?is-entrance-visible/,
+    );
+    expect(content, "navigated path must exist and skip the timeline").toMatch(
+      /function runNavigated[\s\S]*?finalizeEntrancesVisible\(\)/,
+    );
+    expect(
+      content.match(/createEntranceTimeline\(/g)?.length ?? 0,
+      "GSAP entrance timeline must have exactly one call site (initial load only; plus its definition)",
+    ).toBe(2);
+  });
+
+  it("detects persist ownership on host nodes, never on animated children", () => {
+    expect(content, "must check the water-field persist host").toMatch(
+      /data-astro-transition-persist="water-field"/,
+    );
+    expect(content, "must check the bg-words persist host").toMatch(
+      /data-astro-transition-persist="bg-words"/,
+    );
+    expect(content, "must not check persist on the animated child").not.toMatch(
+      /waterImg\?\.hasAttribute\("data-astro-transition-persist"\)/,
+    );
+  });
+
+  it("keeps the initial entrance authored (24px / 620ms) and never reanimates ambient on nav", () => {
+    expect(content, "navigated path must stabilize ambient, not animate it").toMatch(
+      /function runNavigated[\s\S]*?finalizePersistedAmbient\(ambient\)/,
+    );
+    expect(content, "dead persisted re-entry tween must be gone").not.toMatch(
+      /animatePersistedReentry/,
+    );
+    expect(content, "root fade duration must stay Astro-owned in tokens").toMatch(
+      /MOTION\.entranceY[\s\S]*?MOTION\.entranceDuration/,
+    );
+  });
+
+  it("bg-word initial GSAP settle matches navigated finalize per variant (no route jump)", () => {
+    const initial = content.slice(
+      content.indexOf("function animateAmbientVisible"),
+      content.indexOf("function finalizePersistedAmbient"),
+    );
+    const navigated = content.slice(content.indexOf("function finalizePersistedAmbient"));
+    // Initial entrance must settle both variants, not drive all words to one value.
+    expect(initial, "initial must settle normal words at 0.045").toMatch(/opacity: 0\.045/);
+    expect(initial, "initial must settle cyan words at 0.07").toMatch(/opacity: 0\.07/);
+    expect(initial, "initial must split cyan targets").toMatch(/bg-word--cyan/);
+    // Entrance shape unchanged: x from -18, same timings.
+    expect(initial, "initial must keep x -18 entrance").toMatch(/x: -18/);
+    expect(initial, "initial must keep 0.7s stagger timings").toMatch(
+      /duration: 0\.7, stagger: 0\.08/,
+    );
+    // Navigated finalize contract both variants must agree with initial.
+    expect(navigated, "navigated must keep cyan 0.07 / normal 0.045").toMatch(
+      /bg-word--cyan.*0\.07.*0\.045|0\.07.*0\.045/,
+    );
+  });
+
+  it("uses exact public attribution wording, never sole-author", () => {
+    const experience = fs.readFileSync(path.resolve("src/data/experience.ts"), "utf8");
+    const about = fs.readFileSync(path.resolve("src/pages/about.astro"), "utf8");
+    const prd = fs.readFileSync(path.resolve("PRD.md"), "utf8");
+    for (const [name, text] of Object.entries({ experience, about, prd })) {
+      expect(text, `${name} must carry exact wording Author Jonathan Soto`).toMatch(
+        /Author Jonathan Soto/,
+      );
+      expect(text, `${name} must not use sole author wording`).not.toMatch(/sole author/i);
+      expect(text, `${name} must not use sole-author wording`).not.toMatch(/sole-author/i);
+    }
+  });
+});

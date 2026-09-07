@@ -2,6 +2,13 @@
  * Bounded GSAP entrance + subtle water parallax.
  * Respects prefers-reduced-motion, gates parallax on hover+fine pointer,
  * transient will-change only while motion in flight, cleans up before swap.
+ *
+ * Route-transition ownership: Astro's 250ms root fade owns ClientRouter
+ * navigation. `astro:after-swap` fires after body replacement but before the
+ * new elements render, so incoming `[data-entrance]` nodes are finalized
+ * visible there (pre-paint) and `astro:page-load` skips the GSAP entrance on
+ * navigated documents. The authored 24px/620ms cascade runs on initial load
+ * only. Persisted WaterField/bg-word hosts stay stable — no ambient rerun.
  */
 import { gsap } from "gsap";
 import { MOTION } from "./motion-tokens";
@@ -35,8 +42,10 @@ type AmbientNodes = {
   waterImg: HTMLElement | null;
   caustic: HTMLElement | null;
   bgWords: NodeListOf<HTMLElement>;
+  // Persist ownership lives on the HOST nodes (`transition:persist` renders
+  // `data-astro-transition-persist` on the `.water-field` / bg-words wrapper),
+  // never on the animated children — check the hosts so the branch is live.
   isPersisted: boolean;
-  shouldAnimateAmbient: boolean;
 };
 
 function clearWillChange() {
@@ -123,10 +132,10 @@ function collectAmbient(): AmbientNodes {
   const waterImg = document.querySelector<HTMLElement>(".water-field__image");
   const caustic = document.querySelector<HTMLElement>(".water-field__caustic");
   const bgWords = document.querySelectorAll<HTMLElement>(".bg-word");
-  const isPersisted = waterImg?.hasAttribute("data-astro-transition-persist") ?? false;
-  const shouldAnimateAmbient =
-    !isPersisted || !document.documentElement.hasAttribute("data-astro-transition");
-  return { waterImg, caustic, bgWords, isPersisted, shouldAnimateAmbient };
+  const isPersisted =
+    document.querySelector('[data-astro-transition-persist="water-field"]') !== null ||
+    document.querySelector('[data-astro-transition-persist="bg-words"]') !== null;
+  return { waterImg, caustic, bgWords, isPersisted };
 }
 
 function setTransientWillChange(entrances: NodeListOf<HTMLElement>, ambient: AmbientNodes) {
@@ -179,13 +188,11 @@ function createEntranceTimeline(entrances: NodeListOf<HTMLElement>, ambient: Amb
         ">",
       );
     }
-    if (ambient.shouldAnimateAmbient) {
-      animateAmbientVisible(tl, ambient);
-    } else if (!hasReenteredPersisted && ambient.isPersisted && !prefersReduced()) {
-      animatePersistedReentry(tl, ambient);
-    } else {
-      finalizePersistedAmbient(ambient);
-    }
+    // Initial load only: ambient settle belongs to the authored entrance.
+    // ClientRouter navigations never reach this timeline — they finalize
+    // stable ambient in handleAfterSwap/runNavigated, so Astro's 250ms root
+    // fade stays the single transition owner (no second ambient run).
+    animateAmbientVisible(tl, ambient);
     // Ensure will-change cleared even if timeline completes without onComplete (also killAll covers)
     tl.call(() => clearWillChange(), undefined, ">");
   });
@@ -193,23 +200,45 @@ function createEntranceTimeline(entrances: NodeListOf<HTMLElement>, ambient: Amb
 
 function animateAmbientVisible(tl: gsap.core.Timeline, ambient: AmbientNodes): void {
   if (ambient.waterImg) {
+    // Decorative WaterField stays painted at its CSS opacity from first paint —
+    // never hidden from opacity 0 — so it cannot delay LCP. Only the
+    // compositor-safe scale settle animates (transform-only, no opacity tween).
+    ambient.waterImg.style.opacity = "0.42";
     tl.fromTo(
       ambient.waterImg,
-      { scale: 1.04, opacity: 0 },
-      { scale: 1, opacity: 0.42, duration: 0.9, clearProps: "scale" },
+      { scale: 1.04 },
+      { scale: 1, duration: 0.9, clearProps: "scale" },
       0,
     );
   }
   if (ambient.caustic) {
-    tl.fromTo(ambient.caustic, { opacity: 0 }, { opacity: 0.9, duration: 0.6 }, 0.15);
+    ambient.caustic.style.opacity = "0.9";
   }
   if (ambient.bgWords.length) {
-    tl.fromTo(
-      ambient.bgWords,
-      { x: -18, opacity: 0 },
-      { x: 0, opacity: 0.045, duration: 0.7, stagger: 0.08 },
-      0.1,
+    // Per-variant settle matches finalizePersistedAmbient/CSS so initial and
+    // navigated finals agree (no route jump): normal 0.045, cyan 0.07.
+    const normalWords = Array.from(ambient.bgWords).filter(
+      (w) => !w.classList.contains("bg-word--cyan"),
     );
+    const cyanWords = Array.from(ambient.bgWords).filter((w) =>
+      w.classList.contains("bg-word--cyan"),
+    );
+    if (normalWords.length) {
+      tl.fromTo(
+        normalWords,
+        { x: -18, opacity: 0 },
+        { x: 0, opacity: 0.045, duration: 0.7, stagger: 0.08 },
+        0.1,
+      );
+    }
+    if (cyanWords.length) {
+      tl.fromTo(
+        cyanWords,
+        { x: -18, opacity: 0 },
+        { x: 0, opacity: 0.07, duration: 0.7, stagger: 0.08 },
+        0.1,
+      );
+    }
   }
 }
 
@@ -230,6 +259,18 @@ function finalizePersistedAmbient(ambient: AmbientNodes): void {
   }
   // persisted ambient should not retain will-change
   clearWillChange();
+}
+
+/** Finalize incoming entrances visible with no post-paint tween. Runs at
+ * `astro:after-swap` (before new elements render) and on navigated
+ * `astro:page-load`, so the first paint already shows the settled state. */
+function finalizeEntrancesVisible(): void {
+  for (const el of document.querySelectorAll<HTMLElement>("[data-entrance]")) {
+    el.classList.add("is-entrance-visible");
+    el.style.opacity = "";
+    el.style.transform = "";
+    el.style.willChange = "";
+  }
 }
 
 function setupParallax(ambient: AmbientNodes): void {
@@ -270,6 +311,8 @@ function watchReducedMotion(): void {
     if (reduceMql?.matches) {
       killAll();
       applyReducedMotionState();
+    } else if (navigatedDocument) {
+      runNavigated();
     } else {
       runEntrance();
     }
@@ -278,58 +321,12 @@ function watchReducedMotion(): void {
 }
 
 let isRunning = false;
-let hasReenteredPersisted = false;
-
-function animatePersistedReentry(tl: gsap.core.Timeline, ambient: AmbientNodes): void {
-  // opacity-only 250ms re-entry exactly once after teardown, no transform/scale
-  if (prefersReduced()) {
-    finalizePersistedAmbient(ambient);
-    return;
-  }
-  // set transient will-change for opacity only
-  if (ambient.waterImg) ambient.waterImg.style.willChange = "opacity";
-  if (ambient.caustic) ambient.caustic.style.willChange = "opacity";
-  for (const w of ambient.bgWords) w.style.willChange = "opacity";
-  if (ambient.waterImg) {
-    tl.fromTo(
-      ambient.waterImg,
-      { opacity: 0 },
-      { opacity: 0.42, duration: MOTION.ambientReentry, overwrite: "auto" },
-      0,
-    );
-  }
-  if (ambient.caustic) {
-    tl.fromTo(
-      ambient.caustic,
-      { opacity: 0 },
-      { opacity: 0.9, duration: MOTION.ambientReentry, overwrite: "auto" },
-      0,
-    );
-  }
-  if (ambient.bgWords.length) {
-    const normal = Array.from(ambient.bgWords).filter(
-      (w) => !w.classList.contains("bg-word--cyan"),
-    );
-    const cyan = Array.from(ambient.bgWords).filter((w) => w.classList.contains("bg-word--cyan"));
-    if (normal.length) {
-      tl.fromTo(
-        normal,
-        { opacity: 0 },
-        { opacity: 0.045, duration: MOTION.ambientReentry, stagger: 0.02, overwrite: "auto" },
-        0,
-      );
-    }
-    if (cyan.length) {
-      tl.fromTo(
-        cyan,
-        { opacity: 0 },
-        { opacity: 0.07, duration: MOTION.ambientReentry, overwrite: "auto" },
-        0,
-      );
-    }
-  }
-  hasReenteredPersisted = true;
-}
+// True once a ClientRouter navigation finalized this document without the
+// GSAP entrance. Survives rapid navigation/back-forward: set in
+// handleAfterSwap, consumed per page-load, and kept so a later
+// reduced-motion toggle re-runs the navigated path (no post-paint entrance).
+let pendingClientNav = false;
+let navigatedDocument = false;
 
 function runEntrance() {
   if (isRunning) killAll();
@@ -352,23 +349,64 @@ function runEntrance() {
   }, 1200);
 }
 
+/** ClientRouter navigation path: no GSAP entrance — Astro's 250ms root fade
+ * owns the transition. Incoming entrances are already finalized visible
+ * (pre-paint in handleAfterSwap); re-assert here, keep persisted ambient
+ * stable, restore parallax gates and live reduced-motion response. */
+function runNavigated(): void {
+  killAll();
+  isRunning = false;
+  navigatedDocument = true;
+  if (prefersReduced()) {
+    applyReducedMotionState();
+    return;
+  }
+  finalizeEntrancesVisible();
+  const ambient = collectAmbient();
+  finalizePersistedAmbient(ambient);
+  setupParallax(ambient);
+  // Settle to the same contract as initial load (timeline onComplete clears
+  // transient hints): no standing will-change. Parallax keeps working via
+  // quickTo, which promotes on transform change without a standing hint.
+  clearWillChange();
+  watchReducedMotion();
+}
+
+/** Runs at `astro:after-swap` — after body replacement, before new elements
+ * render. Tears down the previous document's motion and finalizes the
+ * incoming state pre-paint, then flags the following `astro:page-load` to
+ * take the navigated (GSAP-free) path. */
+function handleAfterSwap(): void {
+  pendingClientNav = true;
+  killAll();
+  isRunning = false;
+  finalizeEntrancesVisible();
+  finalizePersistedAmbient(collectAmbient());
+}
+
 export function initMotion(): void {
   document.documentElement.classList.add("js");
+  if (pendingClientNav) {
+    pendingClientNav = false;
+    runNavigated();
+    return;
+  }
   runEntrance();
 }
 
 export function destroyMotion(): void {
   killAll();
   isRunning = false;
-  hasReenteredPersisted = false;
 }
 
-// Astro lifecycle — initialize exactly once on page-load, teardown before swap
+// Astro lifecycle — full entrance on initial page-load, GSAP-free finalize on
+// navigations (flagged at after-swap), teardown before swap
 let hasBound = false;
 function bindLifecycle() {
   if (hasBound) return;
   hasBound = true;
   document.addEventListener("astro:page-load", initMotion);
+  document.addEventListener("astro:after-swap", handleAfterSwap);
   document.addEventListener("astro:before-swap", destroyMotion);
 }
 
