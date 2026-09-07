@@ -175,6 +175,11 @@ test("content — /about human context factual fields", async ({ page }) => {
   await expect(page.getByText("Ing. Ejecución en Computación e Informática")).toBeVisible();
   await expect(page.getByText("WealthQuest — Blended Games")).toBeVisible();
   await expect(page.getByText(/May 2025/).first()).toBeVisible();
+  await expect(page.getByText(/Author Jonathan Soto\. Published May 2025/)).toBeVisible();
+  const aboutBody = await page.locator("body").innerText();
+  expect(aboutBody).not.toMatch(/sole author/i);
+  expect(aboutBody).not.toMatch(/sole-author/i);
+  expect(aboutBody).not.toMatch(/co-author/i);
   await expect(page.getByText("Spanish").first()).toBeVisible();
   await expect(page.getByText("Native").first()).toBeVisible();
 });

@@ -2,6 +2,16 @@ import { expect, test } from "@playwright/test";
 
 // Helpers: focus helpers
 test.describe("interaction — keyboard, focus, navigation, overflow, deep links", () => {
+  test("brand link accessible name covers visible branding text", async ({ page }) => {
+    await page.goto("/");
+    const brand = page.getByRole("link", { name: /Jonathan Soto/ }).first();
+    await expect(brand).toBeVisible();
+    // Label-in-Name: accessible name must contain every visible branding string
+    const name = (await brand.getAttribute("aria-label")) ?? "";
+    expect(name).toContain("Jonathan Soto");
+    expect(name).toContain("Backend Engineer");
+  });
+
   test("skip link is first focusable, moves focus to main", async ({ page }) => {
     await page.goto("/");
     // first Tab lands on skip link
@@ -762,7 +772,7 @@ test.describe("runtime-motion — Slice B contracts", () => {
 });
 
 test.describe("runtime-performance — LCP priority ownership", () => {
-  test("home hero is prioritized LCP, water-field is not eager/high", async ({ page }) => {
+  test("home hero is prioritized LCP, water-field is eager but not high", async ({ page }) => {
     await page.goto("/");
     const hero = page.locator('img[alt*="Illustrated portrait of Jonathan Soto"]').first();
     await expect(hero).toBeVisible();
@@ -774,11 +784,11 @@ test.describe("runtime-performance — LCP priority ownership", () => {
       fp === "high" || fp === "High",
       `hero fetchpriority must be high, got ${fp}`,
     ).toBeTruthy();
-    // water-field must NOT be eager/high — should be lazy and not high
+    // water-field is the visible fixed background: eager so first paint includes it, never high so the hero keeps LCP priority
     const water = page.locator(".water-field__image").first();
     await expect(water).toBeVisible();
     const waterLoading = await water.getAttribute("loading");
-    expect(waterLoading).not.toBe("eager");
+    expect(waterLoading).toBe("eager");
     const waterFp = await water.getAttribute("fetchpriority");
     expect(
       waterFp === null || waterFp !== "high",
@@ -786,7 +796,7 @@ test.describe("runtime-performance — LCP priority ownership", () => {
     ).toBeTruthy();
   });
 
-  test("about profile is prioritized LCP, water-field is not eager/high", async ({ page }) => {
+  test("about profile is prioritized LCP, water-field is eager but not high", async ({ page }) => {
     await page.goto("/about");
     const profile = page.locator('img[alt*="Portrait of Jonathan Soto"]').first();
     await expect(profile).toBeVisible();
@@ -799,7 +809,7 @@ test.describe("runtime-performance — LCP priority ownership", () => {
     const water = page.locator(".water-field__image").first();
     await expect(water).toBeVisible();
     const waterLoading = await water.getAttribute("loading");
-    expect(waterLoading).not.toBe("eager");
+    expect(waterLoading).toBe("eager");
     const waterFp = await water.getAttribute("fetchpriority");
     expect(
       waterFp === null || waterFp !== "high",
@@ -1198,5 +1208,150 @@ test.describe("visible-motion — in-flight salience and token matrix", () => {
       ).map((el) => el.style.willChange),
     );
     for (const v of wc) expect(v).toBe("");
+  });
+});
+
+test.describe("transition-remediation — Astro fade is the single navigation owner", () => {
+  test("client navigation finalizes entrances before first paint, no post-paint GSAP", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.waitForFunction(() => {
+      const els = Array.from(document.querySelectorAll<HTMLElement>("[data-entrance]"));
+      return els.length > 0 && els.every((el) => getComputedStyle(el).opacity === "1");
+    });
+    // ClientRouter navigation (no full reload): sample the incoming document
+    // immediately after the URL swaps — a post-paint GSAP fromTo with
+    // immediateRender would hide entrances (inline opacity 0 / y offset).
+    await page.getByRole("link", { name: /About/i }).first().click();
+    await expect(page).toHaveURL(/\/about$/);
+    const immediate = await page.evaluate(() =>
+      Array.from(document.querySelectorAll<HTMLElement>("[data-entrance]")).map((el) => ({
+        hasClass: el.classList.contains("is-entrance-visible"),
+        opacity: getComputedStyle(el).opacity,
+        transform: getComputedStyle(el).transform,
+        inlineOpacity: el.style.opacity,
+        inlineTransform: el.style.transform,
+      })),
+    );
+    expect(immediate.length, "incoming document must have entrances").toBeGreaterThan(0);
+    for (const s of immediate) {
+      expect(s.hasClass, "incoming entrance must be finalized visible pre-paint").toBeTruthy();
+      expect(s.opacity, "incoming entrance must paint at opacity 1").toBe("1");
+      expect(
+        s.transform === "none" || s.transform === "matrix(1, 0, 0, 1, 0, 0)",
+        `incoming entrance must have no y offset, got ${s.transform}`,
+      ).toBeTruthy();
+      expect(s.inlineOpacity, "no post-paint GSAP fromTo may hide entrances").toBe("");
+      expect(s.inlineTransform, "no post-paint GSAP fromTo may offset entrances").not.toMatch(
+        /translate/,
+      );
+    }
+    // back-forward takes the same navigated path — still no post-paint entrance
+    await page.goBack();
+    await expect(page).toHaveURL(/\/$/);
+    const backState = await page.evaluate(() =>
+      Array.from(document.querySelectorAll<HTMLElement>("[data-entrance]")).map((el) => ({
+        hasClass: el.classList.contains("is-entrance-visible"),
+        opacity: getComputedStyle(el).opacity,
+        inlineOpacity: el.style.opacity,
+      })),
+    );
+    for (const s of backState) {
+      expect(s.hasClass).toBeTruthy();
+      expect(s.opacity).toBe("1");
+      expect(s.inlineOpacity).toBe("");
+    }
+  });
+
+  test("persist ownership lives on hosts and stays stable across navigation", async ({ page }) => {
+    await page.goto("/");
+    // ownership: the persist attribute is on the host wrappers, never on children
+    await expect(page.locator('[data-astro-transition-persist="water-field"]')).toHaveCount(1);
+    await expect(page.locator('[data-astro-transition-persist="bg-words"]')).toHaveCount(1);
+    const childHasPersist = await page.evaluate(() =>
+      Array.from(
+        document.querySelectorAll(".water-field__image, .water-field__caustic, .bg-word"),
+      ).some((el) => el.hasAttribute("data-astro-transition-persist")),
+    );
+    expect(childHasPersist, "persist must not be on animated children").toBeFalsy();
+    // ClientRouter navigation keeps the same persisted hosts with settled opacity
+    await page
+      .getByRole("link", { name: /Projects/i })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/projects$/);
+    await expect(page.locator('[data-astro-transition-persist="water-field"]')).toHaveCount(1);
+    await expect(page.locator('[data-astro-transition-persist="bg-words"]')).toHaveCount(1);
+    const stable = await page.evaluate(() => {
+      const img = document.querySelector<HTMLElement>(".water-field__image");
+      const caustic = document.querySelector<HTMLElement>(".water-field__caustic");
+      return {
+        imgOp: img ? parseFloat(getComputedStyle(img).opacity) : 0,
+        causticOp: caustic ? parseFloat(getComputedStyle(caustic).opacity) : 0,
+        stale: Array.from(
+          document.querySelectorAll<HTMLElement>(
+            ".water-field__image, .water-field__caustic, .bg-word",
+          ),
+        ).some((el) => /10px|18px/.test(el.style.transform)),
+      };
+    });
+    expect(stable.imgOp, "persisted water must stay painted").toBeGreaterThan(0.3);
+    expect(stable.causticOp, "persisted caustic must stay painted").toBeGreaterThan(0.5);
+    expect(stable.stale, "persisted nodes must not carry stale parallax offsets").toBeFalsy();
+  });
+
+  test("bg-word per-variant final opacity agrees on initial load and after navigation", async ({
+    page,
+  }) => {
+    const readVariants = () =>
+      page.evaluate(() =>
+        Array.from(document.querySelectorAll<HTMLElement>(".bg-word")).map((el) => ({
+          cyan: el.classList.contains("bg-word--cyan"),
+          opacity: parseFloat(getComputedStyle(el).opacity),
+        })),
+      );
+    await page.goto("/");
+    await page.waitForFunction(() => {
+      const els = Array.from(document.querySelectorAll<HTMLElement>("[data-entrance]"));
+      return els.length > 0 && els.every((el) => getComputedStyle(el).opacity === "1");
+    });
+    await page.waitForTimeout(900);
+    const initial = await readVariants();
+    expect(initial.length, "initial load must render bg words").toBeGreaterThan(0);
+    await page
+      .getByRole("link", { name: /Projects/i })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/projects$/);
+    await page.waitForFunction(() => {
+      const els = Array.from(document.querySelectorAll<HTMLElement>("[data-entrance]"));
+      return els.length > 0 && els.every((el) => getComputedStyle(el).opacity === "1");
+    });
+    await page.waitForTimeout(400);
+    const navigated = await readVariants();
+    expect(navigated.length, "navigated document must render bg words").toBeGreaterThan(0);
+    for (const set of [initial, navigated]) {
+      for (const w of set) {
+        const expected = w.cyan ? 0.07 : 0.045;
+        expect(
+          Math.abs(w.opacity - expected),
+          `${w.cyan ? "cyan" : "normal"} bg-word must settle at ${expected}, got ${w.opacity}`,
+        ).toBeLessThan(0.015);
+      }
+    }
+    // Initial and navigated finals must agree per variant (no route-dependent jump).
+    const mean = (rows: Array<{ cyan: boolean; opacity: number }>, cyan: boolean) => {
+      const vals = rows.filter((r) => r.cyan === cyan).map((r) => r.opacity);
+      return vals.reduce((a, b) => a + b, 0) / Math.max(vals.length, 1);
+    };
+    for (const cyan of [false, true]) {
+      if (initial.some((r) => r.cyan === cyan) && navigated.some((r) => r.cyan === cyan)) {
+        expect(
+          Math.abs(mean(initial, cyan) - mean(navigated, cyan)),
+          `${cyan ? "cyan" : "normal"} final must agree across navigation`,
+        ).toBeLessThan(0.015);
+      }
+    }
   });
 });
