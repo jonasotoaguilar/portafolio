@@ -35,7 +35,7 @@ export const education = {
   period: "Mar 2020 — Apr 2025",
   thesis: {
     title: "WealthQuest — Blended Games",
-    note: "Blended-games thesis; publication May 2025 (co-author Soto Aguilar)",
+    note: "Blended-games thesis; Author Jonathan Soto",
   },
   languages: [
     { name: "Spanish", level: "Native" },
