@@ -1,6 +1,6 @@
 {
   "name": "persona3-portfolio",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "description": "Persona 3 Reload-inspired game-menu portfolio for Jonathan Soto — static Astro foundation.",
   "type": "module",
