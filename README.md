@@ -46,7 +46,7 @@ Build emits `dist/` with hashed `_astro/*.webp` images. See `docs/CODEBASE-GUIDE
 - **Keyboard-first navigation** with `aria-current="page"`, roving focus, and `SkipLink`.
 - **Lint/format** with `oxlint@1.81.0` and `oxfmt@0.66.0`; type safety via `astro check`.
 - **Tests** — Vitest unit and Playwright + axe-core on all routes + 404.
-- **CI/release** — `verify` + `e2e` on `main`; stable `v*` tag releases publish `dist-*.tar.gz` + `.sha256` and the immutable container image `ghcr.io/jonasotoaguilar/portafolio:<tag>@sha256:<digest>` (production `SITE` baked, digest recorded in the release notes). Dokploy deploys that exact digest; no `latest` tag is published.
+- **CI/release** — `verify` + `e2e` on `main`; stable `v*` tag releases publish `dist-*.tar.gz` + `.sha256` and the immutable container image `ghcr.io/jonasotoaguilar/portafolio:<tag>@sha256:<digest>` (production `SITE` baked, digest recorded in the release notes). Dokploy deploys that exact digest; `latest` is also published as an alias to the same digest, never as a separate deploy reference.
 
 ## Documentation
 
